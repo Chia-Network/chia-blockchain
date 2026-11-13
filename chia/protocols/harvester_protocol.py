@@ -175,10 +175,10 @@ class Plot(Streamable):
             raise ValueError("Legacy Plot serialization only supports V1 plots")
         return PlotParam.make_v1(self.size)
 
-    def to_plot3(self) -> Plot3:
+    def to_plot2(self) -> Plot2:
         self.param()
         # Legacy peers without compression support report None for uncompressed plots.
-        return Plot3(
+        return Plot2(
             filename=self.filename,
             pool_public_key=self.pool_public_key,
             pool_contract_puzzle_hash=self.pool_contract_puzzle_hash,
@@ -197,9 +197,9 @@ class Plot(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class Plot3(Streamable):
+class Plot2(Streamable):
     # Field names are exposed by the farmer's get_harvester_plots_valid RPC; renaming them affects its API.
-    # Plot3 represents V1 plots and V2 plot groups with separate fields.
+    # Plot2 represents V1 plots and V2 plot groups with separate fields.
     filename: str
     pool_public_key: G1Element | None
     pool_contract_puzzle_hash: bytes32 | None
@@ -233,13 +233,13 @@ class Plot3(Streamable):
         v2_fields = (self.group_plot_id, self.strength, self.meta_group, self.group_size)
         if self.strength is None:
             if any(field is None for field in v1_fields) or any(field is not None for field in v2_fields):
-                raise ValueError("V1 Plot3 entries require size, plot_id, and compression_level only")
+                raise ValueError("V1 Plot2 entries require size, plot_id, and compression_level only")
         elif (
             any(field is not None for field in v1_fields)
             or any(field is None for field in v2_fields)
             or self.group_size == 0
         ):
-            raise ValueError("V2 Plot3 entries require group_plot_id, strength, meta_group, and positive group_size")
+            raise ValueError("V2 Plot2 entries require group_plot_id, strength, meta_group, and positive group_size")
 
     def param(self) -> PlotParam:
         self.validate()
@@ -267,8 +267,8 @@ class RespondPlots(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class RespondPlots3(Streamable):
-    plots: list[Plot3]
+class RespondPlots2(Streamable):
+    plots: list[Plot2]
     failed_to_open_filenames: list[str]
     no_key_filenames: list[str]
 
@@ -322,13 +322,13 @@ class PlotSyncPlotList(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class PlotSyncPlotList3(Streamable):
+class PlotSyncPlotList2(Streamable):
     identifier: PlotSyncIdentifier
-    data: list[Plot3]
+    data: list[Plot2]
     final: bool
 
     def __str__(self) -> str:
-        return f"PlotSyncPlotList3: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
+        return f"PlotSyncPlotList2: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
 
 
 @streamable

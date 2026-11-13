@@ -28,7 +28,7 @@ from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants, State
 from chia.plotting.manager import PlotManager
-from chia.protocols.harvester_protocol import Plot3
+from chia.protocols.harvester_protocol import Plot2
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
@@ -64,8 +64,8 @@ class ExpectedResult:
     callback_passed: bool = False
 
     def add_valid(self, list_plots: list[MockPlotInfo]) -> None:
-        def create_mock_plot(info: MockPlotInfo) -> Plot3:
-            return Plot3(
+        def create_mock_plot(info: MockPlotInfo) -> Plot2:
+            return Plot2(
                 filename=info.prover.get_filename(),
                 size=uint8(0),
                 plot_id=bytes32.zeros,
@@ -204,8 +204,8 @@ class Environment:
             assert plot is not None
             assert plot.prover.get_filename() == delta.valid.additions[path].filename
             assert equal_param(plot.prover.get_param(), delta.valid.additions[path].param())
-            plot3 = delta.valid.additions[path]
-            assert plot.prover.get_id() == (plot3.plot_id if plot3.plot_id is not None else plot3.group_plot_id)
+            plot2 = delta.valid.additions[path]
+            assert plot.prover.get_id() == (plot2.plot_id if plot2.plot_id is not None else plot2.group_plot_id)
             assert plot.prover.get_compression_level() == delta.valid.additions[path].compression_level
             assert plot.pool_public_key == delta.valid.additions[path].pool_public_key
             assert plot.pool_contract_puzzle_hash == delta.valid.additions[path].pool_contract_puzzle_hash
@@ -266,9 +266,9 @@ class Environment:
                 assert str(path) in receiver.plots()
                 assert plot_info.prover.get_filename() == receiver.plots()[str(path)].filename
                 assert equal_param(plot_info.prover.get_param(), receiver.plots()[str(path)].param())
-                plot3 = receiver.plots()[str(path)]
+                plot2 = receiver.plots()[str(path)]
                 assert plot_info.prover.get_id() == (
-                    plot3.plot_id if plot3.plot_id is not None else plot3.group_plot_id
+                    plot2.plot_id if plot2.plot_id is not None else plot2.group_plot_id
                 )
                 assert plot_info.prover.get_compression_level() == receiver.plots()[str(path)].compression_level
                 assert plot_info.pool_public_key == receiver.plots()[str(path)].pool_public_key

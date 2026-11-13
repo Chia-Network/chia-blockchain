@@ -24,13 +24,13 @@ from chia.plot_sync.exceptions import (
 from chia.plot_sync.util import ErrorCodes, State, T_PlotSyncMessage
 from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
-    Plot3,
+    Plot2,
     PlotSyncDone,
     PlotSyncError,
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
-    PlotSyncPlotList3,
+    PlotSyncPlotList2,
     PlotSyncResponse,
     PlotSyncStart,
 )
@@ -85,7 +85,7 @@ class Receiver:
     _connection: WSChiaConnection
     _current_sync: Sync
     _last_sync: Sync
-    _plots: dict[str, Plot3]
+    _plots: dict[str, Plot2]
     _invalid: list[str]
     _keys_missing: list[str]
     _duplicates: list[str]
@@ -144,7 +144,7 @@ class Receiver:
     def initial_sync(self) -> bool:
         return self._last_sync.sync_id == 0
 
-    def plots(self) -> dict[str, Plot3]:
+    def plots(self) -> dict[str, Plot2]:
         return self._plots
 
     def invalid(self) -> list[str]:
@@ -225,14 +225,14 @@ class Receiver:
     async def sync_started(self, data: PlotSyncStart) -> None:
         await self._process(self._sync_started, ProtocolMessageTypes.plot_sync_start, data)
 
-    async def _process_loaded(self, plot_infos: PlotSyncPlotList | PlotSyncPlotList3) -> None:
+    async def _process_loaded(self, plot_infos: PlotSyncPlotList | PlotSyncPlotList2) -> None:
         self._validate_identifier(plot_infos.identifier)
 
         for plot_info in plot_infos.data:
-            plot3 = plot_info if isinstance(plot_info, Plot3) else plot_info.to_plot3()
-            if plot3.filename in self._plots or plot3.filename in self._current_sync.delta.valid.additions:
-                raise PlotAlreadyAvailableError(State.loaded, plot3.filename)
-            self._current_sync.delta.valid.additions[plot3.filename] = plot3
+            plot2 = plot_info if isinstance(plot_info, Plot2) else plot_info.to_plot2()
+            if plot2.filename in self._plots or plot2.filename in self._current_sync.delta.valid.additions:
+                raise PlotAlreadyAvailableError(State.loaded, plot2.filename)
+            self._current_sync.delta.valid.additions[plot2.filename] = plot2
             self._current_sync.bump_plots_processed()
 
         # Let the callback receiver know about the sync progress updates
@@ -246,8 +246,8 @@ class Receiver:
     async def process_loaded(self, plot_infos: PlotSyncPlotList) -> None:
         await self._process(self._process_loaded, ProtocolMessageTypes.plot_sync_loaded, plot_infos)
 
-    async def process_loaded3(self, plot_infos: PlotSyncPlotList3) -> None:
-        await self._process(self._process_loaded, ProtocolMessageTypes.plot_sync_loaded3, plot_infos)
+    async def process_loaded2(self, plot_infos: PlotSyncPlotList2) -> None:
+        await self._process(self._process_loaded, ProtocolMessageTypes.plot_sync_loaded2, plot_infos)
 
     async def process_path_list(
         self,
@@ -358,7 +358,7 @@ class Receiver:
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
 
-        def effective_plot_size(plot: Plot3) -> float:
+        def effective_plot_size(plot: Plot2) -> float:
             plot_param = plot.param()
             size = UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot_param, self._constants)
             if plot.strength is not None:

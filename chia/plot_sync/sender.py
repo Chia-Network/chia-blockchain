@@ -20,12 +20,12 @@ from chia.plotting.prover import V1Prover, V2Prover
 from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
     Plot,
-    Plot3,
+    Plot2,
     PlotSyncDone,
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
-    PlotSyncPlotList3,
+    PlotSyncPlotList2,
     PlotSyncResponse,
     PlotSyncStart,
     supports_legacy_plot_serialization,
@@ -66,8 +66,8 @@ def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
     return converted
 
 
-def _convert_plot_info_list3(plot_infos: list[PlotInfo]) -> list[Plot3]:
-    converted: list[Plot3] = []
+def _convert_plot_info_list2(plot_infos: list[PlotInfo]) -> list[Plot2]:
+    converted: list[Plot2] = []
     for plot_info in plot_infos:
         group_size: uint16 | None
         if isinstance(plot_info.prover, V2Prover):
@@ -90,7 +90,7 @@ def _convert_plot_info_list3(plot_infos: list[PlotInfo]) -> list[Plot3]:
             strength = None
 
         converted.append(
-            Plot3(
+            Plot2(
                 filename=plot_info.prover.get_filename(),
                 size=size,
                 plot_id=plot_id,
@@ -346,8 +346,8 @@ class Sender:
             if self._protocol_version is None:
                 return
             if supports_plot_groups(self._protocol_version):
-                converted3 = _convert_plot_info_list3(loaded)
-                self._add_message(ProtocolMessageTypes.plot_sync_loaded3, PlotSyncPlotList3, converted3, remaining == 0)
+                converted2 = _convert_plot_info_list2(loaded)
+                self._add_message(ProtocolMessageTypes.plot_sync_loaded2, PlotSyncPlotList2, converted2, remaining == 0)
             elif supports_legacy_plot_serialization(self._protocol_version):
                 converted = _convert_plot_info_list(loaded)
                 self._add_message(ProtocolMessageTypes.plot_sync_loaded, PlotSyncPlotList, converted, remaining == 0)

@@ -472,9 +472,9 @@ def test_protocol_bytes() -> None:
     assert bytes(message_88) == bytes(plot3)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_89 = type(respond_plots3).from_bytes(message_bytes)
-    assert message_89 == respond_plots3
-    assert bytes(message_89) == bytes(respond_plots3)
+    message_89 = type(respond_plots2).from_bytes(message_bytes)
+    assert message_89 == respond_plots2
+    assert bytes(message_89) == bytes(respond_plots2)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
     message_90 = type(request_peers_introducer).from_bytes(message_bytes)

@@ -37,7 +37,7 @@ from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.receiver import Receiver, get_list_or_len
 from chia.pools.pool_config import PoolingShareState
 from chia.protocols import farmer_protocol
-from chia.protocols.harvester_protocol import Plot, Plot3
+from chia.protocols.harvester_protocol import Plot, Plot2
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.solver.solver_service import SolverService
@@ -323,7 +323,7 @@ async def test_farmer_get_pool_state_plot_count(
 async def test_pool_state_counts_v2_group_members() -> None:
     pool_hash = bytes32.random()
     other_pool_hash = bytes32.random()
-    group = Plot3(
+    group = Plot2(
         filename="group.gplot",
         size=None,
         plot_id=None,
@@ -365,7 +365,7 @@ async def test_pool_state_counts_v2_group_members() -> None:
     receiver.plots.return_value = {
         "group.gplot": group,
         "v1.plot": v1_plot,
-        "legacy.plot": legacy_v1_plot.to_plot3(),
+        "legacy.plot": legacy_v1_plot.to_plot2(),
         "other.gplot": dataclasses.replace(group, pool_contract_puzzle_hash=other_pool_hash),
     }
     farmer = Mock(spec=Farmer)
@@ -502,10 +502,10 @@ async def test_farmer_get_harvester_plots_endpoints(
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
         for filter_item in filtering:
             assert isinstance(filter_item, FilterItem)
-            plots = [plot for plot in plots if plot_matches_filter(Plot3.from_json_dict(plot), filter_item)]
+            plots = [plot for plot in plots if plot_matches_filter(Plot2.from_json_dict(plot), filter_item)]
 
         def plot_sort_key(plot_data: dict[str, Any]) -> tuple[tuple[bool, Any], bytes32]:
-            plot = Plot3.from_json_dict(plot_data)
+            plot = Plot2.from_json_dict(plot_data)
             value = plot_identifier(plot) if sort_key == "plot_id" else getattr(plot, sort_key)
             return (value is None, value), plot_identifier(plot)
 

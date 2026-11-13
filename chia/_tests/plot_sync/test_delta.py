@@ -8,13 +8,13 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 
 from chia.plot_sync.delta import Delta, DeltaType, PathListDelta, PlotListDelta
-from chia.protocols.harvester_protocol import Plot3
+from chia.protocols.harvester_protocol import Plot2
 
 log = logging.getLogger(__name__)
 
 
-def dummy_plot(path: str) -> Plot3:
-    return Plot3(
+def dummy_plot(path: str) -> Plot2:
+    return Plot2(
         filename=path,
         size=uint8(32),
         plot_id=bytes32(b"\00" * 32),

@@ -8,7 +8,7 @@ from packaging.version import Version
 
 from chia.protocols.harvester_protocol import (
     Plot,
-    Plot3,
+    Plot2,
     supports_plot_groups,
 )
 from chia.protocols.outbound_message import NodeType
@@ -33,15 +33,15 @@ def test_legacy_plot_param_is_v1(compression_level: uint8 | None) -> None:
 
     assert param.size_v1 == 32
     assert param.strength_v2 is None
-    plot3 = Plot.from_bytes(bytes(plot)).to_plot3()
-    assert plot3.compression_level == (compression_level if compression_level is not None else uint8(0))
-    assert plot3.param().size_v1 == 32
-    assert Plot3.from_bytes(bytes(plot3)) == plot3
+    plot2 = Plot.from_bytes(bytes(plot)).to_plot2()
+    assert plot2.compression_level == (compression_level if compression_level is not None else uint8(0))
+    assert plot2.param().size_v1 == 32
+    assert Plot2.from_bytes(bytes(plot2)) == plot2
 
 
-def test_v2_plot3_param_uses_group_metadata_without_plot_index() -> None:
+def test_v2_plot2_param_uses_group_metadata_without_plot_index() -> None:
     group_plot_id = bytes32.random()
-    plot = Plot3(
+    plot = Plot2(
         filename="v2.gplot",
         size=None,
         plot_id=None,
@@ -69,9 +69,9 @@ def test_v2_plot3_param_uses_group_metadata_without_plot_index() -> None:
     assert plot.compression_level is None
 
 
-def test_v1_plot3_keeps_size_plot_id_and_compression_fields() -> None:
+def test_v1_plot2_keeps_size_plot_id_and_compression_fields() -> None:
     plot_id = bytes32.random()
-    plot = Plot3(
+    plot = Plot2(
         filename="v1.plot",
         size=uint8(32),
         plot_id=plot_id,
@@ -88,10 +88,10 @@ def test_v1_plot3_keeps_size_plot_id_and_compression_fields() -> None:
     )
 
     assert plot.param().size_v1 == 32
-    assert Plot3.from_bytes(bytes(plot)) == plot
+    assert Plot2.from_bytes(bytes(plot)) == plot
 
 
-def test_plot3_serialization_starts_at_0_0_39() -> None:
+def test_plot2_serialization_starts_at_0_0_39() -> None:
     assert not supports_plot_groups(Version("0.0.37"))
     assert supports_plot_groups(Version("0.0.39"))
     assert protocol_version[NodeType.FARMER] == protocol_version[NodeType.HARVESTER] == "0.0.39"
@@ -99,7 +99,7 @@ def test_plot3_serialization_starts_at_0_0_39() -> None:
 
 def test_plot_group_serialization_round_trips() -> None:
     group_plot_id = bytes32.zeros
-    plot = Plot3(
+    plot = Plot2(
         filename="group.gplot",
         size=None,
         plot_id=None,
@@ -115,4 +115,4 @@ def test_plot_group_serialization_round_trips() -> None:
         group_size=uint16(8),
     )
     serialized = bytes(plot)
-    assert Plot3.from_bytes(serialized) == plot
+    assert Plot2.from_bytes(serialized) == plot

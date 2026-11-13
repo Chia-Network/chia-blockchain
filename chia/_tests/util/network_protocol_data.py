@@ -953,7 +953,7 @@ plot = harvester_protocol.Plot(
     uint8(0),
 )
 
-plot3 = harvester_protocol.Plot3(
+plot3 = harvester_protocol.Plot2(
     filename="plot_1",
     size=None,
     plot_id=None,
@@ -987,7 +987,7 @@ respond_plots = harvester_protocol.RespondPlots(
     ["str"],
 )
 
-respond_plots3 = harvester_protocol.RespondPlots3([plot3], ["str"], ["str"])
+respond_plots2 = harvester_protocol.RespondPlots2([plot3], ["str"], ["str"])
 
 # INTRODUCER PROTOCOL
 request_peers_introducer = introducer_protocol.RequestPeersIntroducer()

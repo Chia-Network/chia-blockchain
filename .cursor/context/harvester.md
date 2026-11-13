@@ -95,7 +95,7 @@ Public docs describe harvesters as checking plots for a farmer, but source corre
 
 - Do not start plot refreshing before `harvester_handshake`; doing so loads plots without the farmer/pool key filter and can create incorrect inventory and eligibility state.
 - Do not hold the `PlotManager` lock across disk proof reads. The current path snapshots work while scheduling executor tasks and releases the lock before expensive lookups.
-- Do not alter legacy `Plot.size` high-bit semantics without a protocol bump. The high bit distinguishes V2 strength from V1 k-size and is consumed by farmer-side plot-sync/UI calculations. Newer `Plot3` inventory has separate V1 size and V2 strength fields.
+- Do not alter legacy `Plot.size` high-bit semantics without a protocol bump. The high bit distinguishes V2 strength from V1 k-size and is consumed by farmer-side plot-sync/UI calculations. Newer `Plot2` inventory has separate V1 size and V2 strength fields.
 - Be careful with `plot_identifier` parsing and path normalization. Signature lookup depends on exact V1 identifier formatting and resolved paths matching the plot manager keys.
 - GPU/compressed-plot behavior crosses into `chiapos.decompressor_context_queue`; failures may present as runtime strings from the prover/decompressor. Tests should cover timeout/drop behavior without assuming every failure raises the same Python exception.
 - Protocol edits in this area are compatibility edits. Update `harvester_protocol.py`, `protocol_message_types.py`, sender authorization, API/stub decorators, farmer receiver/handler code, and protocol version behavior together.

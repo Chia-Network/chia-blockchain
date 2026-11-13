@@ -2413,7 +2413,7 @@ plot3_json: dict[str, Any] = {
     "group_size": 8,
 }
 
-respond_plots3_json: dict[str, Any] = {
+respond_plots2_json: dict[str, Any] = {
     "plots": [
         {
             "filename": "plot_1",

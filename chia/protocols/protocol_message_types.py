@@ -144,9 +144,9 @@ class ProtocolMessageTypes(Enum):
     # solver protocol
     solve = 109
 
-    # 112 and 113 were used by the retired Plot2 intermediate protocol.
+    # 112 and 113 were used by the retired 0.0.38 intermediate plot protocol.
     # Do not reuse these values.
-    plot_sync_loaded3 = 114
-    respond_plots3 = 115
+    plot_sync_loaded2 = 114
+    respond_plots2 = 115
 
     error = 255

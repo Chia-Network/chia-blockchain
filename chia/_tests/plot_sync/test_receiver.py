@@ -24,13 +24,13 @@ from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver, Sync, get_list_or_len
-from chia.plot_sync.sender import Sender, _convert_plot_info_list, _convert_plot_info_list3
+from chia.plot_sync.sender import Sender, _convert_plot_info_list, _convert_plot_info_list2
 from chia.plot_sync.util import ErrorCodes, State
 from chia.plotting.prover import V1Prover, V2Prover
 from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
     Plot,
-    Plot3,
+    Plot2,
     PlotSyncDone,
     PlotSyncIdentifier,
     PlotSyncPathList,
@@ -39,7 +39,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncStart,
     RequestPlots,
     RespondPlots,
-    RespondPlots3,
+    RespondPlots2,
 )
 from chia.protocols.outbound_message import NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -96,13 +96,13 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
 
     peer = Mock(protocol_version=Version(version), connection_type=NodeType.FARMER)
     response = await HarvesterAPI(harvester).request_plots(RequestPlots(), peer)
-    inventory: RespondPlots | RespondPlots3
-    synced_plots: Sequence[Plot | Plot3]
+    inventory: RespondPlots | RespondPlots2
+    synced_plots: Sequence[Plot | Plot2]
     if version == "0.0.39":
-        inventory = RespondPlots3.from_bytes(response.data)
-        synced_plots = _convert_plot_info_list3(plot_infos)
-        expected_response_type = ProtocolMessageTypes.respond_plots3
-        expected_sync_type = ProtocolMessageTypes.plot_sync_loaded3
+        inventory = RespondPlots2.from_bytes(response.data)
+        synced_plots = _convert_plot_info_list2(plot_infos)
+        expected_response_type = ProtocolMessageTypes.respond_plots2
+        expected_sync_type = ProtocolMessageTypes.plot_sync_loaded2
     else:
         inventory = RespondPlots.from_bytes(response.data)
         synced_plots = _convert_plot_info_list(plot_infos)
@@ -152,7 +152,7 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
     expected_effective_plot_size: float = 0
     for plot in synced_plots:
         plot_size = UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot.param(), DEFAULT_CONSTANTS)
-        if isinstance(plot, Plot3) and plot.param().strength_v2 is not None:
+        if isinstance(plot, Plot2) and plot.param().strength_v2 is not None:
             assert plot.group_size is not None
             plot_size *= plot.group_size
         expected_effective_plot_size += plot_size
@@ -296,7 +296,7 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
     ]
 
     # Manually add the plots we want to remove in tests
-    receiver._plots = {plot_info.filename: plot_info.to_plot3() for plot_info in plot_info_list[0:10]}
+    receiver._plots = {plot_info.filename: plot_info.to_plot2() for plot_info in plot_info_list[0:10]}
     receiver._total_plot_size = sum(plot.file_size for plot in receiver.plots().values())
     # TODO: todo_v2_plots support v2 plots
     receiver._total_effective_plot_size = int(
@@ -425,7 +425,7 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
         assert sync_data == expected_sync_data
 
     plot_sync_dict_3 = receiver.to_dict(counts_only)
-    loaded_plots = [plot.to_plot3() for plot in sync_steps[State.loaded].args[0]]
+    loaded_plots = [plot.to_plot2() for plot in sync_steps[State.loaded].args[0]]
     assert get_list_or_len(loaded_plots, counts_only) == plot_sync_dict_3["plots"]
     assert (
         get_list_or_len(sync_steps[State.invalid].args[0], counts_only) == plot_sync_dict_3["failed_to_open_filenames"]

@@ -52,9 +52,9 @@ Public farmer/RPC docs expose harvester plot lists as if they are current invent
 
 ## Data Contracts
 
-- Inventory has two wire layouts: legacy `Plot` for protocol `0.0.37` peers and `Plot3` for protocol `0.0.39` peers, with separate V1 plot fields and V2 group fields. The sender selects loaded-message types from the farmer's advertised version; the receiver accepts both layouts. Protocol `0.0.38` was an unreleased intermediate and is not supported.
+- Inventory has two wire layouts: legacy `Plot` for protocol `0.0.37` peers and `Plot2` for protocol `0.0.39` peers, with separate V1 plot fields and V2 group fields. The sender selects loaded-message types from the farmer's advertised version; the receiver accepts both layouts. Protocol `0.0.38` was an unreleased intermediate and is not supported.
 - `Plot.filename` is the dictionary key on the farmer side. Path normalization changes affect duplicate detection, removals, RPC sorting/filtering, and signature/proof correlation elsewhere in farmer-harvester code.
-- Legacy `Plot` encodes v1 k-size and can decode the historical packed V2 strength/group id, but the 0.0.37 sender only reports V1 plots because that layout cannot describe group size or metadata. `Plot3` stores V1 `size`, `plot_id`, and compression level separately from V2 `group_plot_id`, `strength`, `meta_group`, and `group_size`; its validator enforces exactly one representation, and group plots do not carry a plot index.
+- Legacy `Plot` encodes v1 k-size and can decode the historical packed V2 strength/group id, but the 0.0.37 sender only reports V1 plots because that layout cannot describe group size or metadata. `Plot2` stores V1 `size`, `plot_id`, and compression level separately from V2 `group_plot_id`, `strength`, `meta_group`, and `group_size`; its validator enforces exactly one representation, and group plots do not carry a plot index.
 - Effective plot size is recomputed by the receiver with `_expected_plot_size(plot.param(), constants)` and `UI_ACTUAL_SPACE_CONSTANT_FACTOR`, so `Receiver` needs consensus constants even though plot sync itself is not consensus validation.
 - `Delta` is a reporting/commit artifact, not a standalone operation log. For path lists, removals are computed by comparing the previous committed list against the new synced list at `done`.
 
