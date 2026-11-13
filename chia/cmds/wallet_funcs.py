@@ -674,7 +674,11 @@ def timestamp_to_time(timestamp: int) -> str:
 
 
 async def print_offer_summary(
-    cat_name_resolver: CATNameResolver, sum_dict: dict[str, str], has_fee: bool = False, network_xch: str = "XCH"
+    cat_name_resolver: CATNameResolver,
+    sum_dict: dict[str, str],
+    driver_dict: dict[str, PuzzleInfo],
+    has_fee: bool = False,
+    network_xch: str = "XCH",
 ) -> None:
     for asset_id, amount in sum_dict.items():
         description: str = ""
@@ -689,12 +693,16 @@ async def print_offer_summary(
                 unit = units["mojo"]
                 if has_fee:
                     description = " [Typically represents change returned from the included fee]"
-            else:
+            # Asset IDs from other puzzle drivers can collide with known CAT TAILs.
+            elif driver_dict[asset_id].type() == AssetType.CAT.value:
                 unit = units["cat"]
                 result = await cat_name_resolver(CATAssetIDToName(asset_id=bytes32.from_hexstr(asset_id)))
                 if result.name is not None:
                     wid = str(result.wallet_id)
                     name = result.name
+            else:
+                name = f"{driver_dict[asset_id].type()} {asset_id}"
+                unit = units["mojo"]
         output: str = f"    - {name}"
         mojo_str: str = f"{mojo_amount} {'mojo' if mojo_amount == 1 else 'mojos'}"
         if len(wid) > 0:
@@ -724,16 +732,16 @@ async def print_trade_record(record: TradeRecord, wallet_client: WalletRpcClient
     if summaries:
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
-        offered, requested, _, _ = offer.summary()
+        offered, requested, driver_dict, _ = offer.summary()
         outbound_balances: dict[str, str] = {k: str(v) for k, v in offer.get_pending_amounts().items()}
         fees: Decimal = Decimal(offer.fees())
         cat_name_resolver = wallet_client.cat_asset_id_to_name
         print("  OFFERED:")
-        await print_offer_summary(cat_name_resolver, offered)
+        await print_offer_summary(cat_name_resolver, offered, driver_dict)
         print("  REQUESTED:")
-        await print_offer_summary(cat_name_resolver, requested)
+        await print_offer_summary(cat_name_resolver, requested, driver_dict)
         print("Pending Outbound Balances:")
-        await print_offer_summary(cat_name_resolver, outbound_balances, has_fee=(fees > 0))
+        await print_offer_summary(cat_name_resolver, outbound_balances, driver_dict, has_fee=(fees > 0))
         print(f"Included Fees: {fees / units['chia']} XCH, {fees} mojos")
         print("Timelock information:")
         if record.valid_times.min_time is not None:
@@ -830,14 +838,14 @@ async def take_offer(
         print("Please enter a valid offer file or hex blob")
         return []
 
-    offered, requested, _, _ = offer.summary()
+    offered, requested, driver_dict, _ = offer.summary()
     cat_name_resolver = wallet_client.cat_asset_id_to_name
     network_xch = AddressType.XCH.hrp(config).upper()
     print("Summary:")
     print("  OFFERED:")
-    await print_offer_summary(cat_name_resolver, offered, network_xch=network_xch)
+    await print_offer_summary(cat_name_resolver, offered, driver_dict, network_xch=network_xch)
     print("  REQUESTED:")
-    await print_offer_summary(cat_name_resolver, requested, network_xch=network_xch)
+    await print_offer_summary(cat_name_resolver, requested, driver_dict, network_xch=network_xch)
 
     print()
 
@@ -1506,7 +1514,7 @@ def driver_dict_asset_is_nft_supporting_royalties(driver_dict: dict[bytes32, Puz
 
 def driver_dict_asset_is_fungible(driver_dict: dict[bytes32, PuzzleInfo], asset_id: bytes32) -> bool:
     asset_dict: PuzzleInfo = driver_dict[asset_id]
-    return asset_dict.type() != AssetType.SINGLETON.value
+    return asset_dict.type() == AssetType.CAT.value
 
 
 def nft_coin_ids_supporting_royalties_from_offer(offer: Offer) -> list[bytes32]:
