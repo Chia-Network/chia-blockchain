@@ -1942,9 +1942,9 @@ async def test_new_unfinished_block(
         await full_node_1.full_node.add_end_of_sub_slot(sub_slot, peer)
     await full_node_1.full_node.add_unfinished_block(unf, None)
 
-    _, _, msg = peer.outgoing_queue.get_nowait()
+    _, _, msg, _ = peer.outgoing_queue.get_nowait()
     assert msg.type == ProtocolMessageTypes.new_peak.value
-    _, _, msg = peer.outgoing_queue.get_nowait()
+    _, _, msg, _ = peer.outgoing_queue.get_nowait()
     if peer_version == "0.0.35":
         assert msg.type == ProtocolMessageTypes.new_unfinished_block.value
         assert msg.data == bytes(fnp.NewUnfinishedBlock(unf.partial_hash))

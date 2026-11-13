@@ -10,7 +10,7 @@ import struct
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import ClassVar, cast
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import aiohttp
 import pytest
@@ -30,10 +30,11 @@ from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, Error, protocol_version
 from chia.protocols.wallet_protocol import RejectHeaderRequest
-from chia.server.api_protocol import ApiMetadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
+from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
-from chia.server.ws_connection import WSChiaConnection, error_response_version, sanitize_version_string
+from chia.server.ws_connection import WebSocket, WSChiaConnection, error_response_version, sanitize_version_string
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.ssl.create_ssl import generate_ca_signed_cert
@@ -356,8 +357,8 @@ async def test_error_receive(
         return f"ApiError: {error} from {connection.peer_node_id}, {connection.peer_info}" in caplog.text
 
     with caplog.at_level(logging.WARNING):
-        await full_node_connection.outgoing_queue.put((0, 0, message))
-        await wallet_connection.outgoing_queue.put((0, 1, message))
+        await full_node_connection.outgoing_queue.put((0, 0, message, None))
+        await wallet_connection.outgoing_queue.put((0, 1, message, None))
         await time_out_assert(10, error_log_found, True, full_node_connection)
         await time_out_assert(10, error_log_found, True, wallet_connection)
 
@@ -695,11 +696,11 @@ async def test_send_message_timed_out_nonced_request(
     original_send_message = wsc._send_message
     request_id: uint16 | None = None
 
-    async def test_send_message(message: Message, priority: int = 0) -> None:
+    async def test_send_message(message: Message, priority: int = 0, *, expires_at: float | None = None) -> None:
         nonlocal request_id
         request_id = message.id
         await event.wait()
-        await original_send_message(message, priority=priority)
+        await original_send_message(message, priority=priority, expires_at=expires_at)
 
     monkeypatch.setattr(wsc, "_send_message", test_send_message)
     msg_type = ProtocolMessageTypes.request_block
@@ -763,3 +764,85 @@ async def test_inbound_handshake_timeout(
 
     # A normal peer can still connect after the slowloris attempt was cleaned up
     assert await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+
+@pytest.fixture
+def expiry_connection() -> WSChiaConnection:
+    ws = Mock()
+    ws.send_bytes = AsyncMock()
+    ws._writer.transport.get_extra_info.return_value = ("192.0.2.1", 8448)
+    return WSChiaConnection.create(
+        local_type=NodeType.FARMER,
+        ws=cast(WebSocket, ws),
+        api=cast(ApiProtocol, Mock()),
+        server_port=None,
+        log=logging.getLogger(__name__),
+        is_outbound=True,
+        received_message_callback=None,
+        close_callback=None,
+        peer_id=bytes32.zeros,
+        inbound_rate_limit_percent=100,
+        outbound_rate_limit_percent=30,
+        local_capabilities_for_handshake=[],
+        stub_metadata_for_type={},
+    )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("expires_at", [None, 100.001, 100.0])
+async def test_outgoing_message_expiration(expiry_connection: WSChiaConnection, expires_at: float | None) -> None:
+    connection = expiry_connection
+    message = make_msg(ProtocolMessageTypes.new_signage_point_harvester, b"")
+    # A second message lets the handler terminate even when the first expires.
+    marker = make_msg(ProtocolMessageTypes.farming_info, b"")
+    send_bytes = cast(AsyncMock, connection.ws.send_bytes)
+    send_bytes.side_effect = lambda _: setattr(connection, "closed", True)
+    with patch("chia.server.ws_connection.time") as clock:
+        clock.monotonic.return_value = 100.0
+        await connection.send_message(message, priority=5, expires_at=expires_at)
+        await connection.send_message(marker, priority=6)
+        with patch.object(
+            connection.outbound_rate_limiter,
+            "process_msg_and_check",
+            wraps=connection.outbound_rate_limiter.process_msg_and_check,
+        ) as limiter:
+            await connection.outbound_handler()
+            expected_message = marker if expires_at is not None and expires_at <= 100 else message
+            send_bytes.assert_awaited_once_with(bytes(expected_message))
+            # Expired work consumes no rate-limit allowance.
+            assert limiter.call_count == 1
+            assert limiter.call_args.args[0] == expected_message
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("expired, closed", [(False, False), (True, False), (False, True)])
+async def test_rate_limit_retry_preserves_expiration(
+    expiry_connection: WSChiaConnection, expired: bool, closed: bool
+) -> None:
+    connection = expiry_connection
+    message = make_msg(ProtocolMessageTypes.new_signage_point_harvester, b"")
+    with patch("chia.server.ws_connection.time") as clock:
+        clock.monotonic.return_value = 100.0
+        connection.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=0)
+
+        async def advance_time(_: float) -> None:
+            clock.monotonic.return_value += 2.0 if expired else 1.0
+            connection.closed = closed
+
+        # Replace only the consuming module's asyncio binding, keeping the event
+        # loop's clock and sleep intact. Exercise the actual scheduled retry.
+        with patch("chia.server.ws_connection.asyncio", wraps=asyncio, sleep=AsyncMock(side_effect=advance_time)):
+            await connection.send_message(message, priority=5, expires_at=102.0)
+            priority, _, queued_message, deadline = connection.outgoing_queue.get_nowait()
+            await connection._send_message(queued_message, priority=priority, expires_at=deadline)
+            await asyncio.sleep(0)
+            if expired or closed:
+                assert connection.outgoing_queue.empty()
+            else:
+                priority, _, queued_message, deadline = connection.outgoing_queue.get_nowait()
+                assert (priority, queued_message, deadline) == (5, message, 102.0)
+                # A second rate-limit refusal must expire at the original deadline.
+                await connection._send_message(queued_message, priority=priority, expires_at=deadline)
+                await asyncio.sleep(0)
+                assert connection.outgoing_queue.empty()
+        cast(AsyncMock, connection.ws.send_bytes).assert_not_called()
