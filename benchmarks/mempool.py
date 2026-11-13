@@ -189,6 +189,7 @@ async def run_mempool_benchmark() -> None:
                     DEFAULT_CONSTANTS,
                     pool,
                     validation_timeout=2,
+                    minimum_block_fee_per_cost=uint64(0),
                 )
             )
             height = start_height
@@ -218,6 +219,7 @@ async def run_mempool_benchmark() -> None:
                     DEFAULT_CONSTANTS,
                     pool,
                     validation_timeout=2,
+                    minimum_block_fee_per_cost=uint64(0),
                 )
             )
             height = start_height

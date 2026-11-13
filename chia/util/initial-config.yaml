@@ -338,6 +338,12 @@ full_node:
   # measure to not spend too much time building the block generator.
   # block_creation_timeout: 2.0
 
+  # Minimum fee in mojos per CLVM cost for transactions selected for blocks.
+  # Transactions below it stay in the mempool, but aren't included in blocks
+  # this node creates. Defaults to 4 if unset. Set to 0 to disable. The minimum
+  # stops applying on 2027-11-03 00:00:00 UTC.
+  # minimum_block_fee_per_cost: 4
+
   # the number of threads used to read from the blockchain database
   # concurrently. There's always only 1 writer, but the number of readers is
   # configurable

@@ -100,6 +100,7 @@ async def run_mempool_benchmark() -> None:
         DEFAULT_CONSTANTS,
         InlineExecutor(),
         validation_timeout=2,
+        minimum_block_fee_per_cost=uint64(0),
     ) as mempool:
         print("\nrunning add_spend_bundle() + new_peak()")
 
