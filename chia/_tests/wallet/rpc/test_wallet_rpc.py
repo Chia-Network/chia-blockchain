@@ -1853,6 +1853,8 @@ async def test_offer_endpoints(
     trade_record = (await env_1.rpc_client.get_offer(GetOffer(trade_id=offer.name()))).trade_record
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
 
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_1.node)
+
     offer_file_2 = tmp_path / "second.offer"
     await MakeOfferCMD(
         rpc_info=wallet_environments.cmd_tx_endpoint_args(env_1)["rpc_info"],
@@ -2138,6 +2140,7 @@ async def test_offer_endpoints(
     await env_1.rpc_client.cancel_offers(
         CancelOffers(secure=True, asset_id=cat_asset_id.hex(), push=True), tx_config=wallet_environments.tx_config
     )
+    await wallet_environments.full_node.wait_for_wallet_synced(env_1.node)
     assert (
         len(
             [
@@ -2849,6 +2852,7 @@ async def test_key_and_address_endpoints(
     show_config = env.node.config
     if "wallet" not in show_config:
         show_config = {**show_config, "wallet": show_config}
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node)
     await ShowCMD(
         rpc_info=NeedsWalletRPC(
             client_info=WalletClientInfo(

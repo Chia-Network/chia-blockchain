@@ -274,6 +274,8 @@ async def create_new_plotnft(
     async with wallet_state_manager.new_action_scope(wallet_test_framework.tx_config, push=True) as action_scope:
         our_ph = await action_scope.get_puzzle_hash(wallet_state_manager)
 
+    await wallet_test_framework.full_node.wait_for_wallet_synced(wallet_node=wallet_test_framework.environments[0].node)
+
     await wallet_rpc.create_new_wallet(
         CreateNewWallet(
             wallet_type=CreateNewWalletType.POOL_WALLET,
