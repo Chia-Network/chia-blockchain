@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import operator
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
@@ -11,7 +10,7 @@ from typing_extensions import Protocol
 
 from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
-from chia.protocols.harvester_protocol import Plot, Plot2, Plot3
+from chia.protocols.harvester_protocol import Plot2
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.peer_info import PeerInfo
@@ -73,12 +72,24 @@ def paginated_plot_request(source: list[Any], request: PaginatedRequestData) -> 
     }
 
 
-def plot_matches_filter(plot: Plot | Plot2 | Plot3, filter_item: FilterItem) -> bool:
-    plot_attribute = getattr(plot, filter_item.key)
+def plot_matches_filter(plot: Plot2, filter_item: FilterItem) -> bool:
+    if filter_item.key == "plot_id":
+        plot_attribute = plot_identifier(plot)
+    else:
+        try:
+            plot_attribute = getattr(plot, filter_item.key)
+        except AttributeError:
+            return False
     if filter_item.value is None:
         return plot_attribute is None
     else:
         return filter_item.value in str(plot_attribute)
+
+
+def plot_identifier(plot: Plot2) -> bytes32:
+    identifier = plot.plot_id if plot.plot_id is not None else plot.group_plot_id
+    assert identifier is not None
+    return identifier
 
 
 class FarmerRpcApi:
@@ -302,7 +313,7 @@ class FarmerRpcApi:
         plot_count: int = 0
         for receiver in self.service.plot_sync_receivers.values():
             plot_count += sum(
-                plot.group_size if isinstance(plot, Plot3) and plot.param().strength_v2 is not None else 1
+                plot.group_size if plot.strength is not None and plot.group_size is not None else 1
                 for plot in receiver.plots().values()
                 if plot.pool_contract_puzzle_hash == pool_contract_puzzle_hash
             )
@@ -339,8 +350,17 @@ class FarmerRpcApi:
         # Apply sort_key and reverse if sort_key is not restricted
         if request.sort_key in restricted_sort_keys:
             raise KeyError(f"Can't sort by optional attributes: {restricted_sort_keys}")
-        # Sort by plot_id also by default since its unique
-        plot_list = sorted(plot_list, key=operator.attrgetter(request.sort_key, "plot_id"), reverse=request.reverse)
+
+        # Sort by the V1 plot id or V2 group plot id as a stable tie-breaker.
+        def sort_value(plot: Plot2) -> tuple[bool, Any]:
+            value = plot_identifier(plot) if request.sort_key == "plot_id" else getattr(plot, request.sort_key, None)
+            return value is None, value
+
+        plot_list = sorted(
+            plot_list,
+            key=lambda plot: (sort_value(plot), plot_identifier(plot)),
+            reverse=request.reverse,
+        )
         return paginated_plot_request(plot_list, request)
 
     def paginated_plot_path_request(

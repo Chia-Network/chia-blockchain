@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import BinaryIO, Self
 
 from chia_rs import G1Element, G2Element, PartialProof, PlotParam, ProofOfSpace, RewardChainBlockUnfinished
 from chia_rs.sized_bytes import bytes32
@@ -15,16 +16,16 @@ Protocol between harvester and farmer.
 Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
 
-NEW_PLOT_SERIALIZATION_VERSION = Version("0.0.38")
+LEGACY_PLOT_SERIALIZATION_VERSION = Version("0.0.37")
 PLOT_GROUP_SERIALIZATION_VERSION = Version("0.0.39")
-
-
-def supports_new_plot_serialization(version: Version) -> bool:
-    return version >= NEW_PLOT_SERIALIZATION_VERSION
 
 
 def supports_plot_groups(version: Version) -> bool:
     return version >= PLOT_GROUP_SERIALIZATION_VERSION
+
+
+def supports_legacy_plot_serialization(version: Version) -> bool:
+    return version <= LEGACY_PLOT_SERIALIZATION_VERSION
 
 
 @streamable
@@ -55,8 +56,7 @@ class NewSignagePointHarvester(Streamable):
 
 
 # this message has the same message ID as NewSignagePointHarvester, but this
-# message format is used if the protocol version is 0.0.38 or higher.
-# 0.0.37 harvesters are intentionally not supported by the new filter-challenge path.
+# message format is used if the protocol version is 0.0.39 or higher.
 @streamable
 @dataclass(frozen=True)
 class NewSignagePointHarvester2(Streamable):
@@ -158,12 +158,9 @@ class RespondSignatures(Streamable):
 @streamable
 @dataclass(frozen=True)
 class Plot(Streamable):
+    # Field names are exposed by the farmer's get_harvester_plots_valid RPC; renaming them affects its API.
     filename: str
-    # for backwards compatibility with previous harvester (e.g. DrPlotter)
-    # this field is either k-size (for v1 plots) or strength (for v2 plots).
-    # the most significant bit is set for v2 plots
-    # TODO: after the phase-out, v1 harvester won't be relevant anymore and we
-    # can clean this up with a new protocol version
+    # Legacy peers support V1 plots only; this field is the V1 k-size.
     size: uint8
     plot_id: bytes32
     pool_public_key: G1Element | None
@@ -174,55 +171,84 @@ class Plot(Streamable):
     compression_level: uint8 | None
 
     def param(self) -> PlotParam:
-        if (self.size & 0x80) != 0:
-            return PlotParam.make_v2(0, 0, self.size & 0x7F)
-        else:
-            return PlotParam.make_v1(self.size)
+        if self.size & 0x80:
+            raise ValueError("Legacy Plot serialization only supports V1 plots")
+        return PlotParam.make_v1(self.size)
+
+    def to_plot2(self) -> Plot2:
+        self.param()
+        # Legacy peers without compression support report None for uncompressed plots.
+        return Plot2(
+            filename=self.filename,
+            pool_public_key=self.pool_public_key,
+            pool_contract_puzzle_hash=self.pool_contract_puzzle_hash,
+            plot_public_key=self.plot_public_key,
+            file_size=self.file_size,
+            time_modified=self.time_modified,
+            size=self.size,
+            plot_id=self.plot_id,
+            compression_level=self.compression_level if self.compression_level is not None else uint8(0),
+            group_plot_id=None,
+            strength=None,
+            meta_group=None,
+            group_size=None,
+        )
 
 
 @streamable
 @dataclass(frozen=True)
 class Plot2(Streamable):
+    # Field names are exposed by the farmer's get_harvester_plots_valid RPC; renaming them affects its API.
+    # Plot2 represents V1 plots and V2 plot groups with separate fields.
     filename: str
-    # k-size for v1 plots; strength with the top bit set for v2 plots.
-    size: uint8
-    plot_id: bytes32
     pool_public_key: G1Element | None
     pool_contract_puzzle_hash: bytes32 | None
     plot_public_key: G1Element
     file_size: uint64
     time_modified: uint64
+
+    # V1 plot fields
+    size: uint8 | None
+    plot_id: bytes32 | None
     compression_level: uint8 | None
-    plot_index: uint16
-    meta_group: uint8
+
+    # V2 plot group fields
+    group_plot_id: bytes32 | None
+    strength: uint8 | None
+    meta_group: uint8 | None
+    group_size: uint16 | None
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.validate()
+
+    @classmethod
+    def parse(cls, f: BinaryIO, list_limits: dict[str, int] | None = None) -> Self:
+        plot = super().parse(f, list_limits=list_limits)
+        plot.validate()
+        return plot
+
+    def validate(self) -> None:
+        v1_fields = (self.size, self.plot_id, self.compression_level)
+        v2_fields = (self.group_plot_id, self.strength, self.meta_group, self.group_size)
+        if self.strength is None:
+            if any(field is None for field in v1_fields) or any(field is not None for field in v2_fields):
+                raise ValueError("V1 Plot2 entries require size, plot_id, and compression_level only")
+        elif (
+            any(field is not None for field in v1_fields)
+            or any(field is None for field in v2_fields)
+            or self.group_size == 0
+        ):
+            raise ValueError("V2 Plot2 entries require group_plot_id, strength, meta_group, and positive group_size")
 
     def param(self) -> PlotParam:
-        if (self.size & 0x80) != 0:
-            return PlotParam.make_v2(self.plot_index, self.meta_group, self.size & 0x7F)
-        else:
-            return PlotParam.make_v1(self.size)
+        self.validate()
+        if self.strength is not None:
+            assert self.meta_group is not None
+            return PlotParam.make_v2(0, self.meta_group, self.strength)
 
-
-@streamable
-@dataclass(frozen=True)
-class Plot3(Plot2):
-    # Plot2 is the released 0.0.38 layout. Group metadata uses new messages.
-    group_size: uint16
-
-    def to_plot2(self) -> Plot2:
-        return Plot2(
-            self.filename,
-            self.size,
-            self.plot_id,
-            self.pool_public_key,
-            self.pool_contract_puzzle_hash,
-            self.plot_public_key,
-            self.file_size,
-            self.time_modified,
-            self.compression_level,
-            self.plot_index,
-            self.meta_group,
-        )
+        assert self.size is not None
+        return PlotParam.make_v1(self.size)
 
 
 @streamable
@@ -243,14 +269,6 @@ class RespondPlots(Streamable):
 @dataclass(frozen=True)
 class RespondPlots2(Streamable):
     plots: list[Plot2]
-    failed_to_open_filenames: list[str]
-    no_key_filenames: list[str]
-
-
-@streamable
-@dataclass(frozen=True)
-class RespondPlots3(Streamable):
-    plots: list[Plot3]
     failed_to_open_filenames: list[str]
     no_key_filenames: list[str]
 
@@ -311,17 +329,6 @@ class PlotSyncPlotList2(Streamable):
 
     def __str__(self) -> str:
         return f"PlotSyncPlotList2: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
-
-
-@streamable
-@dataclass(frozen=True)
-class PlotSyncPlotList3(Streamable):
-    identifier: PlotSyncIdentifier
-    data: list[Plot3]
-    final: bool
-
-    def __str__(self) -> str:
-        return f"PlotSyncPlotList3: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
 
 
 @streamable
