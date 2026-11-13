@@ -29,54 +29,63 @@ class TestProver:
             get_prover_from_file("/nonexistent/path/test.txt")
 
 
-# TODO: todo_v2_plots enable these tests once we have test plots we can load
-@pytest.mark.skip("we don't have v2 test plots yet")
 class TestV2Prover:
-    def test_v2_prover_init_with_nonexistent_file(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
+    def test_v2_prover_delegates_plot_metadata(self) -> None:
+        inner_prover = MagicMock()
+        inner_prover.get_filename.return_value = "test.gplot"
+        inner_prover.get_strength.return_value = 3
+        inner_prover.size.return_value = 18
+        inner_prover.get_meta_group.return_value = 4
+        inner_prover.get_group_size.return_value = 2
+        inner_prover.plot_group_id.return_value = bytes32(b"1" * 32)
+        inner_prover.get_memo.return_value = b"memo"
+        inner_prover.plot_id_for_index.return_value = bytes32(b"2" * 32)
+        inner_prover.to_bytes.return_value = b"serialized prover"
+        prover = V2Prover(inner_prover)
+
+        assert prover.get_filename() == "test.gplot"
         assert prover.get_version() == PlotVersion.V2
-        assert prover.get_filename() == "/nonexistent/path/test.gplot"
-
-    def test_v2_prover_get_param_raises_error(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_param()
-
-    def test_v2_prover_get_memo_raises_error(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_memo()
-
-    def test_v2_prover_get_compression_level(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
+        assert prover.get_strength() == uint8(3)
+        assert prover.get_size() == uint8(18)
+        assert prover.get_meta_group() == uint8(4)
+        assert prover.get_group_size() == uint16(2)
+        assert prover.get_id() == bytes32(b"1" * 32)
+        assert prover.get_memo() == b"memo"
         assert prover.get_compression_level() == uint8(0)
+        assert bytes(prover) == inner_prover.to_bytes.return_value
+        assert prover.plot_id_for_index(uint16(7)) == bytes32(b"2" * 32)
+        inner_prover.plot_id_for_index.assert_called_once_with(uint16(7))
 
-    def test_v2_prover_get_id_raises_error(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_id()
-
-    def test_v2_prover_get_qualities_for_challenge_raises_error(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
-        with pytest.raises(
-            AssertionError, match="V2 plot format does not support qualities directly, use partial proofs"
-        ):
-            prover.get_qualities_for_challenge(bytes32(b"1" * 32))
-
-    def test_v2_prover_bytes_raises_error(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            bytes(prover)
-
-    def test_v2_prover_from_bytes_raises_error(self) -> None:
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            V2Prover.from_bytes(b"test_data")
-
-    def test_get_prover_from_file(self) -> None:
-        prover = get_prover_from_file("/nonexistent/path/test.gplot")
-        assert prover.get_version() == PlotVersion.V2
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
+        with pytest.raises(AssertionError, match="do not have a single-plot PlotParam"):
             prover.get_param()
+        param = prover.get_param_for_index(uint16(7))
+        assert param.size_v1 is None
+        assert param.plot_index == 7
+        assert param.meta_group == 4
+        assert param.strength_v2 == 3
+
+    def test_v2_prover_from_bytes(self) -> None:
+        with patch("chia.plotting.prover.Prover") as prover_class:
+            inner_prover = MagicMock()
+            inner_prover.to_bytes.return_value = b"serialized prover"
+            prover_class.from_bytes.return_value = inner_prover
+
+            prover = V2Prover.from_bytes(b"serialized prover")
+
+        prover_class.from_bytes.assert_called_once_with(b"serialized prover")
+        assert prover.get_version() == PlotVersion.V2
+        assert bytes(prover) == inner_prover.to_bytes.return_value
+
+    def test_get_prover_from_file_dispatches_gplot(self) -> None:
+        with patch("chia.plotting.prover.Prover") as prover_class:
+            inner_prover = MagicMock()
+            prover_class.return_value = inner_prover
+
+            prover = get_prover_from_file("test.gplot")
+
+        prover_class.assert_called_once_with("test.gplot")
+        assert isinstance(prover, V2Prover)
+        assert prover.get_version() == PlotVersion.V2
 
 
 class TestV1Prover:
