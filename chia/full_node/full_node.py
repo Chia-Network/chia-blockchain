@@ -100,7 +100,7 @@ from chia.util.inline_executor import InlineExecutor
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
 from chia.util.path import path_from_root
-from chia.util.priority_thread_pool_executor import Executor, PriorityThreadPoolExecutor
+from chia.util.priority_thread_pool_executor import PriorityThreadPoolExecutor
 from chia.util.profiler import enable_profiler, mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.task_pipeline import TaskPipeline
@@ -210,7 +210,7 @@ class FullNode:
     _mempool_manager: MempoolManager | None = None
     _init_weight_proof: asyncio.Task[None] | None = None
     _blockchain: Blockchain | None = None
-    _pool: Executor | None = None
+    _pool: PriorityThreadPoolExecutor | None = None
     _timelord_lock: asyncio.Lock | None = None
     weight_proof_handler: WeightProofHandler | None = None
     # hashes of peaks that failed long sync on chip13 Validation
@@ -424,6 +424,10 @@ class FullNode:
                 try:
                     async with contextlib.AsyncExitStack() as aexit_stack:
                         aexit_stack.enter_context(self.pool)
+                        # Exiting the pool waits for all its queued jobs so
+                        # stop any weight proof validation first. The stack
+                        # unwinds in reverse so this runs before that.
+                        aexit_stack.callback(self._cancel_weight_proof_tasks)
                         if self.full_node_peers is not None:
                             await aexit_stack.enter_async_context(self.full_node_peers.manage())
                         yield
@@ -489,7 +493,7 @@ class FullNode:
         return self._blockchain
 
     @property
-    def pool(self) -> Executor:
+    def pool(self) -> PriorityThreadPoolExecutor:
         assert self._pool is not None
         return self._pool
 
@@ -613,11 +617,15 @@ class FullNode:
         self.weight_proof_handler = WeightProofHandler(
             constants=self.constants,
             blockchain=self.blockchain,
-            multiprocessing_context=self.multiprocessing_context,
+            pool=self.pool,
         )
         peak = self.blockchain.get_peak()
         if peak is not None:
             await self.weight_proof_handler.create_sub_epoch_segments()
+
+    def _cancel_weight_proof_tasks(self) -> None:
+        if self.weight_proof_handler is not None:
+            self.weight_proof_handler.cancel_weight_proof_tasks()
 
     def set_server(self, server: ChiaServer) -> None:
         self._server = server
