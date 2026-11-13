@@ -351,7 +351,7 @@ async def create_v2_plots(
             # Keep the original filename for index 0 so existing single-plot
             # groups can be extended without recreating their first plot.
             suffix = f"-{plot_index}" if plot_index else ""
-            filename = f"plot-k{size}-{plot_group_id}{suffix}.gplot"
+            filename = f"plot-k{size}-{strength}-{plot_group_id}{suffix}.gplot"
             full_path = final_dir / filename
 
             if not full_path.exists():
