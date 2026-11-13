@@ -116,7 +116,7 @@ class WSChiaConnection:
     # Messaging
     received_message_callback: ConnectionCallback | None = field(repr=False)
     incoming_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
-    outgoing_queue: asyncio.PriorityQueue[tuple[int, int, Message]] = field(
+    outgoing_queue: asyncio.PriorityQueue[tuple[int, int, Message, float | None]] = field(
         default_factory=asyncio.PriorityQueue, repr=False
     )
     _send_seq: int = field(default=0, repr=False)
@@ -457,8 +457,8 @@ class WSChiaConnection:
             while not self.closed:
                 item = await self.outgoing_queue.get()
                 if item is not None:
-                    priority, _seq, msg = item
-                    await self._send_message(msg, priority=priority)
+                    priority, _seq, msg, expires_at = item
+                    await self._send_message(msg, priority=priority, expires_at=expires_at)
         except asyncio.CancelledError:
             pass
         except Exception as e:
@@ -663,13 +663,13 @@ class WSChiaConnection:
             self.log.error(f"Exception: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    async def send_message(self, message: Message, priority: int = 0) -> bool:
-        """Send message sends a message with no tracking / callback."""
+    async def send_message(self, message: Message, priority: int = 0, *, expires_at: float | None = None) -> bool:
+        """Enqueue a message without a callback, optionally expiring at a monotonic deadline."""
         if self.closed:
             return False
         seq = self._send_seq
         self._send_seq += 1
-        await self.outgoing_queue.put((priority, seq, message))
+        await self.outgoing_queue.put((priority, seq, message, expires_at))
         return True
 
     async def call_api(
@@ -763,7 +763,7 @@ class WSChiaConnection:
             self.pending_requests[message.id] = event
             seq = self._send_seq
             self._send_seq += 1
-            await self.outgoing_queue.put((priority, seq, message))
+            await self.outgoing_queue.put((priority, seq, message, None))
 
             try:
                 await asyncio.wait_for(event.wait(), timeout=timeout)
@@ -790,17 +790,22 @@ class WSChiaConnection:
                 assert rl_window.in_flight > 0
                 rl_window.in_flight -= 1
 
-    async def _wait_and_retry(self, msg: Message, priority: int = 0) -> None:
+    async def _wait_and_retry(self, msg: Message, priority: int = 0, *, expires_at: float | None = None) -> None:
         try:
             await asyncio.sleep(1)
+            if self.closed or (expires_at is not None and time.monotonic() >= expires_at):
+                return
             seq = self._send_seq
             self._send_seq += 1
-            await self.outgoing_queue.put((priority, seq, msg))
+            await self.outgoing_queue.put((priority, seq, msg, expires_at))
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
             return None
 
-    async def _send_message(self, message: Message, priority: int = 0) -> None:
+    async def _send_message(self, message: Message, priority: int = 0, *, expires_at: float | None = None) -> None:
+        if expires_at is not None and time.monotonic() >= expires_at:
+            self.log.debug("Dropping expired %s to %s", ProtocolMessageTypes(message.type).name, self.peer_info.host)
+            return
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
@@ -844,7 +849,9 @@ class WSChiaConnection:
                 rl_window = self.rate_limit_windows[message_type]
                 # Drop and retry this message if sending it exceeds the window
                 if peer_subject_to_rl and rl_window.in_flight >= window_size:
-                    create_referenced_task(self._wait_and_retry(message, priority=priority), known_unreferenced=True)
+                    create_referenced_task(
+                        self._wait_and_retry(message, priority=priority, expires_at=expires_at), known_unreferenced=True
+                    )
                     details = ", ".join(
                         [
                             f"{message_type.name}",
@@ -881,7 +888,8 @@ class WSChiaConnection:
                     # TODO: fix this special case. This function has rate limits which are too low.
                     if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
                         create_referenced_task(
-                            self._wait_and_retry(message, priority=priority), known_unreferenced=True
+                            self._wait_and_retry(message, priority=priority, expires_at=expires_at),
+                            known_unreferenced=True,
                         )
 
                     return None

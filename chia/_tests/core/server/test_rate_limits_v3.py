@@ -202,11 +202,13 @@ async def test_malformed_config_message_bytes(
     malformed_config_msg = make_msg(ProtocolMessageTypes.configure_window_sizes, b"42")
     original_send_message = WSChiaConnection._send_message
 
-    async def test_send_message(self: WSChiaConnection, message: Message, priority: int = 0) -> None:
+    async def test_send_message(
+        self: WSChiaConnection, message: Message, priority: int = 0, *, expires_at: float | None = None
+    ) -> None:
         # Intercept the config message sent by the peer to set malformed data
         if self.is_outbound and ProtocolMessageTypes(message.type) == ProtocolMessageTypes.configure_window_sizes:
             message = malformed_config_msg
-        await original_send_message(self, message)
+        await original_send_message(self, message, priority=priority, expires_at=expires_at)
 
     monkeypatch.setattr(WSChiaConnection, "_send_message", test_send_message)
     sender_connection, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, wait_for_peer_added=False)
@@ -228,12 +230,14 @@ async def test_non_config_msg_during_handshake(
     random_non_config_msg = make_msg(ProtocolMessageTypes.request_blocks, b"")
     original_send_message = WSChiaConnection._send_message
 
-    async def test_send_message(self: WSChiaConnection, message: Message, priority: int = 0) -> None:
+    async def test_send_message(
+        self: WSChiaConnection, message: Message, priority: int = 0, *, expires_at: float | None = None
+    ) -> None:
         # Intercept the config message sent by the peer to send an unexpected
         # message instead.
         if self.is_outbound and ProtocolMessageTypes(message.type) == ProtocolMessageTypes.configure_window_sizes:
             message = random_non_config_msg
-        await original_send_message(self, message)
+        await original_send_message(self, message, priority=priority, expires_at=expires_at)
 
     monkeypatch.setattr(WSChiaConnection, "_send_message", test_send_message)
     sender_connection, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, wait_for_peer_added=False)
@@ -386,12 +390,14 @@ async def test_receiving_unknown_msg_type_in_config(
     )
     original_send_message = WSChiaConnection._send_message
 
-    async def test_send_message(self: WSChiaConnection, message: Message, priority: int = 0) -> None:
+    async def test_send_message(
+        self: WSChiaConnection, message: Message, priority: int = 0, *, expires_at: float | None = None
+    ) -> None:
         # Intercept the config message sent by the peer to add to it the
         # message type that is unknown to us.
         if self.is_outbound and ProtocolMessageTypes(message.type) == ProtocolMessageTypes.configure_window_sizes:
             message = config_msg_with_unknown_type
-        await original_send_message(self, message)
+        await original_send_message(self, message, priority=priority, expires_at=expires_at)
 
     monkeypatch.setattr(WSChiaConnection, "_send_message", test_send_message)
     sender_connection, peer_id = await add_dummy_connection_wsc(server, self_hostname, 1337)

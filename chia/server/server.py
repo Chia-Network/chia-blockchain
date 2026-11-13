@@ -670,12 +670,14 @@ class ChiaServer:
         node_type: NodeType,
         predicate: Callable[[WSChiaConnection], bool],
         exclude: bytes32 | None = None,
+        *,
+        expires_at: float | None = None,
     ) -> None:
         await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude and predicate(connection):
                 for message in messages:
-                    await connection.send_message(message)
+                    await connection.send_message(message, expires_at=expires_at)
 
     async def send_to_specific(self, messages: list[Message], node_id: bytes32) -> None:
         if node_id in self.all_connections:
