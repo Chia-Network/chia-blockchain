@@ -4860,40 +4860,31 @@ async def test_node_type_message_typechecking(
 
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
-async def test_wallet_request_transaction(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, self_hostname: str
-) -> None:
+async def test_wallet_request_transaction(one_node: SimulatorsAndWalletsServices, self_hostname: str) -> None:
     """
     A real `WalletNode` server can fetch a mempool spend bundle by ID with `request_transaction` and
     decode the reply. The CHIP-0026 flow that leads to this request is covered end to end in
     `test_new_wallet_protocol.py::test_request_mempool_transaction_after_update`.
     """
-    [full_node_service], [wallet_service], _ = one_wallet_and_one_simulator_services
+    [full_node_service], _, _ = one_node
     full_node_api = full_node_service._api
-    full_node = full_node_api.full_node
-    wallet_tool = WalletTool(full_node.constants)
+    wallet_tool = WalletTool(full_node_api.full_node.constants)
     ph = wallet_tool.get_new_puzzlehash()
     await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=ph, guarantee_transaction_blocks=True)
-
-    coin_records = await full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
-    spend_bundle = wallet_tool.generate_signed_transaction(
-        uint64(100), wallet_tool.get_new_puzzlehash(), coin_records[0].coin
-    )
-    status, err = await full_node.add_transaction(spend_bundle, spend_bundle.name(), test=True)
+    coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+    sb = wallet_tool.generate_signed_transaction(uint64(100), ph, coin_records[0].coin)
+    sb_name = sb.name()
+    status, err = await full_node_api.full_node.add_transaction(sb, sb_name, test=True)
     assert err is None
     assert status == MempoolInclusionStatus.SUCCESS
-
-    wallet_server = wallet_service._node.server
-    await wallet_server.start_client(PeerInfo(self_hostname, full_node.server.get_port()), None)
-    await time_out_assert(5, lambda: len(wallet_server.all_connections) == 1)
-    [connection] = wallet_server.all_connections.values()
-
-    response = await connection.call_api(
-        FullNodeAPI.request_transaction, fnp.RequestTransaction(spend_bundle.name()), timeout=5
+    wsc, peer_id = await add_dummy_connection_wsc(
+        full_node_api.server, self_hostname, 1337, NodeType.WALLET, wait_for_peer_added=False
     )
-    assert response == fnp.RespondTransaction(spend_bundle)
-    assert not connection.closed
-    assert len(full_node.server.all_connections) == 1
+    await time_out_assert(5, lambda: peer_id in full_node_api.server.all_connections)
+    response = await wsc.call_api(FullNodeAPI.request_transaction, fnp.RequestTransaction(sb_name), timeout=5)
+    assert response == fnp.RespondTransaction(sb)
+    assert not wsc.closed
+    assert peer_id in full_node_api.server.all_connections
 
 
 @pytest.mark.parametrize(
