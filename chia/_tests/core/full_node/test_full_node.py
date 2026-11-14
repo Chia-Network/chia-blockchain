@@ -4858,6 +4858,40 @@ async def test_node_type_message_typechecking(
     await time_out_assert(5, lambda: "1.3.3.7" in server.banned_peers, type_mismatch)
 
 
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_wallet_request_transaction(
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, self_hostname: str
+) -> None:
+    """Wallets can fetch a mempool spend bundle by ID (e.g. after `mempool_items_added`)."""
+    [full_node_service], [wallet_service], _ = one_wallet_and_one_simulator_services
+    full_node_api = full_node_service._api
+    full_node = full_node_api.full_node
+    wallet_tool = WalletTool(full_node.constants)
+    ph = wallet_tool.get_new_puzzlehash()
+    await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=ph, guarantee_transaction_blocks=True)
+
+    coin_records = await full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+    spend_bundle = wallet_tool.generate_signed_transaction(
+        uint64(100), wallet_tool.get_new_puzzlehash(), coin_records[0].coin
+    )
+    status, err = await full_node.add_transaction(spend_bundle, spend_bundle.name(), test=True)
+    assert err is None
+    assert status == MempoolInclusionStatus.SUCCESS
+
+    wallet_server = wallet_service._node.server
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node.server.get_port()), None)
+    await time_out_assert(5, lambda: len(wallet_server.all_connections) == 1)
+    [connection] = wallet_server.all_connections.values()
+
+    response = await connection.call_api(
+        FullNodeAPI.request_transaction, fnp.RequestTransaction(spend_bundle.name()), timeout=5
+    )
+    assert response == fnp.RespondTransaction(spend_bundle)
+    assert not connection.closed
+    assert len(full_node.server.all_connections) == 1
+
+
 @pytest.mark.parametrize(
     "node_type, config_key",
     [
