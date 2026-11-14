@@ -4862,9 +4862,9 @@ async def test_node_type_message_typechecking(
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
 async def test_wallet_request_transaction(one_node: SimulatorsAndWalletsServices, self_hostname: str) -> None:
     """
-    A real `WalletNode` server can fetch a mempool spend bundle by ID with `request_transaction` and
-    decode the reply. The CHIP-0026 flow that leads to this request is covered end to end in
-    `test_new_wallet_protocol.py::test_request_mempool_transaction_after_update`.
+    Minimal check that a WALLET-type connection may send `request_transaction`: it gets the mempool
+    spend bundle back and isn't disconnected. The CHIP-0026 flow that leads to this request is
+    covered end to end in `test_new_wallet_protocol.py::test_request_mempool_transaction_after_update`.
     """
     [full_node_service], _, _ = one_node
     full_node_api = full_node_service._api
