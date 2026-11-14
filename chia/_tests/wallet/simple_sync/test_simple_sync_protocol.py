@@ -87,7 +87,7 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
 
     all_messages = await get_all_messages_in_queue(incoming_queue)
 
-    zero_coin = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, {zero_ph})
+    zero_coin = await full_node_api.full_node.explorer_store.get_coin_states_by_puzzle_hashes(True, {zero_ph})
     all_zero_coin = set(zero_coin)
     notified_zero_coins = set()
 
@@ -121,10 +121,10 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(one_ph))
 
     assert peak is not None
-    zero_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(
+    zero_coins = await full_node_api.full_node.explorer_store.get_coin_states_by_puzzle_hashes(
         True, {zero_ph}, uint32(peak.height + 1)
     )
-    one_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, {one_ph})
+    one_coins = await full_node_api.full_node.explorer_store.get_coin_states_by_puzzle_hashes(True, {one_ph})
 
     all_coins = set(zero_coins)
     all_coins.update(one_coins)
@@ -159,7 +159,7 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
     )
     fn_amount = sum(
         cr.coin.amount
-        for cr in await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, puzzle_hash)
+        for cr in await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hash(False, puzzle_hash)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -245,7 +245,7 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
 
     await time_out_assert(20, standard_wallet.get_confirmed_balance, funds)
 
-    my_coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
+    my_coins = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
     coin_to_spend = my_coins[0].coin
 
     msg = wallet_protocol.RegisterForCoinUpdates([coin_to_spend.name()], uint32(0))
@@ -357,13 +357,13 @@ async def test_subscribe_for_ph_reorg(simulator_and_wallet: OldSimulatorsAndWall
     expected_height = uint32(long_blocks + 2 * num_blocks + 1)
     await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, expected_height)
 
-    coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
+    coin_records = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
     assert len(coin_records) > 0
     fork_height = uint32(expected_height - num_blocks - 5)
     req = ReorgProtocol(fork_height, uint32(expected_height + 5), zero_ph, None)
     await full_node_api.reorg_from_index_to_new_index(req)
 
-    coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
+    coin_records = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
     assert coin_records == []
 
     all_messages = await get_all_messages_in_queue(incoming_queue)
@@ -431,7 +431,7 @@ async def test_subscribe_for_coin_id_reorg(simulator_and_wallet: OldSimulatorsAn
     expected_height = uint32(long_blocks + 2 * num_blocks + 1)
     await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, expected_height)
 
-    coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
+    coin_records = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
     assert len(coin_records) > 0
 
     for coin_rec in coin_records:
@@ -443,7 +443,7 @@ async def test_subscribe_for_coin_id_reorg(simulator_and_wallet: OldSimulatorsAn
     req = ReorgProtocol(fork_height, uint32(expected_height + 5), zero_ph, None)
     await full_node_api.reorg_from_index_to_new_index(req)
 
-    coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
+    coin_records = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
     assert coin_records == []
 
     all_messages = await get_all_messages_in_queue(incoming_queue)
@@ -484,7 +484,7 @@ async def test_subscribe_for_hint(simulator_and_wallet: OldSimulatorsAndWallets,
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     await asyncio.sleep(6)
-    coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
+    coins = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hashes(False, [ph])
     coin_spent = coins[0].coin
     hint_puzzle_hash = 32 * b"\2"
     amount = uint64(1)
@@ -546,7 +546,7 @@ async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
     wt = bt.get_pool_wallet_tool()
     ph = wt.get_new_puzzlehash()
     await full_node_api.farm_blocks_to_puzzlehash(4, ph)
-    coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
+    coins = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hashes(False, [ph])
     wallet_connection = full_node_server.all_connections[wallet_server.node_id]
 
     # Create a coin which is hinted with its own destination puzzle hash
@@ -592,7 +592,7 @@ async def test_subscribe_for_hint_long_sync(
     for _ in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
+    coins = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hashes(False, [ph])
     coin_spent = coins[0].coin
     hint_puzzle_hash = 32 * b"\2"
     amount = uint64(1)

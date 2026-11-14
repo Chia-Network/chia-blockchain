@@ -1263,7 +1263,7 @@ async def test_new_transaction_and_mempool(
     for i in range(1, len(puzzle_hashes), group_size):
         phs_to_use = [puzzle_hashes[i + j] for j in range(group_size) if (i + j) < len(puzzle_hashes)]
         coin_records = [
-            (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
+            (await full_node_1.full_node.explorer_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
             for puzzle_hash in phs_to_use
         ]
 
@@ -3601,13 +3601,13 @@ async def test_sync_from_fork_point_adds_hints_for_committed_prefix(
     peer = DummyPeer(peer_blocks)
     monkeypatch.setattr(full_node, "get_peers_with_peak", lambda _peak_hash: [peer])
 
-    assert await full_node.hint_store.get_coin_ids(hint) == []
+    assert await full_node.explorer_store.get_coin_ids(hint) == []
     await asyncio.wait_for(
         full_node.sync_from_fork_point(uint32(0), bad_block.height, bad_block.header_hash, []),
         timeout=60,
     )
 
-    assert await full_node.hint_store.get_coin_ids(hint) == [hinted_coin_id]
+    assert await full_node.explorer_store.get_coin_ids(hint) == [hinted_coin_id]
     peak = full_node.blockchain.get_peak()
     assert peak is not None
     assert peak.header_hash == tx_block.header_hash

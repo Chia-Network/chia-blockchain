@@ -49,7 +49,7 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
 )
 from chia.consensus.signage_point import SignagePoint
-from chia.full_node.coin_store import CoinStore
+from chia.full_node.explorer_store import ExplorerStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
 from chia.full_node.full_node_store import SignagePointAddResult
@@ -1929,18 +1929,18 @@ class FullNodeAPI:
         # before we send the response
 
         # Send all coins with requested puzzle hash that have been created after the specified height
-        states: set[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
+        states: set[CoinState] = await self.full_node.explorer_store.get_coin_states_by_puzzle_hashes(
             include_spent_coins=True, puzzle_hashes=puzzle_hashes, min_height=request.min_height, max_items=max_items
         )
         max_items -= len(states)
 
-        hint_coin_ids = await self.full_node.hint_store.get_coin_ids_multi(
+        hint_coin_ids = await self.full_node.explorer_store.get_coin_ids_multi(
             cast(set[bytes], puzzle_hashes), max_items=max_items
         )
 
         hint_states: list[CoinState] = []
         if len(hint_coin_ids) > 0:
-            hint_states = await self.full_node.coin_store.get_coin_states_by_ids(
+            hint_states = await self.full_node.explorer_store.get_coin_states_by_ids(
                 include_spent_coins=True,
                 coin_ids=hint_coin_ids,
                 min_height=request.min_height,
@@ -1987,7 +1987,7 @@ class FullNodeAPI:
             coin_ids = coin_ids[:max_subscriptions]
         self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, coin_ids, max_subscriptions)
 
-        states: list[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
+        states: list[CoinState] = await self.full_node.explorer_store.get_coin_states_by_ids(
             include_spent_coins=True, coin_ids=set(coin_ids), min_height=request.min_height, max_items=max_items
         )
 
@@ -1997,7 +1997,7 @@ class FullNodeAPI:
 
     @metadata.request()
     async def request_children(self, request: wallet_protocol.RequestChildren) -> Message | None:
-        coin_records: list[CoinRecord] = await self.full_node.coin_store.get_coin_records_by_parent_ids(
+        coin_records: list[CoinRecord] = await self.full_node.explorer_store.get_coin_records_by_parent_ids(
             True, [request.coin_name]
         )
         states = [record.coin_state for record in coin_records]
@@ -2079,7 +2079,7 @@ class FullNodeAPI:
     @metadata.request(
         peer_required=True,
         reply_types=[ProtocolMessageTypes.respond_puzzle_state],
-        list_limits=lambda self, peer: {"puzzle_hashes": CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE},
+        list_limits=lambda self, peer: {"puzzle_hashes": ExplorerStore.MAX_PUZZLE_HASH_BATCH_SIZE},
     )
     async def request_puzzle_state(
         self, request: wallet_protocol.RequestPuzzleState, peer: WSChiaConnection
@@ -2089,8 +2089,8 @@ class FullNodeAPI:
         subs = self.full_node.subscriptions
 
         puzzle_hashes = request.puzzle_hashes
-        if len(puzzle_hashes) > CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE:
-            puzzle_hashes = puzzle_hashes[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE]
+        if len(puzzle_hashes) > ExplorerStore.MAX_PUZZLE_HASH_BATCH_SIZE:
+            puzzle_hashes = puzzle_hashes[: ExplorerStore.MAX_PUZZLE_HASH_BATCH_SIZE]
         puzzle_hashes = list(dict.fromkeys(puzzle_hashes))
 
         previous_header_hash = (
@@ -2123,7 +2123,7 @@ class FullNodeAPI:
 
         min_height = uint32((request.previous_height + 1) if request.previous_height is not None else 0)
 
-        (coin_states, next_min_height) = await self.full_node.coin_store.batch_coin_states_by_puzzle_hashes(
+        (coin_states, next_min_height) = await self.full_node.explorer_store.batch_coin_states_by_puzzle_hashes(
             puzzle_hashes,
             min_height=min_height,
             include_spent=request.filters.include_spent,
@@ -2204,7 +2204,7 @@ class FullNodeAPI:
 
         min_height = uint32(request.previous_height + 1 if request.previous_height is not None else 0)
 
-        coin_states = await self.full_node.coin_store.get_coin_states_by_ids(
+        coin_states = await self.full_node.explorer_store.get_coin_states_by_ids(
             True, coin_ids, min_height=min_height, max_items=max_items
         )
 
@@ -2248,7 +2248,7 @@ class FullNodeAPI:
             self.full_node.mempool_manager.mempool.items_with_puzzle_hashes(puzzle_hashes, include_hints)
         )
 
-        hinted_coin_ids = await self.full_node.hint_store.get_coin_ids_by_hints(puzzle_hashes)
+        hinted_coin_ids = await self.full_node.explorer_store.get_coin_ids_by_hints(puzzle_hashes)
 
         transaction_ids |= set(self.full_node.mempool_manager.mempool.items_with_coin_ids(hinted_coin_ids))
 

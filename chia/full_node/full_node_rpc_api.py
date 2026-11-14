@@ -449,9 +449,9 @@ class FullNodeRpcApi:
             uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
 
         hint_count = 0
-        if self.service.hint_store is not None:
+        if self.service.explorer_store is not None:
             with log_exceptions(self.service.log, consume=True):
-                hint_count = await self.service.hint_store.count_hints()
+                hint_count = await self.service.explorer_store.count_hints()
 
         return {
             "metrics": {
@@ -707,7 +707,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
+        coin_records = await self.service.explorer_store.get_coin_records_by_puzzle_hash(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -729,7 +729,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
+        coin_records = await self.service.explorer_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -770,7 +770,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records = await self.service.explorer_store.get_coin_records_by_names(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -792,7 +792,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.coin_store.get_coin_records_by_parent_ids(**kwargs)
+        coin_records = await self.service.explorer_store.get_coin_records_by_parent_ids(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -803,10 +803,10 @@ class FullNodeRpcApi:
         if "hint" not in request:
             raise RpcError.simple(RpcErrorCodes.HINT_NOT_IN_REQUEST, "Hint not in request")
 
-        if self.service.hint_store is None:
+        if self.service.explorer_store is None:
             return {"coin_records": []}
 
-        names: list[bytes32] = await self.service.hint_store.get_coin_ids(bytes32.from_hexstr(request["hint"]))
+        names: list[bytes32] = await self.service.explorer_store.get_coin_ids(bytes32.from_hexstr(request["hint"]))
 
         kwargs: dict[str, Any] = {
             "include_spent_coins": False,
@@ -821,7 +821,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records = await self.service.explorer_store.get_coin_records_by_names(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 

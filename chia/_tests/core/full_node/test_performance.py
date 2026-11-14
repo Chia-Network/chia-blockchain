@@ -92,7 +92,9 @@ class TestPerformance:
 
         # Fill mempool
         for puzzle_hash in puzzle_hashes[1:]:
-            coin_record = (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
+            coin_record = (
+                await full_node_1.full_node.explorer_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
+            )[0]
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
             if puzzle_hash == puzzle_hashes[-1]:
                 fee = 100000000  # 100 million (20 fee per cost)

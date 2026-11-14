@@ -64,10 +64,10 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.explorer_store import ExplorerStore
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
-from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
 from chia.full_node.mempool_manager import DEFAULT_MAX_SPENDS_PER_ITEM, LogMempoolMode, MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
@@ -210,7 +210,7 @@ class FullNode:
     _sp_catchup_sem: LimitedSemaphore | None = None
     _add_transaction_semaphore: asyncio.Semaphore | None = None
     _db_wrapper: DBWrapper2 | None = None
-    _hint_store: HintStore | None = None
+    _explorer_store: ExplorerStore | None = None
     _block_store: BlockStore | None = None
     _coin_store: CoinStore | None = None
     _mempool_manager: MempoolManager | None = None
@@ -316,8 +316,9 @@ class FullNode:
                                 pass
 
             self._block_store = await BlockStore.create(self.db_wrapper)
-            self._hint_store = await HintStore.create(self.db_wrapper)
             self._coin_store = await CoinStore.create(self.db_wrapper, block_store=self._block_store)
+            # after CoinStore, which creates the coin_record indexes ExplorerStore detects
+            self._explorer_store = await ExplorerStore.create(self.db_wrapper)
             self.log.info("Initializing blockchain from disk")
             start_time = time.monotonic()
             single_threaded = self.config.get("single_threaded", False)
@@ -351,7 +352,7 @@ class FullNode:
 
             async with MempoolManager.managed(
                 get_coin_records=self.coin_store.get_coin_records,
-                get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                get_unspent_lineage_info_for_puzzle_hash=self.explorer_store.get_unspent_lineage_info_for_puzzle_hash,
                 consensus_constants=self.constants,
                 pool=self.pool,
                 validation_timeout=self.config.get("block_creation_timeout", 2.0),
@@ -524,9 +525,9 @@ class FullNode:
         return self._db_wrapper
 
     @property
-    def hint_store(self) -> HintStore:
-        assert self._hint_store is not None
-        return self._hint_store
+    def explorer_store(self) -> ExplorerStore:
+        assert self._explorer_store is not None
+        return self._explorer_store
 
     @property
     def new_peak_sem(self) -> LimitedSemaphore:
@@ -1570,7 +1571,7 @@ class FullNode:
                     self.subscriptions.has_coin_subscription,
                     self.subscriptions.has_puzzle_subscription,
                 )
-                await self.hint_store.add_hints(hints_to_add)
+                await self.explorer_store.add_hints(hints_to_add)
             if err is not None:
                 # ASSUMEVALID_BLOCK_MISMATCH is local checkpoint policy (wrong/stale
                 # assumevalid_hash, or a reorg at that height), not evidence the peer
@@ -2144,7 +2145,7 @@ class FullNode:
             self.subscriptions.has_coin_subscription,
             self.subscriptions.has_puzzle_subscription,
         )
-        await self.hint_store.add_hints(hints_to_add)
+        await self.explorer_store.add_hints(hints_to_add)
 
         sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(record.header_hash)
         assert sub_slots is not None
@@ -3279,7 +3280,7 @@ class FullNode:
 
         start_time = time.monotonic()
 
-        hints_for_removals = await self.hint_store.get_hints([bytes32(spend.coin_id) for spend in conds.spends])
+        hints_for_removals = await self.explorer_store.get_hints([bytes32(spend.coin_id) for spend in conds.spends])
         peer_ids = all_peers.intersection(peers_for_spend_bundle(self.subscriptions, conds, set(hints_for_removals)))
 
         for peer_id in peer_ids:
@@ -3331,7 +3332,9 @@ class FullNode:
                 conds = internal_mempool_item.conds
                 assert conds is not None
 
-                hints_for_removals = await self.hint_store.get_hints([bytes32(spend.coin_id) for spend in conds.spends])
+                hints_for_removals = await self.explorer_store.get_hints(
+                    [bytes32(spend.coin_id) for spend in conds.spends]
+                )
                 peer_ids = all_peers.intersection(
                     peers_for_spend_bundle(self.subscriptions, conds, set(hints_for_removals))
                 )

@@ -171,7 +171,7 @@ async def test_request_block_headers_transactions_filter(
         parent_coin = None
     else:
         # Generate a transaction block with our test spend
-        coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+        coins = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hash(False, ph)
         [parent_coin] = [c.coin for c in coins if c.coin.amount == 250_000_000_000]
         sb = SpendBundle(
             [

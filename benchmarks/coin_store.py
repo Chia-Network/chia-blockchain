@@ -13,6 +13,7 @@ from chia_rs.sized_ints import uint32, uint64
 from benchmarks.utils import setup_db
 from chia._tests.util.benchmarks import rand_hash, rewards
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.explorer_store import ExplorerStore
 from chia.types.blockchain_format.coin import Coin
 
 # to run this benchmark:
@@ -48,6 +49,7 @@ async def run_new_block_benchmark(version: int) -> None:
 
     async with setup_db("coin-store-benchmark.db", version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
+        explorer_store = await ExplorerStore.create(db_wrapper)
 
         all_unspent: list[bytes32] = []
         all_coins: list[bytes32] = []
@@ -241,7 +243,7 @@ async def run_new_block_benchmark(version: int) -> None:
         for i in range(NUM_ITERS):
             lookup = random.sample(all_coins, 200)
             start = monotonic()
-            records = await coin_store.get_coin_records_by_names(True, lookup)
+            records = await explorer_store.get_coin_records_by_names(True, lookup)
             total_time += monotonic() - start
             assert len(records) == 200
             found_coins += len(records)
@@ -264,7 +266,7 @@ async def run_new_block_benchmark(version: int) -> None:
         for i in range(NUM_ITERS):
             lookup = random.sample(all_coins, 200)
             start = monotonic()
-            records = await coin_store.get_coin_records_by_names(False, lookup)
+            records = await explorer_store.get_coin_records_by_names(False, lookup)
             total_time += monotonic() - start
             assert len(records) <= 200
             found_coins += len(records)

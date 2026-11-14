@@ -9,6 +9,7 @@ from chia._tests.core.consensus.test_pot_iterations import test_constants
 from chia._tests.util.db_connection import DBConnection
 from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.explorer_store import ExplorerStore
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimation import MempoolItemInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
@@ -63,9 +64,10 @@ async def test_basics() -> None:
 async def test_fee_increase() -> None:
     async with DBConnection(db_version=2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
+        explorer_store = await ExplorerStore.create(db_wrapper)
         async with MempoolManager.managed(
             coin_store.get_coin_records,
-            coin_store.get_unspent_lineage_info_for_puzzle_hash,
+            explorer_store.get_unspent_lineage_info_for_puzzle_hash,
             test_constants,
             InlineExecutor(),
             validation_timeout=10,

@@ -304,7 +304,7 @@ async def prepare_and_test_singleton(
     )
     # At this point we don't have any unspent singleton
     singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
-    unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+    unspent_lineage_info = await sim_client.service.explorer_store.get_unspent_lineage_info_for_puzzle_hash(
         singleton_puzzle_hash
     )
     assert unspent_lineage_info is None
@@ -316,7 +316,7 @@ async def prepare_and_test_singleton(
     singleton, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
     assert singleton.amount == singleton_amount
     singleton_puzzle_hash = eve_coin.puzzle_hash
-    unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+    unspent_lineage_info = await sim_client.service.explorer_store.get_unspent_lineage_info_for_puzzle_hash(
         singleton_puzzle_hash
     )
     assert unspent_lineage_info == UnspentLineageInfo(
@@ -345,7 +345,7 @@ async def test_singleton_fast_forward_solo() -> None:
         singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
         # spending the eve coin is not eligible for fast forward, so we need to make this spend first, to test FF
         await make_and_send_spend_bundle(sim, sim_client, [singleton_coin_spend], aggsig=G2Element())
-        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+        unspent_lineage_info = await sim_client.service.explorer_store.get_unspent_lineage_info_for_puzzle_hash(
             singleton_puzzle_hash
         )
         singleton_child, _ = await get_singleton_and_remaining_coins(sim)
@@ -407,7 +407,7 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
             signing_coin=singleton,
             aggsig=sig,
         )
-        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+        unspent_lineage_info = await sim_client.service.explorer_store.get_unspent_lineage_info_for_puzzle_hash(
             singleton_puzzle_hash
         )
         singleton_child, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
@@ -435,7 +435,7 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
             # version which is the grandchild in this scenario
             assert status == MempoolInclusionStatus.SUCCESS
             assert error is None
-            unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+            unspent_lineage_info = await sim_client.service.explorer_store.get_unspent_lineage_info_for_puzzle_hash(
                 singleton_puzzle_hash
             )
             singleton_grandchild, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
@@ -480,7 +480,7 @@ async def test_singleton_fast_forward_same_block() -> None:
         )
         remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
         await make_and_send_spend_bundle(sim, sim_client, [remaining_coin_spend, singleton_coin_spend], aggsig=sig)
-        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+        unspent_lineage_info = await sim_client.service.explorer_store.get_unspent_lineage_info_for_puzzle_hash(
             singleton_puzzle_hash
         )
         singleton_child, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
@@ -513,7 +513,7 @@ async def test_singleton_fast_forward_same_block() -> None:
 
         # Farm a block to process all these spend bundles
         await sim.farm_block()
-        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+        unspent_lineage_info = await sim_client.service.explorer_store.get_unspent_lineage_info_for_puzzle_hash(
             singleton_puzzle_hash
         )
         latest_singleton, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
@@ -560,7 +560,7 @@ async def test_mempool_items_immutability_on_ff() -> None:
             signing_coin=singleton,
             aggsig=sig,
         )
-        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+        unspent_lineage_info = await sim_client.service.explorer_store.get_unspent_lineage_info_for_puzzle_hash(
             singleton_puzzle_hash
         )
         singleton_child, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
@@ -624,7 +624,7 @@ async def test_double_spend_ff_spend_no_latest_unspent() -> None:
         ]
         singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
         # Get its current latest unspent info
-        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+        unspent_lineage_info = await sim_client.service.explorer_store.get_unspent_lineage_info_for_puzzle_hash(
             singleton_puzzle_hash
         )
         assert unspent_lineage_info == UnspentLineageInfo(
@@ -636,7 +636,7 @@ async def test_double_spend_ff_spend_no_latest_unspent() -> None:
         async with sim_client.service.coin_store.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("DELETE FROM coin_record WHERE coin_name = ?", (unspent_lineage_info.coin_id,))
         # This singleton no longer has a latest unspent coin
-        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+        unspent_lineage_info = await sim_client.service.explorer_store.get_unspent_lineage_info_for_puzzle_hash(
             singleton_puzzle_hash
         )
         assert unspent_lineage_info is None

@@ -29,7 +29,7 @@ from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.hint_store import HintStore
+from chia.full_node.explorer_store import ExplorerStore
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
@@ -150,7 +150,7 @@ class SpendSim:
     timestamp: uint64
     block_height: uint32
     defaults: ConsensusConstants
-    hint_store: HintStore
+    explorer_store: ExplorerStore
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -165,12 +165,12 @@ class SpendSim:
 
         async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
             self.coin_store = await CoinStore.create(self.db_wrapper)
-            self.hint_store = await HintStore.create(self.db_wrapper)
+            self.explorer_store = await ExplorerStore.create(self.db_wrapper)
             self.defaults = defaults
 
             async with MempoolManager.managed(
                 self.coin_store.get_coin_records,
-                self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                self.explorer_store.get_unspent_lineage_info_for_puzzle_hash,
                 defaults,
                 InlineExecutor(),
                 validation_timeout=10,
@@ -280,7 +280,7 @@ class SpendSim:
                         for coin_name, hint_obj in hint_dict.items():
                             if hint_obj.hint is not None:
                                 hints.append((coin_name, bytes(hint_obj.hint)))
-                        await self.hint_store.add_hints(hints)
+                        await self.explorer_store.add_hints(hints)
                         spend_id = spend.coin.name()
                         spent_coins[spend_id] = spend.coin
                         spent_coins_ids.append(spend_id)
@@ -366,7 +366,7 @@ class SimClient:
             kwargs["start_height"] = start_height
         if end_height is not None:
             kwargs["end_height"] = end_height
-        return await self.service.coin_store.get_coin_records_by_names(**kwargs)
+        return await self.service.explorer_store.get_coin_records_by_names(**kwargs)
 
     async def get_coin_records_by_parent_ids(
         self,
@@ -380,7 +380,7 @@ class SimClient:
             kwargs["start_height"] = start_height
         if end_height is not None:
             kwargs["end_height"] = end_height
-        return await self.service.coin_store.get_coin_records_by_parent_ids(**kwargs)
+        return await self.service.explorer_store.get_coin_records_by_parent_ids(**kwargs)
 
     async def get_coin_records_by_puzzle_hash(
         self,
@@ -394,7 +394,7 @@ class SimClient:
             kwargs["start_height"] = start_height
         if end_height is not None:
             kwargs["end_height"] = end_height
-        return await self.service.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
+        return await self.service.explorer_store.get_coin_records_by_puzzle_hash(**kwargs)
 
     async def get_coin_records_by_puzzle_hashes(
         self,
@@ -408,7 +408,7 @@ class SimClient:
             kwargs["start_height"] = start_height
         if end_height is not None:
             kwargs["end_height"] = end_height
-        return await self.service.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
+        return await self.service.explorer_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
     async def get_block_record_by_height(self, height: uint32) -> SimBlockRecord:
         return next(filter(lambda block: block.height == height, self.service.block_records))
@@ -480,7 +480,7 @@ class SimClient:
         """
         Retrieves coins by hint, by default returns unspent coins.
         """
-        names: list[bytes32] = await self.service.hint_store.get_coin_ids(hint)
+        names: list[bytes32] = await self.service.explorer_store.get_coin_ids(hint)
 
         kwargs: dict[str, Any] = {
             "include_spent_coins": False,
@@ -494,6 +494,6 @@ class SimClient:
         if include_spent_coins:
             kwargs["include_spent_coins"] = include_spent_coins
 
-        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records = await self.service.explorer_store.get_coin_records_by_names(**kwargs)
 
         return coin_records

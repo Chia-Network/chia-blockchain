@@ -16,7 +16,7 @@ from chia.consensus.blockchain import Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.hint_store import HintStore
+from chia.full_node.explorer_store import ExplorerStore
 from chia.simulator.block_tools import test_constants
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.inline_executor import InlineExecutor
@@ -58,7 +58,7 @@ async def test_blocks(default_1000_blocks: list[FullBlock], with_hints: bool) ->
         ) as db_wrapper1:
             block_store1 = await BlockStore.create(db_wrapper1)
             coin_store1 = await CoinStore.create(db_wrapper1)
-            hint_store1 = await HintStore.create(db_wrapper1)
+            hint_store1 = await ExplorerStore.create(db_wrapper1)
             if with_hints:
                 for h in hints:
                     await hint_store1.add_hints([(h[0], h[1])])
@@ -83,11 +83,11 @@ async def test_blocks(default_1000_blocks: list[FullBlock], with_hints: bool) ->
             async with DBWrapper2.managed(database=out_file, reader_count=1, db_version=2) as db_wrapper2:
                 block_store1 = await BlockStore.create(db_wrapper1)
                 coin_store1 = await CoinStore.create(db_wrapper1)
-                hint_store1 = await HintStore.create(db_wrapper1)
+                hint_store1 = await ExplorerStore.create(db_wrapper1)
 
                 block_store2 = await BlockStore.create(db_wrapper2)
                 coin_store2 = await CoinStore.create(db_wrapper2)
-                hint_store2 = await HintStore.create(db_wrapper2)
+                hint_store2 = await ExplorerStore.create(db_wrapper2)
 
                 if with_hints:
                     # check hints
