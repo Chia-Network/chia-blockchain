@@ -4863,7 +4863,11 @@ async def test_node_type_message_typechecking(
 async def test_wallet_request_transaction(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, self_hostname: str
 ) -> None:
-    """Wallets can fetch a mempool spend bundle by ID (e.g. after `mempool_items_added`)."""
+    """
+    A real `WalletNode` server can fetch a mempool spend bundle by ID with `request_transaction` and
+    decode the reply. The CHIP-0026 flow that leads to this request is covered end to end in
+    `test_new_wallet_protocol.py::test_request_mempool_transaction_after_update`.
+    """
     [full_node_service], [wallet_service], _ = one_wallet_and_one_simulator_services
     full_node_api = full_node_service._api
     full_node = full_node_api.full_node
