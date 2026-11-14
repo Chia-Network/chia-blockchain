@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import io
 import json
@@ -2161,6 +2162,92 @@ async def test_offer_endpoints(
             wallet_environments.tx_config,
             timelock_info=ConditionValidTimes(min_secs_since_created=uint64(1)),
         )
+
+
+@pytest.mark.anyio
+async def test_cancel_offers_continues_after_page_without_matching_asset(monkeypatch: pytest.MonkeyPatch) -> None:
+    target_asset_id = bytes32.from_hexstr("11" * 32)
+    unrelated_asset_id = bytes32.from_hexstr("22" * 32)
+    unrelated_record = SimpleNamespace(trade_id=bytes32.zeros, offer=b"unrelated")
+    matching_record = SimpleNamespace(trade_id=bytes32.from_hexstr("33" * 32), offer=b"matching")
+    parsed_offers = {
+        b"unrelated": SimpleNamespace(arbitrage=lambda: {unrelated_asset_id: 1}),
+        b"matching": SimpleNamespace(arbitrage=lambda: {target_asset_id: 1}),
+    }
+    monkeypatch.setattr(Offer, "from_bytes", lambda offer: parsed_offers[offer])
+
+    pages = {0: [unrelated_record], 1: [matching_record]}
+
+    async def get_trades_between(start: int, end: int, **kwargs: Any) -> list[SimpleNamespace]:
+        return pages.get(start, [])
+
+    trade_store = SimpleNamespace(get_trades_between=AsyncMock(side_effect=get_trades_between))
+    trade_manager = SimpleNamespace(trade_store=trade_store, cancel_pending_offers=AsyncMock())
+    wallet_state_manager = SimpleNamespace(lock=asyncio.Lock(), trade_manager=trade_manager)
+    api = SimpleNamespace(service=SimpleNamespace(wallet_state_manager=wallet_state_manager))
+
+    await WalletRpcApi.cancel_offers(
+        cast(WalletRpcApi, api),
+        CancelOffers(secure=True, batch_size=uint16(1), asset_id=target_asset_id.hex()),
+        action_scope=cast(Any, None),
+    )
+
+    assert [call.args[0] for call in trade_store.get_trades_between.await_args_list] == [0, 1, 2]
+    trade_manager.cancel_pending_offers.assert_awaited_once()
+    assert trade_manager.cancel_pending_offers.await_args.args[0] == [matching_record.trade_id]
+
+
+@pytest.mark.anyio
+async def test_cancel_offers_secure_false_does_not_skip_records_after_mutation(monkeypatch: pytest.MonkeyPatch) -> None:
+    target_asset_id = bytes32.from_hexstr("11" * 32)
+    unrelated_asset_id = bytes32.from_hexstr("22" * 32)
+    records = [
+        SimpleNamespace(trade_id=bytes32.from_hexstr("31" * 32), offer=b"target_1"),
+        SimpleNamespace(trade_id=bytes32.from_hexstr("32" * 32), offer=b"unrelated_1"),
+        SimpleNamespace(trade_id=bytes32.from_hexstr("33" * 32), offer=b"target_2"),
+        SimpleNamespace(trade_id=bytes32.from_hexstr("34" * 32), offer=b"target_3"),
+        SimpleNamespace(trade_id=bytes32.from_hexstr("35" * 32), offer=b"unrelated_2"),
+    ]
+    parsed_offers = {
+        b"target_1": SimpleNamespace(arbitrage=lambda: {target_asset_id: 1}),
+        b"target_2": SimpleNamespace(arbitrage=lambda: {target_asset_id: 1}),
+        b"target_3": SimpleNamespace(arbitrage=lambda: {target_asset_id: 1}),
+        b"unrelated_1": SimpleNamespace(arbitrage=lambda: {unrelated_asset_id: 1}),
+        b"unrelated_2": SimpleNamespace(arbitrage=lambda: {unrelated_asset_id: 1}),
+    }
+    monkeypatch.setattr(Offer, "from_bytes", lambda offer: parsed_offers[offer])
+    active_records = records.copy()
+    page_starts: list[int] = []
+
+    async def get_trades_between(start: int, end: int, **kwargs: Any) -> list[SimpleNamespace]:
+        page_starts.append(start)
+        return active_records[start:end]
+
+    cancelled_ids: list[bytes32] = []
+
+    async def cancel_pending_offers(
+        trade_ids: list[bytes32], action_scope: Any, fee: Any, secure: bool, trade_cache: Any, **kwargs: Any
+    ) -> None:
+        cancelled_ids.extend(trade_ids)
+        active_records[:] = [record for record in active_records if record.trade_id not in trade_ids]
+
+    trade_store = SimpleNamespace(get_trades_between=AsyncMock(side_effect=get_trades_between))
+    trade_manager = SimpleNamespace(
+        trade_store=trade_store,
+        cancel_pending_offers=AsyncMock(side_effect=cancel_pending_offers),
+    )
+    wallet_state_manager = SimpleNamespace(lock=asyncio.Lock(), trade_manager=trade_manager)
+    api = SimpleNamespace(service=SimpleNamespace(wallet_state_manager=wallet_state_manager))
+
+    await WalletRpcApi.cancel_offers(
+        cast(WalletRpcApi, api),
+        CancelOffers(secure=False, batch_size=uint16(2), asset_id=target_asset_id.hex()),
+        action_scope=cast(Any, None),
+    )
+
+    assert cancelled_ids == [records[0].trade_id, records[2].trade_id, records[3].trade_id]
+    assert active_records == [records[1], records[4]]
+    assert page_starts == [0, 1, 1, 2]
 
 
 @pytest.mark.parametrize(
