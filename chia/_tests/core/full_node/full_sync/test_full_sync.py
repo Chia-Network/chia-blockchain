@@ -7,7 +7,7 @@ import time
 from typing import Any, cast
 
 import pytest
-from chia_rs import ConsensusConstants, FullBlock, SubEpochSummary
+from chia_rs import FullBlock, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
@@ -800,40 +800,40 @@ async def test_sync_none_wp_response_backward_comp(
 
 
 @pytest.mark.anyio
-# todo_v2_plots fix this test and remove limit_consensus_modes
-@pytest.mark.limit_consensus_modes(
-    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
-    reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
-)
 async def test_bad_peak_cache_invalidation(
     two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
-    default_1000_blocks: list[FullBlock],
-    blockchain_constants: ConsensusConstants,
     consensus_mode: ConsensusMode,
 ) -> None:
     full_node_1, _full_node_2, _server_1, _server_2, bt = two_nodes
+    full_node = full_node_1.full_node
+    # Cache capacity is operational; expiry still uses the actual consensus sub-epoch length.
+    cache_size = 8
+    full_node.config["bad_peak_cache_size"] = cache_size
+    blocks = bt.get_consecutive_blocks(1)
+    await full_node.add_block(blocks[0])
 
-    for block in default_1000_blocks[:-500]:
-        await full_node_1.full_node.add_block(block)
-
-    cache_size = full_node_1.full_node.config.get("bad_peak_cache_size")
-    assert cache_size is not None
+    cached_hashes: set[bytes32] = set()
     for x in range(cache_size + 10):
-        blocks = bt.get_consecutive_blocks(
-            num_blocks=1, block_list_input=default_1000_blocks[:-500], seed=x.to_bytes(2, "big")
-        )
-        block = blocks[-1]
-        full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
+        candidate = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=x.to_bytes(2, "big"))[-1]
+        cached_hashes.add(candidate.header_hash)
+        full_node.add_to_bad_peak_cache(candidate.header_hash, candidate.height)
 
-    assert len(full_node_1.full_node.bad_peak_cache) == cache_size
+    assert len(cached_hashes) > cache_size
+    assert len(full_node.bad_peak_cache) == cache_size
+    assert set(full_node.bad_peak_cache).issubset(cached_hashes)
+    assert all(height == blocks[-1].height + 1 for height in full_node.bad_peak_cache.values())
 
-    for block in default_1000_blocks[500:]:
-        await full_node_1.full_node.add_block(block)
+    # The original cached candidates must fall below the two-sub-epoch retention window.
+    blocks = bt.get_consecutive_blocks(int(2 * bt.constants.SUB_EPOCH_BLOCKS) + 2, block_list_input=blocks)
+    for block in blocks[1:]:
+        await full_node.add_block(block)
+    assert full_node.blockchain.get_peak_height() == blocks[-1].height
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        assert any(block.reward_chain_block.proof_of_space.param().strength_v2 is not None for block in blocks)
 
-    blocks = bt.get_consecutive_blocks(num_blocks=1, block_list_input=default_1000_blocks[:-1])
-    block = blocks[-1]
-    full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
-    assert len(full_node_1.full_node.bad_peak_cache) == 1
+    candidate = bt.get_consecutive_blocks(1, block_list_input=blocks)[-1]
+    full_node.add_to_bad_peak_cache(candidate.header_hash, candidate.height)
+    assert full_node.bad_peak_cache == {candidate.header_hash: candidate.height}
 
 
 # Tests below cover the inflated-peak-weight regression: detection of peers
