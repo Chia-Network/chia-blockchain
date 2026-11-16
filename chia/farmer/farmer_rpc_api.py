@@ -73,13 +73,10 @@ def paginated_plot_request(source: list[Any], request: PaginatedRequestData) -> 
 
 
 def plot_matches_filter(plot: Plot2, filter_item: FilterItem) -> bool:
-    if filter_item.key == "plot_id":
-        plot_attribute = plot_identifier(plot)
-    else:
-        try:
-            plot_attribute = getattr(plot, filter_item.key)
-        except AttributeError:
-            return False
+    try:
+        plot_attribute = plot_identifier(plot) if filter_item.key == "plot_id" else getattr(plot, filter_item.key)
+    except AttributeError:
+        return False
     if filter_item.value is None:
         return plot_attribute is None
     else:
