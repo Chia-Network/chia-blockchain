@@ -5,6 +5,7 @@ import logging
 import random
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Collection, Sequence
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -43,7 +44,9 @@ from chia.full_node.eligible_coin_spends import (
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_manager import (
     DEFAULT_MAX_SPENDS_PER_ITEM,
+    DEFAULT_MINIMUM_BLOCK_FEE_PER_COST,
     MEMPOOL_MIN_FEE_INCREASE,
+    MINIMUM_BLOCK_FEE_EXPIRATION,
     LogMempoolMode,
     MempoolManager,
     TimelockConditions,
@@ -271,6 +274,7 @@ async def instantiate_mempool_manager(
     validation_timeout: float = 10,
     log_mempool: LogMempoolMode = "false",
     root_path: Path | None = None,
+    minimum_block_fee_per_cost: uint64,
 ) -> AsyncGenerator[MempoolManager, None]:
     async with MempoolManager.managed(
         get_coin_records,
@@ -282,6 +286,7 @@ async def instantiate_mempool_manager(
         validation_timeout=validation_timeout,
         log_mempool=log_mempool,
         root_path=root_path,
+        minimum_block_fee_per_cost=minimum_block_fee_per_cost,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
         await mempool_manager.new_peak(test_block_record, None)
@@ -291,13 +296,17 @@ async def instantiate_mempool_manager(
 
 @pytest.fixture(name="zero_mempool_manager", scope="function")
 async def zero_mempool_manager_fixture() -> AsyncIterator[MempoolManager]:
-    async with instantiate_mempool_manager(zero_calls_get_coin_records) as mempool_manager:
+    async with instantiate_mempool_manager(
+        zero_calls_get_coin_records, minimum_block_fee_per_cost=uint64(0)
+    ) as mempool_manager:
         yield mempool_manager
 
 
 @pytest.fixture(name="test_coins_mempool_manager", scope="function")
 async def test_coins_mempool_manager_fixture() -> AsyncIterator[MempoolManager]:
-    async with instantiate_mempool_manager(get_coin_records_for_test_coins) as mempool_manager:
+    async with instantiate_mempool_manager(
+        get_coin_records_for_test_coins, minimum_block_fee_per_cost=uint64(0)
+    ) as mempool_manager:
         yield mempool_manager
 
 
@@ -333,7 +342,11 @@ async def setup_mempool_with_coins(
         constants = constants.replace(MEMPOOL_BLOCK_BUFFER=uint8(mempool_block_buffer))
 
     async with instantiate_mempool_manager(
-        get_coin_records, block_height=height, constants=constants, max_tx_clvm_cost=max_tx_clvm_cost
+        get_coin_records,
+        block_height=height,
+        constants=constants,
+        max_tx_clvm_cost=max_tx_clvm_cost,
+        minimum_block_fee_per_cost=uint64(0),
     ) as mempool_manager:
         yield (mempool_manager, coins)
 
@@ -732,7 +745,9 @@ async def test_block_cost_exceeds_max(zero_mempool_manager: MempoolManager) -> N
 
 @pytest.mark.anyio
 async def test_too_many_spends_per_item() -> None:
-    async with instantiate_mempool_manager(zero_calls_get_coin_records, max_spends_per_item=2) as mempool_manager:
+    async with instantiate_mempool_manager(
+        zero_calls_get_coin_records, max_spends_per_item=2, minimum_block_fee_per_cost=uint64(0)
+    ) as mempool_manager:
         coins = [Coin(bytes32(i.to_bytes(32, "big")), IDENTITY_PUZZLE_HASH, uint64(1)) for i in range(3)]
         spends = [make_spend(c, IDENTITY_PUZZLE, SerializedProgram.to([])) for c in coins]
         sb = SpendBundle(spends, G2Element())
@@ -786,6 +801,7 @@ async def test_validation_timeout() -> None:
         DEFAULT_CONSTANTS,
         InlineExecutor(),
         validation_timeout=0,
+        minimum_block_fee_per_cost=uint64(0),
     ) as mempool_manager:
         await mempool_manager.new_peak(create_test_block_record(), None)
         conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
@@ -797,7 +813,9 @@ async def test_validation_timeout() -> None:
 @pytest.mark.anyio
 async def test_validate_spend_bundle_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     """The wall-clock check in validate_spend_bundle rejects with INVALID_SPEND_BUNDLE."""
-    async with instantiate_mempool_manager(get_coin_records_for_test_coins) as mempool_manager:
+    async with instantiate_mempool_manager(
+        get_coin_records_for_test_coins, minimum_block_fee_per_cost=uint64(0)
+    ) as mempool_manager:
         conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
         sb = spend_bundle_from_conditions(conditions)
         sbc = await mempool_manager.pre_validate_spendbundle(sb)
@@ -841,6 +859,7 @@ async def test_log_mempool_timeout_on_pre_validate(
         validation_timeout=0,
         log_mempool=log_mempool,
         root_path=tmp_path,
+        minimum_block_fee_per_cost=uint64(0),
     ) as mempool_manager:
         await mempool_manager.new_peak(create_test_block_record(), None)
         conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
@@ -859,7 +878,9 @@ async def test_too_many_atoms() -> None:
     # a very large MAX_BLOCK_COST_CLVM makes the per-cost atom/pair threshold
     # effectively 0, triggering the density check on any spend
     constants = DEFAULT_CONSTANTS.replace(MAX_BLOCK_COST_CLVM=uint64(10**18))
-    async with instantiate_mempool_manager(zero_calls_get_coin_records, constants=constants) as mempool_manager:
+    async with instantiate_mempool_manager(
+        zero_calls_get_coin_records, constants=constants, minimum_block_fee_per_cost=uint64(0)
+    ) as mempool_manager:
         conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
         sb = spend_bundle_from_conditions(conditions)
         with pytest.raises(ValueError, match="too many atoms"):
@@ -871,7 +892,7 @@ async def test_unknown_unspent() -> None:
     async def get_coin_records(_: Collection[bytes32]) -> list[CoinRecord]:
         return []
 
-    async with instantiate_mempool_manager(get_coin_records) as mempool_manager:
+    async with instantiate_mempool_manager(get_coin_records, minimum_block_fee_per_cost=uint64(0)) as mempool_manager:
         conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
         _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
         assert result == (None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT)
@@ -1012,6 +1033,7 @@ async def test_ephemeral_timelock(
         block_height=uint32(5),
         block_timestamp=uint64(10050),
         constants=DEFAULT_CONSTANTS,
+        minimum_block_fee_per_cost=uint64(0),
     ) as mempool_manager:
         conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
         created_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1))
@@ -1406,7 +1428,7 @@ async def test_total_mempool_fees() -> None:
                 ret.append(r)
         return ret
 
-    async with instantiate_mempool_manager(get_coin_records) as mempool_manager:
+    async with instantiate_mempool_manager(get_coin_records, minimum_block_fee_per_cost=uint64(0)) as mempool_manager:
         conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
 
         # the limit of total fees in the mempool is 2^63
@@ -1617,6 +1639,7 @@ async def test_assert_before_expiration(
         block_height=uint32(10),
         block_timestamp=uint64(10000),
         constants=DEFAULT_CONSTANTS,
+        minimum_block_fee_per_cost=uint64(0),
     ) as mempool_manager:
         bundle = spend_bundle_from_conditions(
             [
@@ -1686,6 +1709,47 @@ def assert_sb_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
 
 def assert_sb_not_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
     assert mempool_manager.get_spendbundle(sb.name()) is None
+
+
+@pytest.mark.anyio
+async def test_minimum_block_fee_does_not_reject_from_mempool() -> None:
+    async with instantiate_mempool_manager(
+        get_coin_records_for_test_coins,
+        minimum_block_fee_per_cost=uint64(1),
+    ) as mempool_manager:
+        spend_bundle = await make_and_send_spendbundle(mempool_manager, TEST_COIN)
+        assert_sb_in_pool(mempool_manager, spend_bundle)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("old", [True, False])
+@pytest.mark.parametrize(
+    "peak_timestamp, included",
+    [
+        (uint64(MINIMUM_BLOCK_FEE_EXPIRATION - 1), False),
+        (MINIMUM_BLOCK_FEE_EXPIRATION, True),
+        (uint64(MINIMUM_BLOCK_FEE_EXPIRATION + 1), True),
+    ],
+)
+async def test_minimum_block_fee_expires(old: bool, peak_timestamp: uint64, included: bool) -> None:
+    async with instantiate_mempool_manager(
+        get_coin_records_for_test_coins,
+        block_timestamp=peak_timestamp,
+        minimum_block_fee_per_cost=DEFAULT_MINIMUM_BLOCK_FEE_PER_COST,
+    ) as mempool_manager:
+        spend_bundle = await make_and_send_spendbundle(mempool_manager, TEST_COIN)
+        assert_sb_in_pool(mempool_manager, spend_bundle)
+
+        assert mempool_manager.peak is not None
+        create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+        generator = create_block(mempool_manager.peak.header_hash, 30.0)
+        assert (generator is not None and TEST_COIN in generator.removals) == included
+        assert_sb_in_pool(mempool_manager, spend_bundle)
+
+
+def test_minimum_block_fee_expiration_date() -> None:
+    expiration = datetime.fromtimestamp(MINIMUM_BLOCK_FEE_EXPIRATION, tz=UTC)
+    assert expiration == datetime(2027, 11, 3, tzinfo=UTC)
 
 
 @pytest.mark.anyio
@@ -2026,7 +2090,7 @@ async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(ne
                 ret.append(r)
         return ret
 
-    async with instantiate_mempool_manager(get_coin_records) as mempool_manager:
+    async with instantiate_mempool_manager(get_coin_records, minimum_block_fee_per_cost=uint64(0)) as mempool_manager:
         # Create a bunch of mempool items that spend the coin in different ways
         # only the first one will be accepted
         for i in range(3):
@@ -2438,7 +2502,7 @@ async def test_mempool_timelocks(cond1: list[object], cond2: list[object], expec
         return ret
 
     async with instantiate_mempool_manager(
-        get_coin_records, block_height=uint32(21), block_timestamp=uint64(2010)
+        get_coin_records, block_height=uint32(21), block_timestamp=uint64(2010), minimum_block_fee_per_cost=uint64(0)
     ) as mempool_manager:
         coin_spends = [
             make_spend(coins[0], IDENTITY_PUZZLE, Program.to([cond1])),
@@ -2713,6 +2777,7 @@ async def setup_mempool(coins: TestCoins) -> AsyncGenerator[MempoolManager, None
         DEFAULT_CONSTANTS,
         InlineExecutor(),
         validation_timeout=10,
+        minimum_block_fee_per_cost=uint64(0),
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=uint32(5000000), timestamp=uint64(12345678))
         await mempool_manager.new_peak(test_block_record, None)
@@ -2964,6 +3029,7 @@ def test_no_peak(old: bool, transactions_1000: list[SpendBundle]) -> None:
         DEFAULT_CONSTANTS,
         InlineExecutor(),
         validation_timeout=10,
+        minimum_block_fee_per_cost=uint64(0),
     ) as mempool_manager:
         create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
 
