@@ -4,7 +4,6 @@ import asyncio
 import logging
 import tempfile
 import time
-from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
 from typing import IO
 
@@ -13,7 +12,7 @@ from chia_rs.sized_ints import uint32
 
 from chia.full_node.weight_proof import _validate_sub_epoch_summaries, validate_weight_proof_inner
 from chia.types.weight_proof import WeightProof
-from chia.util.setproctitle import getproctitle, setproctitle
+from chia.util.priority_thread_pool_executor import PriorityThreadPoolExecutor
 
 log = logging.getLogger(__name__)
 
@@ -31,11 +30,9 @@ class WalletWeightProofHandler:
         self._constants = constants
         self._num_processes = 4
         self._executor_shutdown_tempfile: IO[bytes] = _create_shutdown_file()
-        self._executor: ProcessPoolExecutor = ProcessPoolExecutor(
-            self._num_processes,
-            mp_context=multiprocessing_context,
-            initializer=setproctitle,
-            initargs=(f"{getproctitle()}_worker",),
+        self._executor: PriorityThreadPoolExecutor = PriorityThreadPoolExecutor(
+            max_workers=self._num_processes,
+            thread_name_prefix="weight-proof-",
         )
 
     def cancel_weight_proof_tasks(self) -> None:
