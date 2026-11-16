@@ -241,9 +241,28 @@ class Plot2(Streamable):
         ):
             raise ValueError("V2 Plot2 entries require group_plot_id, strength, meta_group, and positive group_size")
 
+    def is_v2(self) -> bool:
+        if self.strength is not None:
+            assert self.group_plot_id is not None
+            assert self.meta_group is not None
+            assert self.group_size is not None
+            return True
+
+        assert self.size is not None
+        assert self.plot_id is not None
+        assert self.compression_level is not None
+        return False
+
+    def plot_count(self) -> int:
+        if self.is_v2():
+            assert self.group_size is not None
+            return self.group_size
+        return 1
+
     def param(self) -> PlotParam:
         self.validate()
-        if self.strength is not None:
+        if self.is_v2():
+            assert self.strength is not None
             assert self.meta_group is not None
             return PlotParam.make_v2(0, self.meta_group, self.strength)
 

@@ -152,7 +152,7 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
     expected_effective_plot_size: float = 0
     for plot in synced_plots:
         plot_size = UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot.param(), DEFAULT_CONSTANTS)
-        if isinstance(plot, Plot2) and plot.param().strength_v2 is not None:
+        if isinstance(plot, Plot2) and plot.is_v2():
             assert plot.group_size is not None
             plot_size *= plot.group_size
         expected_effective_plot_size += plot_size

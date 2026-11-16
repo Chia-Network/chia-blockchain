@@ -205,7 +205,7 @@ class Environment:
             assert plot.prover.get_filename() == delta.valid.additions[path].filename
             assert equal_param(plot.prover.get_param(), delta.valid.additions[path].param())
             plot2 = delta.valid.additions[path]
-            assert plot.prover.get_id() == (plot2.plot_id if plot2.plot_id is not None else plot2.group_plot_id)
+            assert plot.prover.get_id() == (plot2.group_plot_id if plot2.is_v2() else plot2.plot_id)
             assert plot.prover.get_compression_level() == delta.valid.additions[path].compression_level
             assert plot.pool_public_key == delta.valid.additions[path].pool_public_key
             assert plot.pool_contract_puzzle_hash == delta.valid.additions[path].pool_contract_puzzle_hash
@@ -267,9 +267,7 @@ class Environment:
                 assert plot_info.prover.get_filename() == receiver.plots()[str(path)].filename
                 assert equal_param(plot_info.prover.get_param(), receiver.plots()[str(path)].param())
                 plot2 = receiver.plots()[str(path)]
-                assert plot_info.prover.get_id() == (
-                    plot2.plot_id if plot2.plot_id is not None else plot2.group_plot_id
-                )
+                assert plot_info.prover.get_id() == (plot2.group_plot_id if plot2.is_v2() else plot2.plot_id)
                 assert plot_info.prover.get_compression_level() == receiver.plots()[str(path)].compression_level
                 assert plot_info.pool_public_key == receiver.plots()[str(path)].pool_public_key
                 assert plot_info.pool_contract_puzzle_hash == receiver.plots()[str(path)].pool_contract_puzzle_hash

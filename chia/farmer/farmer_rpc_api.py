@@ -84,9 +84,11 @@ def plot_matches_filter(plot: Plot2, filter_item: FilterItem) -> bool:
 
 
 def plot_identifier(plot: Plot2) -> bytes32:
-    identifier = plot.plot_id if plot.plot_id is not None else plot.group_plot_id
-    assert identifier is not None
-    return identifier
+    if plot.is_v2():
+        assert plot.group_plot_id is not None
+        return plot.group_plot_id
+    assert plot.plot_id is not None
+    return plot.plot_id
 
 
 class FarmerRpcApi:
@@ -310,7 +312,7 @@ class FarmerRpcApi:
         plot_count: int = 0
         for receiver in self.service.plot_sync_receivers.values():
             plot_count += sum(
-                plot.group_size if plot.strength is not None and plot.group_size is not None else 1
+                plot.plot_count()
                 for plot in receiver.plots().values()
                 if plot.pool_contract_puzzle_hash == pool_contract_puzzle_hash
             )

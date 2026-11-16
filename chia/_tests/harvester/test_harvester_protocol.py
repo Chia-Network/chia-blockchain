@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
@@ -64,9 +66,19 @@ def test_v2_plot2_param_uses_group_metadata_without_plot_index() -> None:
     assert param.plot_index == 0
     assert param.meta_group == 56
     assert plot.group_plot_id == group_plot_id
+    assert plot.is_v2()
+    assert plot.plot_count() == 8
     assert plot.size is None
     assert plot.plot_id is None
     assert plot.compression_level is None
+    with pytest.raises(ValueError, match="V1 Plot2 entries require"):
+        dataclasses.replace(plot, strength=None)
+    with pytest.raises(ValueError, match="V2 Plot2 entries require"):
+        dataclasses.replace(plot, meta_group=None)
+    with pytest.raises(ValueError, match="V2 Plot2 entries require"):
+        dataclasses.replace(plot, group_size=None)
+    with pytest.raises(ValueError, match="V2 Plot2 entries require"):
+        dataclasses.replace(plot, group_plot_id=None)
 
 
 def test_v1_plot2_keeps_size_plot_id_and_compression_fields() -> None:
@@ -88,7 +100,15 @@ def test_v1_plot2_keeps_size_plot_id_and_compression_fields() -> None:
     )
 
     assert plot.param().size_v1 == 32
+    assert not plot.is_v2()
+    assert plot.plot_count() == 1
     assert Plot2.from_bytes(bytes(plot)) == plot
+    with pytest.raises(ValueError, match="V1 Plot2 entries require"):
+        dataclasses.replace(plot, size=None)
+    with pytest.raises(ValueError, match="V1 Plot2 entries require"):
+        dataclasses.replace(plot, plot_id=None)
+    with pytest.raises(ValueError, match="V1 Plot2 entries require"):
+        dataclasses.replace(plot, compression_level=None)
 
 
 def test_plot2_serialization_starts_at_0_0_39() -> None:
@@ -115,4 +135,5 @@ def test_plot_group_serialization_round_trips() -> None:
         group_size=uint16(8),
     )
     serialized = bytes(plot)
+    assert plot.is_v2()
     assert Plot2.from_bytes(serialized) == plot
