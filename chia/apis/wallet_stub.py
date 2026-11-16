@@ -103,6 +103,11 @@ class WalletNodeApiStub(ApiProtocol, Protocol):
         ...
 
     @metadata.request()
+    async def respond_transaction(self, request: full_node_protocol.RespondTransaction) -> None:
+        """Handle mempool transaction response from full node."""
+        ...
+
+    @metadata.request()
     async def respond_puzzle_solution(self, request: RespondPuzzleSolution) -> None:
         """Handle puzzle solution response from full node."""
         ...

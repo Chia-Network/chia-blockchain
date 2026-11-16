@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from asyncio import Queue
 from collections import OrderedDict
 from collections.abc import AsyncGenerator
@@ -16,9 +17,10 @@ from chia._tests.connection_utils import add_dummy_connection, add_dummy_connect
 from chia._tests.util.coin_store import add_coin_records_to_db
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node import FullNode
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import MempoolRemoveReason
-from chia.protocols import wallet_protocol
-from chia.protocols.outbound_message import Message, NodeType
+from chia.protocols import full_node_protocol, wallet_protocol
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.ws_connection import WSChiaConnection
@@ -1199,6 +1201,74 @@ async def test_missing_capability_hint(mpu_setup_no_capability: Mpu) -> None:
     # Farm a block and there's still no mempool update
     await simulator.farm_blocks_to_puzzlehash(1)
     assert queue.empty()
+
+
+@pytest.mark.anyio
+async def test_request_mempool_transaction_after_update(one_node: OneNode, self_hostname: str) -> None:
+    """
+    End-to-end CHIP-0026 flow over a real wallet connection: subscribe to a puzzle hash,
+    receive `mempool_items_added` when a matching transaction is broadcast, then fetch the
+    spend bundle with `request_transaction`.
+    """
+    [full_node_service], _, _ = one_node
+    simulator = full_node_service._api
+    full_node = simulator.full_node
+
+    wsc, peer_id = await add_dummy_connection_wsc(
+        simulator.server,
+        self_hostname,
+        41723,
+        NodeType.WALLET,
+        additional_capabilities=[
+            (uint16(Capability.MEMPOOL_UPDATES), "1"),
+            (uint16(Capability.HARD_FORK_2), "1"),
+            (uint16(Capability.RATE_LIMITS_V3), "1"),
+        ],
+    )
+    try:
+        await simulator.farm_blocks_to_puzzlehash(1)
+        message = await asyncio.wait_for(wsc.incoming_queue.get(), timeout=10)
+        assert message.type == ProtocolMessageTypes.new_peak_wallet.value
+
+        # Subscribe to the coin's puzzle hash over the wire
+        coin, _ = await make_coin(full_node)
+        genesis = full_node.constants.GENESIS_CHALLENGE
+        response = await wsc.send_request(
+            make_msg(
+                ProtocolMessageTypes.request_puzzle_state,
+                wallet_protocol.RequestPuzzleState([coin.puzzle_hash], None, genesis, ALL_FILTER, True),
+            ),
+            timeout=10,
+        )
+        assert response is not None
+        assert response.type == ProtocolMessageTypes.respond_puzzle_state.value
+        puzzle_state = wallet_protocol.RespondPuzzleState.from_bytes(response.data)
+        assert [cs.coin for cs in puzzle_state.coin_states] == [coin]
+
+        # A transaction spending the coin reaches the mempool from elsewhere
+        bundle = SpendBundle([CoinSpend(coin, IDENTITY_PUZZLE, Program.to([]))], AugSchemeMPL.aggregate([]))
+        status, err = await full_node.add_transaction(bundle, bundle.name(), test=True)
+        assert err is None
+        assert status == MempoolInclusionStatus.SUCCESS
+
+        # The wallet only learns the transaction ID...
+        message = await asyncio.wait_for(wsc.incoming_queue.get(), timeout=10)
+        assert message.type == ProtocolMessageTypes.mempool_items_added.value
+        update = wallet_protocol.MempoolItemsAdded.from_bytes(message.data)
+        assert update.transaction_ids == [bundle.name()]
+
+        # ...and fetches the full spend bundle by that ID
+        respond = await wsc.call_api(
+            FullNodeAPI.request_transaction,
+            full_node_protocol.RequestTransaction(update.transaction_ids[0]),
+            timeout=10,
+        )
+        assert respond == full_node_protocol.RespondTransaction(bundle)
+        assert not wsc.closed
+        assert peer_id in simulator.server.all_connections
+    finally:
+        await wsc.close()
+        await wsc.wait_until_closed()
 
 
 @pytest.mark.anyio
