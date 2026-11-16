@@ -616,12 +616,14 @@ class GetCoinRecordsByNames(Streamable):
     end_height: uint32 | None = None
     include_spent_coins: bool = True
     allow_unsynced: bool = False
+    allow_missing: bool = False
 
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
 class GetCoinRecordsByNamesResponse(Streamable):
     coin_records: list[CoinRecord]
+    missing_coins: list[bytes32]
 
 
 @streamable
