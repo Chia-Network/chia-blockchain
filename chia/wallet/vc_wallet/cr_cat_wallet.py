@@ -562,20 +562,20 @@ class CRCATWallet(CATWallet):
 
         if vc is None:  # pragma: no cover
             raise RuntimeError("Spending no cat coins is not an appropriate use of _generate_unsigned_spendbundle")
-        if vc.proof_hash is None:
+        if vc.as_inner_puzzle.proof_hash is None:
             raise RuntimeError("CR-CATs found an appropriate VC but that VC contains no proofs")  # pragma: no cover
 
         proof_of_inclusions: Program = await vc_wallet.proof_of_inclusions_for_root_and_keys(
-            vc.proof_hash, self.info.proofs_checker.flags
+            vc.as_inner_puzzle.proof_hash, self.info.proofs_checker.flags
         )
 
         expected_announcements, coin_spends, _ = CRCAT.spend_many(
             inner_spends,
             proof_of_inclusions,
             Program.NIL,  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
-            vc.proof_provider,
+            vc.as_inner_puzzle.proof_provider,
             vc.launcher_id,
-            vc.wrap_inner_with_backdoor().get_tree_hash() if add_authorizations_to_cr_cats else None,
+            vc.as_inner_puzzle.wrap_inner_with_backdoor().get_tree_hash() if add_authorizations_to_cr_cats else None,
         )
         if add_authorizations_to_cr_cats:
             assert announcement is not None
@@ -710,10 +710,10 @@ class CRCATWallet(CATWallet):
         )
         if vc is None:  # pragma: no cover
             raise RuntimeError(f"No VC exists that can approve spends for CR-CAT wallet {self.id()}")
-        if vc.proof_hash is None:
+        if vc.as_inner_puzzle.proof_hash is None:
             raise RuntimeError(f"VC {vc.launcher_id} has no proofs to authorize transaction")  # pragma: no cover
         proof_of_inclusions: Program = await vc_wallet.proof_of_inclusions_for_root_and_keys(
-            vc.proof_hash, self.info.proofs_checker.flags
+            vc.as_inner_puzzle.proof_hash, self.info.proofs_checker.flags
         )
 
         # Generate the bundle nonce
@@ -739,9 +739,9 @@ class CRCATWallet(CATWallet):
             ],
             proof_of_inclusions,
             Program.NIL,  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
-            vc.proof_provider,
+            vc.as_inner_puzzle.proof_provider,
             vc.launcher_id,
-            vc.wrap_inner_with_backdoor().get_tree_hash(),
+            vc.as_inner_puzzle.wrap_inner_with_backdoor().get_tree_hash(),
         )
         claim_bundle = WalletSpendBundle(coin_spends, G2Element())
 
