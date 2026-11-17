@@ -79,6 +79,13 @@ MAX_SPENDS_PER_BLOCK = 6000
 MAX_BLOCK_ATOMS = 60_000_000
 MAX_BLOCK_PAIRS = 60_000_000
 
+# The minimum block fee used when the full_node config doesn't specify one, in
+# mojos per CLVM cost.
+DEFAULT_MINIMUM_BLOCK_FEE_PER_COST = uint64(4)
+# The minimum block fee policy expires at this timestamp (2027-11-03 00:00:00
+# UTC). Once the peak has reached it, the configured minimum is ignored.
+MINIMUM_BLOCK_FEE_EXPIRATION = uint64(1_825_200_000)
+
 
 def minimum_fee_for_cost(cost: int, fee_per_cost: uint64) -> int:
     return cost * fee_per_cost

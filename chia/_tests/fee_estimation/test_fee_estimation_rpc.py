@@ -9,6 +9,7 @@ from chia_rs import SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
+from chia._tests.core.mempool.test_mempool_manager import TEST_MINIMUM_BLOCK_FEE_PER_COST
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_errors import RpcError
@@ -94,7 +95,7 @@ async def test_empty_peak(one_node_no_blocks: tuple[FullNodeRpcClient, FullNodeR
     assert response == {
         "estimates": [],
         "target_times": [],
-        "current_fee_rate": 0,
+        "current_fee_rate": TEST_MINIMUM_BLOCK_FEE_PER_COST,
         "mempool_size": 0,
         "mempool_max_size": 0,
         "full_node_synced": False,
@@ -184,7 +185,7 @@ async def test_empty_target_times(setup_node_and_rpc: tuple[FullNodeRpcClient, F
 async def test_cost(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
     _client, full_node_rpc_api = setup_node_and_rpc
     response = await full_node_rpc_api.get_fee_estimate({"target_times": [1], "cost": 1})
-    assert response["estimates"] == [0]
+    assert response["estimates"] == [TEST_MINIMUM_BLOCK_FEE_PER_COST]
     assert response["target_times"] == [1]
 
 
@@ -201,16 +202,18 @@ async def test_tx(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi], 
     response = await full_node_rpc_api.get_fee_estimate(
         {"target_times": [1], "spend_bundle": spend_bundle.to_json_dict()}
     )
-    assert response["estimates"] == [0]
+    conds = await full_node_rpc_api.service.mempool_manager.pre_validate_spendbundle(spend_bundle)
+    assert response["estimates"] == [TEST_MINIMUM_BLOCK_FEE_PER_COST * conds.cost]
     assert response["target_times"] == [1]
 
 
 @pytest.mark.anyio
 async def test_multiple(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
     _client, full_node_rpc_api = setup_node_and_rpc
-    response = await full_node_rpc_api.get_fee_estimate({"target_times": [1, 5, 10, 15, 60, 120, 180, 240], "cost": 1})
-    assert response["estimates"] == [0, 0, 0, 0, 0, 0, 0, 0]
-    assert response["target_times"] == [1, 5, 10, 15, 60, 120, 180, 240]
+    target_times = [1, 5, 10, 15, 60, 120, 180, 240]
+    response = await full_node_rpc_api.get_fee_estimate({"target_times": target_times, "cost": 1})
+    assert response["estimates"] == [TEST_MINIMUM_BLOCK_FEE_PER_COST] * len(target_times)
+    assert response["target_times"] == target_times
 
 
 def get_test_spendbundle(bt: BlockTools) -> SpendBundle:

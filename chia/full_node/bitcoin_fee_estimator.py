@@ -7,6 +7,7 @@ from chia.full_node.fee_estimation import EmptyFeeMempoolInfo, FeeBlockInfo, Fee
 from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.fee_tracker import FeeTracker
+from chia.full_node.mempool import DEFAULT_MINIMUM_BLOCK_FEE_PER_COST, MINIMUM_BLOCK_FEE_EXPIRATION
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRateV2
 
@@ -21,15 +22,18 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
     tracker: FeeTracker
     last_mempool_info: FeeMempoolInfo = EmptyFeeMempoolInfo
     block_height: uint32
+    peak_timestamp: uint64
 
     def __init__(self, fee_tracker: FeeTracker, smart_fee_estimator: SmartFeeEstimator) -> None:
         self.fee_rate_estimator: SmartFeeEstimator = smart_fee_estimator
         self.tracker: FeeTracker = fee_tracker
         self.last_mempool_info: FeeMempoolInfo = EmptyFeeMempoolInfo
         self.block_height: uint32 = uint32(0)
+        self.peak_timestamp = uint64(0)
 
-    def new_block_height(self, block_height: uint32) -> None:
+    def new_block_height(self, block_height: uint32, timestamp: uint64) -> None:
         self.block_height = block_height
+        self.peak_timestamp = timestamp
 
     def new_block(self, block_info: FeeBlockInfo) -> None:
         self.block_height = block_info.block_height
@@ -47,9 +51,18 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
         """
         time_offset_seconds: Target time in the future we want our tx included by
         """
+        # Fee estimates use the default minimum block fee per cost, not this
+        # full node's value, because any farmer can make the next block.
+        minimum_fee_rate = FeeRateV2(DEFAULT_MINIMUM_BLOCK_FEE_PER_COST)
+        if self.peak_timestamp >= MINIMUM_BLOCK_FEE_EXPIRATION:
+            minimum_fee_rate = FeeRateV2(0)
         fee_estimate = self.fee_rate_estimator.get_estimate(time_offset_seconds)
         if fee_estimate.error is not None:
-            return FeeRateV2(0)
+            # Return the default minimum block fee per cost when we don't have
+            # enough data to estimate.
+            return minimum_fee_rate
+        if fee_estimate.estimated_fee_rate.mojos_per_clvm_cost < minimum_fee_rate.mojos_per_clvm_cost:
+            return minimum_fee_rate
         return fee_estimate.estimated_fee_rate
 
     def estimate_fee_rate_for_block(self, block: uint32) -> FeeRateV2:

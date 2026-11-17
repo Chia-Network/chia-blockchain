@@ -5,6 +5,7 @@ import datetime
 import pytest
 from chia_rs.sized_ints import uint64
 
+from chia._tests.core.mempool.test_mempool_manager import TEST_MINIMUM_BLOCK_FEE_PER_COST
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
@@ -49,3 +50,7 @@ async def test_protocol_messages(
     # Sanity check the response
     assert len(response.estimates.estimates) == len(request_times)
     assert response.estimates.error is None
+    assert all(
+        estimate.estimated_fee_rate.mojos_per_clvm_cost == TEST_MINIMUM_BLOCK_FEE_PER_COST
+        for estimate in response.estimates.estimates
+    )
