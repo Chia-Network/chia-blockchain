@@ -823,7 +823,34 @@ async def test_get_not_sent(seeded_random: random.Random) -> None:
         not_sent = await store.get_not_sent()
         assert cmp(not_sent, [])
 
-        # TODO: also cover include_accepted_txs=True
+
+@pytest.mark.anyio
+async def test_get_not_sent_include_accepted_keeps_stored_mempool_status() -> None:
+    """Resend filtering must not erase a mempool ack from the store.
+
+    ``include_accepted_txs`` returns a copy with SUCCESS/PENDING removed so the
+    caller will submit the spend again. The stored record has to keep that ack:
+    ``TransactionRecord.is_in_mempool`` is what the wallet test harness waits on.
+    """
+    async with DBConnection(1) as db_wrapper:
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
+        sent_to = [
+            ("peer-ok", uint8(MempoolInclusionStatus.SUCCESS), None),
+            ("peer-bad", uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name),
+        ]
+        accepted = dataclasses.replace(tr1, sent=uint32(1), sent_to=sent_to)
+        await store.add_transaction_record(accepted)
+
+        returned = await store.get_not_sent(include_accepted_txs=True)
+
+        assert len(returned) == 1
+        assert returned[0].sent_to == [
+            ("peer-bad", uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name)
+        ]
+        stored = await store.get_transaction_record(tr1.name)
+        assert stored is not None
+        assert stored == accepted
+        assert stored.is_in_mempool()
 
 
 @pytest.mark.anyio
