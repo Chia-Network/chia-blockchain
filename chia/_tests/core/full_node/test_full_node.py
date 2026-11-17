@@ -70,6 +70,7 @@ from chia.full_node import full_node as full_node_module
 from chia.full_node.full_node import FullNode, WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI, tx_request_and_timeout
 from chia.full_node.hard_fork_utils import get_flags
+from chia.full_node.sqlite_stores import sqlite_node_stores
 from chia.full_node.sync_store import Peak
 from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
@@ -1263,7 +1264,7 @@ async def test_new_transaction_and_mempool(
     for i in range(1, len(puzzle_hashes), group_size):
         phs_to_use = [puzzle_hashes[i + j] for j in range(group_size) if (i + j) < len(puzzle_hashes)]
         coin_records = [
-            (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
+            (await full_node_1.full_node.hint_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
             for puzzle_hash in phs_to_use
         ]
 
@@ -4759,6 +4760,7 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
         bt.config["full_node"],
         root_path=bt.root_path,
         consensus_constants=bt.constants,
+        open_stores=sqlite_node_stores(bt.config["full_node"], bt.root_path),
     )
 
     config = bt.config["full_node"]
@@ -4871,7 +4873,7 @@ async def test_wallet_request_transaction(one_node: SimulatorsAndWalletsServices
     wallet_tool = WalletTool(full_node_api.full_node.constants)
     ph = wallet_tool.get_new_puzzlehash()
     await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=ph, guarantee_transaction_blocks=True)
-    coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+    coin_records = await full_node_api.full_node.hint_store.get_coin_records_by_puzzle_hash(False, ph)
     sb = wallet_tool.generate_signed_transaction(uint64(100), ph, coin_records[0].coin)
     sb_name = sb.name()
     status, err = await full_node_api.full_node.add_transaction(sb, sb_name, test=True)

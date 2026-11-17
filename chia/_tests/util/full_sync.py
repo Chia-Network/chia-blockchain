@@ -26,6 +26,7 @@ from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node import FullNode
+from chia.full_node.sqlite_stores import sqlite_node_stores
 from chia.init.init_funcs import chia_init
 from chia.protocols.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
@@ -156,6 +157,7 @@ async def run_sync_test(
             config["full_node"],
             root_path=root_path,
             consensus_constants=constants,
+            open_stores=sqlite_node_stores(config["full_node"], root_path),
         )
 
         full_node.set_server(cast(ChiaServer, FakeServer()))

@@ -7,13 +7,12 @@ import dataclasses
 import logging
 import multiprocessing
 import random
-import sqlite3
 import time
 import traceback
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Sequence
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, TextIO, cast, final
+from typing import TYPE_CHECKING, Any, ClassVar, cast, final
 
 from chia_rs import (
     AugSchemeMPL,
@@ -45,7 +44,6 @@ from chia.consensus.block_generator_info import (
     block_has_transactions_generator,
     get_transactions_generator_bytes,
 )
-from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.condition_tools import pkm_pairs
@@ -61,16 +59,14 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
-from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
-from chia.full_node.coin_store import CoinStore
 from chia.full_node.explorer_store_protocol import ExplorerStoreProtocol
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
-from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
 from chia.full_node.mempool_manager import DEFAULT_MAX_SPENDS_PER_ITEM, LogMempoolMode, MempoolManager
+from chia.full_node.store_protocols import FullNodeBlockStoreProtocol, FullNodeCoinStoreProtocol, OpenNodeStores
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
@@ -99,9 +95,6 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import process_config_start_method
 from chia.util.cpu import available_logical_cores
-from chia.util.db_synchronous import db_synchronous_on
-from chia.util.db_version import lookup_db_version, set_db_version_async
-from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
 from chia.util.inline_executor import InlineExecutor
 from chia.util.limited_semaphore import LimitedSemaphore
@@ -184,7 +177,7 @@ class FullNode:
     signage_point_times: list[float]
     full_node_store: FullNodeStore
     log: logging.Logger
-    db_path: Path
+    open_stores: OpenNodeStores
     wallet_sync_queue: asyncio.Queue[WalletUpdate]
     _segment_task_list: list[asyncio.Task[None]] = dataclasses.field(default_factory=list)
     initialized: bool = False
@@ -210,10 +203,9 @@ class FullNode:
     _new_peak_sem: LimitedSemaphore | None = None
     _sp_catchup_sem: LimitedSemaphore | None = None
     _add_transaction_semaphore: asyncio.Semaphore | None = None
-    _db_wrapper: DBWrapper2 | None = None
-    _hint_store: HintStore | None = None
-    _block_store: BlockStore | None = None
-    _coin_store: CoinStore | None = None
+    _hint_store: ExplorerStoreProtocol | None = None
+    _block_store: FullNodeBlockStoreProtocol | None = None
+    _coin_store: FullNodeCoinStoreProtocol | None = None
     _mempool_manager: MempoolManager | None = None
     _init_weight_proof: asyncio.Task[None] | None = None
     _blockchain: Blockchain | None = None
@@ -241,12 +233,10 @@ class FullNode:
         root_path: Path,
         consensus_constants: ConsensusConstants,
         name: str = __name__,
+        *,
+        open_stores: OpenNodeStores,
     ) -> FullNode:
         # NOTE: async to force the queue creation to occur when an event loop is available
-        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-        db_path = path_from_root(root_path, db_path_replaced)
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-
         return cls(
             root_path=root_path,
             config=config,
@@ -254,7 +244,7 @@ class FullNode:
             signage_point_times=[time.time() for _ in range(consensus_constants.NUM_SPS_SUB_SLOT)],
             full_node_store=FullNodeStore(consensus_constants),
             log=logging.getLogger(name),
-            db_path=db_path,
+            open_stores=open_stores,
             wallet_sync_queue=asyncio.Queue(),
         )
 
@@ -274,51 +264,11 @@ class FullNode:
         # These many respond_transaction tasks can be active at any point in time
         self._add_transaction_semaphore = asyncio.Semaphore(200)
 
-        sql_log_path: Path | None = None
-        with contextlib.ExitStack() as exit_stack:
-            sql_log_file: TextIO | None = None
-            if self.config.get("log_sqlite_cmds", False):
-                sql_log_path = path_from_root(self.root_path, "log/sql.log")
-                self.log.info(f"logging SQL commands to {sql_log_path}")
-                sql_log_file = exit_stack.enter_context(sql_log_path.open("a", encoding="utf-8"))
-
-            # create the store (db) and full node instance
-            # TODO: is this standardized and thus able to be handled by DBWrapper2?
-            async with manage_connection(self.db_path, log_file=sql_log_file, name="version_check") as db_connection:
-                db_version = await lookup_db_version(db_connection)
-
-        self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
-
-        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
-        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
-
-        async with DBWrapper2.managed(
-            self.db_path,
-            db_version=db_version,
-            reader_count=self.config.get("db_readers", 4),
-            log_path=sql_log_path,
-            synchronous=db_sync,
-        ) as self._db_wrapper:
-            if self.db_wrapper.db_version != 2:
-                async with self.db_wrapper.reader_no_transaction() as conn:
-                    async with conn.execute(
-                        "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
-                    ) as cur:
-                        if len(list(await cur.fetchall())) == 0:
-                            try:
-                                # this is a new DB file. Make it v2
-                                async with self.db_wrapper.writer_maybe_transaction() as w_conn:
-                                    await set_db_version_async(w_conn, 2)
-                                    self.db_wrapper.db_version = 2
-                                    self.log.info("blockchain database is empty, configuring as v2")
-                            except sqlite3.OperationalError:
-                                # it could be a database created with "chia init", which is
-                                # empty except it has the database_version table
-                                pass
-
-            self._block_store = await BlockStore.create(self.db_wrapper)
-            self._coin_store = await CoinStore.create(self.db_wrapper, block_store=self._block_store)
-            self._hint_store = await HintStore.create(self._coin_store)
+        # the stores are opened first and closed last, after every node task has stopped
+        async with self.open_stores() as stores:
+            self._block_store = stores.block_store
+            self._coin_store = stores.coin_store
+            self._hint_store = stores.hint_store
             self.log.info("Initializing blockchain from disk")
             start_time = time.monotonic()
             single_threaded = self.config.get("single_threaded", False)
@@ -339,13 +289,11 @@ class FullNode:
                     instrument=bool(self.config.get("instrument_thread_pool", 0)),
                 )
                 self.log.info(f"Started {num_workers} threads for validation ({dedicated} dedicated)")
-            selected_network = self.config.get("selected_network")
-            height_map = await BlockHeightMap.create(self.db_path.parent, self._db_wrapper, selected_network)
             self._blockchain = await Blockchain.create(
                 coin_store=self.coin_store,
                 block_store=self.block_store,
                 consensus_constants=self.constants,
-                height_map=height_map,
+                height_map=stores.height_map,
                 pool=self.pool,
                 log_coins=log_coins,
             )
@@ -480,7 +428,7 @@ class FullNode:
                     await asyncio.gather(*self._segment_task_list, return_exceptions=True)
 
     @property
-    def block_store(self) -> BlockStore:
+    def block_store(self) -> FullNodeBlockStoreProtocol:
         assert self._block_store is not None
         return self._block_store
 
@@ -505,7 +453,7 @@ class FullNode:
         return self._pool
 
     @property
-    def coin_store(self) -> CoinStore:
+    def coin_store(self) -> FullNodeCoinStoreProtocol:
         assert self._coin_store is not None
         return self._coin_store
 
@@ -518,11 +466,6 @@ class FullNode:
     def transaction_queue(self) -> TransactionQueue:
         assert self._transaction_queue is not None
         return self._transaction_queue
-
-    @property
-    def db_wrapper(self) -> DBWrapper2:
-        assert self._db_wrapper is not None
-        return self._db_wrapper
 
     @property
     def hint_store(self) -> ExplorerStoreProtocol:
