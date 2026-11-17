@@ -5,11 +5,14 @@ import logging
 import pytest
 from chia_rs.sized_ints import uint32, uint64
 
+from chia._tests.core.mempool.test_mempool_manager import TEST_MINIMUM_BLOCK_FEE_PER_COST
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolItemInfo
-from chia.full_node.fee_estimator_constants import INFINITE_FEE_RATE, INITIAL_STEP
+from chia.full_node.fee_estimator_constants import INFINITE_FEE_RATE, INITIAL_STEP, SECONDS_PER_BLOCK
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.fee_tracker import get_bucket_index, init_buckets
+from chia.full_node.mempool import MINIMUM_BLOCK_FEE_EXPIRATION
+from chia.protocols.fee_estimate import FeeEstimateV2
 from chia.types.fee_rate import FeeRateV2
 from chia.util.math import make_monotonically_decreasing
 
@@ -24,9 +27,9 @@ def test_interface() -> None:
     current_fee_rate = estimator.estimate_fee_rate(
         time_offset_seconds=1,
     )
-    zero = FeeRateV2(0)
-    assert estimates == [zero, zero, zero]
-    assert current_fee_rate.mojos_per_clvm_cost == 0
+    minimum_fee_rate = FeeRateV2(TEST_MINIMUM_BLOCK_FEE_PER_COST)
+    assert estimates == [minimum_fee_rate, minimum_fee_rate, minimum_fee_rate]
+    assert current_fee_rate.mojos_per_clvm_cost == TEST_MINIMUM_BLOCK_FEE_PER_COST
 
 
 def test_estimator_create() -> None:
@@ -41,7 +44,7 @@ def test_single_estimate() -> None:
     height = uint32(1)
     estimator.new_block(FeeBlockInfo(height, []))
     fee_rate = estimator.estimate_fee_rate(time_offset_seconds=40 * height)
-    assert fee_rate.mojos_per_clvm_cost == 0
+    assert fee_rate.mojos_per_clvm_cost == TEST_MINIMUM_BLOCK_FEE_PER_COST
 
 
 def make_block(
@@ -58,6 +61,7 @@ def test_steady_fee_pressure() -> None:
     """
     max_block_cost_clvm = uint64(1000 * 1000)
     estimator = create_bitcoin_fee_estimator(max_block_cost_clvm)
+    estimator.new_block_height(block_height=uint32(0), timestamp=MINIMUM_BLOCK_FEE_EXPIRATION)
     cost = uint64(5000000)
     fee = uint64(10000000)
     time_offset_seconds = 40
@@ -141,3 +145,39 @@ def test_monotonically_decrease() -> None:
     for i, o in zip(inputs, output):
         print(o, i)
         assert o == make_monotonically_decreasing(i)
+
+
+def test_estimate_without_enough_data_is_minimum_fee_rate() -> None:
+    """
+    Covers the scenario where we don't have enough data to estimate, to make
+    sure we return the default minimum block fee per cost.
+    """
+    minimum_fee_rate = FeeRateV2(TEST_MINIMUM_BLOCK_FEE_PER_COST)
+    estimator = create_bitcoin_fee_estimator(max_block_cost_clvm=uint64(1000 * 1000))
+    assert estimator.estimate_fee_rate(time_offset_seconds=SECONDS_PER_BLOCK) == minimum_fee_rate
+
+
+# Below the minimum the estimate is raised to it and above that it stays
+@pytest.mark.parametrize(
+    "estimated_fee_rate, expected_fee_rate",
+    [
+        (TEST_MINIMUM_BLOCK_FEE_PER_COST - 1, TEST_MINIMUM_BLOCK_FEE_PER_COST),
+        (TEST_MINIMUM_BLOCK_FEE_PER_COST, TEST_MINIMUM_BLOCK_FEE_PER_COST),
+        (TEST_MINIMUM_BLOCK_FEE_PER_COST + 1, TEST_MINIMUM_BLOCK_FEE_PER_COST + 1),
+    ],
+)
+def test_estimate_is_at_least_minimum_fee_rate(
+    estimated_fee_rate: float, expected_fee_rate: float, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Covers fee estimation to make sure when it's below the default minimum
+    block fee per cost it gets raised to it and above it stays as it is.
+    """
+    estimator = create_bitcoin_fee_estimator(max_block_cost_clvm=uint64(1000 * 1000))
+
+    def test_get_estimate(time_offset_seconds: int) -> FeeEstimateV2:
+        return FeeEstimateV2(None, uint64(time_offset_seconds), FeeRateV2(estimated_fee_rate))
+
+    monkeypatch.setattr(estimator.fee_rate_estimator, "get_estimate", test_get_estimate)
+    estimate = estimator.estimate_fee_rate(time_offset_seconds=SECONDS_PER_BLOCK)
+    assert estimate.mojos_per_clvm_cost == expected_fee_rate

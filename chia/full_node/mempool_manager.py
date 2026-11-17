@@ -32,7 +32,13 @@ from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.eligible_coin_spends import can_fast_forward_singleton
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveInfo, MempoolRemoveReason
+from chia.full_node.mempool import (
+    MEMPOOL_ITEM_FEE_LIMIT,
+    MINIMUM_BLOCK_FEE_EXPIRATION,
+    Mempool,
+    MempoolRemoveInfo,
+    MempoolRemoveReason,
+)
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST, CLVMCost
@@ -49,12 +55,6 @@ log = logging.getLogger(__name__)
 # mempool items replacing existing ones must increase the total fee at least by
 # this amount. 0.00001 XCH
 MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
-# The minimum block fee used when the full_node config doesn't specify one, in
-# mojos per CLVM cost.
-DEFAULT_MINIMUM_BLOCK_FEE_PER_COST = uint64(4)
-# The minimum block fee policy expires at this timestamp (2027-11-03 00:00:00
-# UTC). Once the peak has reached it, the configured minimum is ignored.
-MINIMUM_BLOCK_FEE_EXPIRATION = uint64(1_825_200_000)
 
 
 @dataclass
@@ -965,7 +965,7 @@ class MempoolManager:
         if self.peak == new_peak:
             return NewPeakInfo([], [])
         assert new_peak.timestamp is not None
-        self.fee_estimator.new_block_height(new_peak.height)
+        self.fee_estimator.new_block_height(block_height=new_peak.height, timestamp=new_peak.timestamp)
         included_items: list[MempoolItemInfo] = []
         new_peak_start = time.monotonic()
 

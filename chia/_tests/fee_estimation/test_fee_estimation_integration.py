@@ -7,6 +7,7 @@ from chia_rs import Coin, SpendBundleConditions, SpendConditions
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.core.mempool.test_mempool_manager import (
+    TEST_TIMESTAMP,
     create_test_block_record,
     instantiate_mempool_manager,
     zero_calls_get_coin_records,
@@ -57,7 +58,7 @@ class FeeEstimatorInterfaceIntegrationVerificationObject(FeeEstimatorInterface):
     new_block_called_count: int = 0
     current_block_height: int = 0
 
-    def new_block_height(self, block_height: uint32) -> None:
+    def new_block_height(self, block_height: uint32, timestamp: uint64) -> None:
         self.current_block_height: int = block_height
 
     def new_block(self, block_info: FeeBlockInfo) -> None:
@@ -158,7 +159,7 @@ def test_current_block_height_add() -> None:
     mempool = Mempool(test_mempool_info, fee_estimator)
     item = make_mempoolitem()
     height = uint32(7)
-    fee_estimator.new_block_height(height)
+    fee_estimator.new_block_height(block_height=height, timestamp=TEST_TIMESTAMP)
     mempool.add_to_pool(item)
     assert mempool.fee_estimator.current_block_height == height  # type: ignore[attr-defined]
 
@@ -168,7 +169,7 @@ def test_current_block_height_remove() -> None:
     mempool = Mempool(test_mempool_info, fee_estimator)
     item = make_mempoolitem()
     height = uint32(8)
-    fee_estimator.new_block_height(height)
+    fee_estimator.new_block_height(block_height=height, timestamp=TEST_TIMESTAMP)
     mempool.add_to_pool(item)
     mempool.remove_from_pool([item.name], MempoolRemoveReason.CONFLICT)
     assert mempool.fee_estimator.current_block_height == height  # type: ignore[attr-defined]
@@ -178,7 +179,7 @@ def test_current_block_height_new_block_height() -> None:
     fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
     mempool = Mempool(test_mempool_info, fee_estimator)
     height = uint32(9)
-    mempool.fee_estimator.new_block_height(height)
+    mempool.fee_estimator.new_block_height(block_height=height, timestamp=TEST_TIMESTAMP)
     assert mempool.fee_estimator.current_block_height == height  # type: ignore[attr-defined]
 
 
@@ -196,7 +197,7 @@ def test_current_block_height_new_height_then_new_block() -> None:
     mempool = Mempool(test_mempool_info, fee_estimator)
     height = uint32(11)
     included_items: list[MempoolItemInfo] = []
-    fee_estimator.new_block_height(uint32(height - 1))
+    fee_estimator.new_block_height(block_height=uint32(height - 1), timestamp=TEST_TIMESTAMP)
     mempool.fee_estimator.new_block(FeeBlockInfo(height, included_items))
     assert mempool.fee_estimator.current_block_height == height  # type: ignore[attr-defined]
 
@@ -206,9 +207,9 @@ def test_current_block_height_new_block_then_new_height() -> None:
     mempool = Mempool(test_mempool_info, fee_estimator)
     height = uint32(12)
     included_items: list[MempoolItemInfo] = []
-    fee_estimator.new_block_height(uint32(height - 1))
+    fee_estimator.new_block_height(block_height=uint32(height - 1), timestamp=TEST_TIMESTAMP)
     mempool.fee_estimator.new_block(FeeBlockInfo(height, included_items))
-    fee_estimator.new_block_height(uint32(height + 1))
+    fee_estimator.new_block_height(block_height=uint32(height + 1), timestamp=TEST_TIMESTAMP)
     assert mempool.fee_estimator.current_block_height == height + 1  # type: ignore[attr-defined]
 
 
@@ -229,7 +230,7 @@ async def test_mm_calls_new_block_height() -> None:
     ) as mempool_manager:
         new_block_height_called = False
 
-        def test_new_block_height_called(self: FeeEstimatorInterface, height: uint32) -> None:
+        def test_new_block_height_called(self: FeeEstimatorInterface, block_height: uint32, timestamp: uint64) -> None:
             nonlocal new_block_height_called
             new_block_height_called = True
 

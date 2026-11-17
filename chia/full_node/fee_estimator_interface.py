@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Protocol
 
 from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo, MempoolItemInfo
@@ -9,7 +9,7 @@ from chia.types.fee_rate import FeeRateV2
 
 
 class FeeEstimatorInterface(Protocol):
-    def new_block_height(self, block_height: uint32) -> None:
+    def new_block_height(self, block_height: uint32, timestamp: uint64) -> None:
         """Called immediately when block height changes. Can be called multiple times before `new_block`"""
 
     def new_block(self, block_info: FeeBlockInfo) -> None:
