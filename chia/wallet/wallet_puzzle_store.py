@@ -29,7 +29,7 @@ class PuzzleHashWindow:
     minimum_unused_index: int | None
     maximum_used_index: int | None
     maximum_generated_index: int | None
-    usused_after_maximum_used: int
+    unused_after_maximum_used: int
     total_unused: int
     total_generated: int
     gaps: list[int] = field(default_factory=list)
@@ -168,7 +168,7 @@ class WalletPuzzleStore:
             minimum_unused_index=row[0],
             maximum_used_index=row[1],
             maximum_generated_index=row[2],
-            usused_after_maximum_used=row[3],
+            unused_after_maximum_used=row[3],
             total_unused=row[4],
             total_generated=row[5],
             gaps=gaps,
