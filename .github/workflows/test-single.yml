@@ -103,6 +103,114 @@ jobs:
           mkdir "${GITHUB_WORKSPACE}/.chia"
           mv "${GITHUB_WORKSPACE}/test-cache-${BLOCKS_AND_PLOTS_VERSION}/"* "${GITHUB_WORKSPACE}/.chia"
 
+  # Full-suite source vs installed collect, once per OS and Python in matrix_mode.
+  # Shards do not need this job. Keep this Python list in sync with the test job.
+  collect-installed:
+    name: ${{ inputs.os-emoji }} ${{ inputs.arch-emoji }} collect installed tests - ${{ matrix.python.name }}
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - name: "3.11"
+            action: "3.11"
+            install_sh: "3.11"
+            exclude_from:
+              limited: True
+              main: True
+          - name: "3.12"
+            action: "3.12"
+            install_sh: "3.12"
+          - name: "3.13"
+            action: "3.13"
+            install_sh: "3.13"
+            exclude_from:
+              limited: True
+              main: True
+          - name: "3.14"
+            action: "3.14"
+            install_sh: "3.14"
+            exclude_from:
+              limited: True
+              main: True
+        exclude:
+          - python:
+              exclude_from:
+                ${{ inputs.matrix_mode }}: True
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      - name: Setup Python environment
+        if: ${{ !contains(inputs.runs-on, 'blacksmith-4vcpu-windows') }}
+        uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python.action }}
+
+      - name: Create keychain for CI use (macOS)
+        if: inputs.matrix == 'macos'
+        run: |
+          security create-keychain -p foo chiachain
+          security default-keychain -s chiachain
+          security unlock-keychain -p foo chiachain
+          security set-keychain-settings -t 7200 -u chiachain
+
+      - uses: chia-network/actions/cache-pip@main
+        with:
+          mode: poetry
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.install_sh }}
+          development: true
+          editable: false
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: Verify source and installed tests collect and match
+        run: |
+          echo '==== collecting source tests ===='
+          if pytest --collect-only -qq --import-mode=prepend chia/_tests/ > source_tests_raw
+          then
+            cat source_tests_raw | sed -n 's;^\(chia/_tests/.*\);\1;p' | sort > source_tests
+          else
+            echo '    ==== source test collection failure'
+            cat source_tests_raw
+            exit 1
+          fi
+
+          echo '==== collecting installed tests ===='
+          if pytest --collect-only -qq --import-mode=append --pyargs chia._tests > installed_tests_raw
+          then
+            cat installed_tests_raw | sed -n 's;^\.venv/.*/\(chia/_tests/.*\);\1;p' | sort > installed_tests
+          else
+            echo '    ==== installed test collection failure'
+            cat installed_tests_raw
+            exit 1
+          fi
+
+          echo '==== collected tests ===='
+          for mode in source installed
+          do
+            echo "::group::collected ${mode} tests"
+            cat ${mode}_tests
+            echo '::endgroup::'
+          done
+
+          echo '==== diffing collected tests ===='
+          echo "::group::collected tests diff"
+          diff --unified source_tests installed_tests; DIFF_EXIT_CODE=$?
+          echo '::endgroup::'
+
+          exit $DIFF_EXIT_CODE
+
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
     needs: warm-cache
@@ -276,43 +384,6 @@ jobs:
         run: |
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
-
-      - name: Verify source and installed tests collect and match
-        run: |
-          echo '==== collecting source tests ===='
-          if pytest --collect-only -qq --import-mode=prepend chia/_tests/ > source_tests_raw
-          then
-            cat source_tests_raw | sed -n 's;^\(chia/_tests/.*\);\1;p' | sort > source_tests
-          else
-            echo '    ==== source test collection failure'
-            cat source_tests_raw
-            exit 1
-          fi
-
-          echo '==== collecting installed tests ===='
-          if pytest --collect-only -qq --import-mode=append --pyargs chia._tests > installed_tests_raw
-          then
-            cat installed_tests_raw | sed -n 's;^\.venv/.*/\(chia/_tests/.*\);\1;p' | sort > installed_tests
-          else
-            echo '    ==== installed test collection failure'
-            cat installed_tests_raw
-            exit 1
-          fi
-
-          echo '==== collected tests ===='
-          for mode in source installed
-          do
-            echo "::group::collected ${mode} tests"
-            cat ${mode}_tests
-            echo '::endgroup::'
-          done
-
-          echo '==== diffing collected tests ===='
-          echo "::group::collected tests diff"
-          diff --unified source_tests installed_tests; DIFF_EXIT_CODE=$?
-          echo '::endgroup::'
-
-          exit $DIFF_EXIT_CODE
 
       - name: Move chia/ so we test the installed code
         run: |
