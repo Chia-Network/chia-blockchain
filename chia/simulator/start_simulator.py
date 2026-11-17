@@ -12,6 +12,7 @@ from chia_rs.sized_ints import uint16
 
 from chia.apis import StubMetadataRegistry
 from chia.full_node.full_node import FullNode
+from chia.full_node.sqlite_stores import sqlite_node_stores
 from chia.protocols.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
 from chia.service.start_service import Service, async_run
@@ -48,6 +49,7 @@ async def create_full_node_simulator_service(
         config=service_config,
         root_path=root_path,
         consensus_constants=constants,
+        open_stores=sqlite_node_stores(service_config, root_path),
     )
 
     peer_api = FullNodeSimulator(node, bt, config)
