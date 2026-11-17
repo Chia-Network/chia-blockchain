@@ -344,13 +344,7 @@ jobs:
 
       - name: Process coverage data
         run: |
-          # parallel=True writes .coverage.<pid> files. Combine them into the
-          # single data file the coverage job already merges. No XML or report.
-          if compgen -G '.coverage.*' > /dev/null; then
-            coverage combine --rcfile=.coveragerc --data-file=.coverage
-          fi
-          mkdir -p coverage-data
-          cp .coverage "coverage-data/.coverage.${{ env.JOB_FILE_NAME }}"
+          mkdir coverage-data && cp .coverage "coverage-data/.coverage.${{ env.JOB_FILE_NAME }}"
 
       - name: Publish coverage data
         uses: actions/upload-artifact@v7
