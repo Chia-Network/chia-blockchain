@@ -27,6 +27,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  packaging-paths:
+    if: github.event.repository.visibility != 'private' || github.event_name == 'workflow_dispatch' || github.event_name == 'release'
+    uses: ./.github/workflows/packaging-paths.yml
+
   setup:
     name: Setup
     if: github.event.repository.visibility != 'private' || github.event_name == 'workflow_dispatch' || github.event_name == 'release'
@@ -48,12 +52,16 @@ jobs:
 
   build:
     name: Benchmarks
-    runs-on: ${{ github.repository_owner == 'Chia-Network' && 'benchmark' || 'ubuntu-latest' }}
+    runs-on: ${{ needs.packaging-paths.outputs.packaging == 'true' && (github.repository_owner == 'Chia-Network' && 'benchmark' || 'ubuntu-latest') || 'ubuntu-latest' }}
     needs:
+      - packaging-paths
       - setup
-    container:
-      image: chianetwork/ubuntu-22.04-builder:latest
-    timeout-minutes: ${{ fromJSON(needs.setup.outputs.timeout) }}
+    if: |
+      !cancelled() &&
+      needs.packaging-paths.result == 'success' &&
+      (needs.packaging-paths.outputs.packaging != 'true' || needs.setup.result == 'success')
+    container: ${{ fromJSON(needs.packaging-paths.outputs.packaging == 'true' && '{"image":"chianetwork/ubuntu-22.04-builder:latest"}' || 'null') }}
+    timeout-minutes: ${{ fromJSON(needs.packaging-paths.outputs.packaging == 'true' && needs.setup.outputs.timeout || '5') }}
     strategy:
       fail-fast: false
       matrix:
@@ -63,27 +71,37 @@ jobs:
       BLOCKS_AND_PLOTS_VERSION: 0.45.49
 
     steps:
+      - name: Pull request does not change packaging paths
+        if: needs.packaging-paths.outputs.packaging != 'true'
+        run: echo "Packaging paths unchanged; skipping this job's work."
+
       - name: Clean workspace
+        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: Chia-Network/actions/clean-workspace@main
 
       - name: Add safe git directory
+        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: Chia-Network/actions/git-mark-workspace-safe@main
 
       - name: Checkout Code
+        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Python 3.12
+        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: Chia-Network/actions/setup-python@main
         with:
           python-version: "3.12"
 
       - uses: chia-network/actions/cache-pip@main
+        if: needs.packaging-paths.outputs.packaging == 'true'
         with:
           mode: poetry
 
       - name: Checkout test blocks and plots
+        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/checkout@v7
         with:
           repository: "Chia-Network/test-cache"
@@ -92,24 +110,27 @@ jobs:
           fetch-depth: 1
 
       - uses: ./.github/actions/install
+        if: needs.packaging-paths.outputs.packaging == 'true'
         with:
           python-version: ${{ matrix.python-version }}
           development: true
           legacy_keyring: true
 
       - uses: chia-network/actions/activate-venv@main
+        if: needs.packaging-paths.outputs.packaging == 'true'
 
       - name: pytest
+        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml --benchmark-repeats ${{ needs.setup.outputs.repeats }} chia/_tests/
 
       - name: Format JUnit data and prepare results
-        if: always()
+        if: needs.packaging-paths.outputs.packaging == 'true' && (always())
         run: |
           yq junit-data/benchmarks.raw.xml > junit-data/benchmarks.xml
 
       - name: Publish JUnit results
-        if: always()
+        if: needs.packaging-paths.outputs.packaging == 'true' && (always())
         uses: actions/upload-artifact@v7
         with:
           name: junit-data
@@ -117,6 +138,6 @@ jobs:
           if-no-files-found: error
 
       - name: Add benchmark results to workflow summary
-        if: always()
+        if: needs.packaging-paths.outputs.packaging == 'true' && (always())
         run: |
           python -m chia._tests.process_junit --type benchmark --xml junit-data/benchmarks.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"

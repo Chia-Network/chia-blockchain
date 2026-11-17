@@ -1,0 +1,85 @@
+name: packaging paths
+
+# Called by the installer, install-script, and benchmark workflows.
+# Push, release, and workflow_dispatch always run those jobs. pull_request runs
+# them only when a packaging input changed. The path list is conservative:
+# a hit runs the jobs, a miss skips the expensive work but still reports the
+# original check names.
+on:
+  workflow_call:
+    outputs:
+      packaging:
+        description: Run packaging and benchmark jobs for this event
+        value: ${{ jobs.filter.outputs.packaging }}
+
+jobs:
+  filter:
+    name: Packaging paths
+    runs-on: ubuntu-latest
+    outputs:
+      packaging: ${{ steps.set.outputs.packaging }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether to run packaging jobs
+        id: set
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
+            echo "packaging=true" >> "$GITHUB_OUTPUT"
+            echo "Event ${GITHUB_EVENT_NAME} is unfiltered."
+            exit 0
+          fi
+          base="${{ github.event.pull_request.base.sha }}"
+          if ! git cat-file -e "${base}^{commit}" >/dev/null 2>&1; then
+            git fetch --no-tags origin "${base}"
+          fi
+          git diff --name-only "${base}" HEAD > /tmp/changed-paths.txt
+          echo "Changed paths:"
+          cat /tmp/changed-paths.txt
+          python3 - << 'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          changed = [line for line in Path("/tmp/changed-paths.txt").read_text().splitlines() if line]
+          anchored = [
+              re.compile(r"^build_scripts/"),
+              re.compile(r"^\.github/actions/"),
+              re.compile(r"^\.github/workflows/build-linux-installer-deb\.yml$"),
+              re.compile(r"^\.github/workflows/build-linux-installer-rpm\.yml$"),
+              re.compile(r"^\.github/workflows/build-macos-installers\.yml$"),
+              re.compile(r"^\.github/workflows/build-windows-installer\.yml$"),
+              re.compile(r"^\.github/workflows/test-install-scripts\.yml$"),
+              re.compile(r"^\.github/workflows/benchmarks\.yml$"),
+              re.compile(r"^\.github/workflows/packaging-paths\.yml$"),
+              re.compile(r"^\.github/workflows/reflow-.*\.yml$"),
+              re.compile(r"^benchmarks/"),
+              re.compile(r"^chia-blockchain-gui($|/)"),
+              re.compile(r"^\.gitmodules$"),
+              re.compile(r"^(pyproject\.toml|poetry\.lock|poetry\.toml|setup\.py|setup\.cfg|pytest\.ini)$"),
+              re.compile(r"^activated\.(sh|ps1|py)$"),
+          ]
+          names = [
+              re.compile(r"^install.*\.sh$"),
+              re.compile(r"^Install.*\.ps1$"),
+          ]
+
+          def relevant(path: str) -> bool:
+              if any(pattern.search(path) for pattern in anchored):
+                  return True
+              name = path.rsplit("/", 1)[-1]
+              return any(pattern.search(name) for pattern in names)
+
+          hit = [path for path in changed if relevant(path)]
+          print("Packaging paths:" if hit else "No packaging paths.")
+          for path in hit:
+              print(f"  {path}")
+          value = "true" if hit else "false"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"packaging={value}\n")
+          PY
