@@ -65,10 +65,10 @@ def validate_tx_generator(
     return None
 
 
-def compute_generator_root(generator: bytes, flags: int) -> bytes32:
+def compute_generator_root(generator: bytes, flags: int, constants: ConsensusConstants) -> bytes32:
     """Commit to the interned tree after activation, or serialized bytes before it."""
     if flags & INTERNED_SPEND_LIST:
-        return tree_hash_2026(generator)
+        return tree_hash_2026(generator, constants.MAX_BLOCK_COST_CLVM, constants.COST_PER_BYTE)
     return std_hash(generator)
 
 
@@ -77,7 +77,7 @@ def validate_generator_root(
 ) -> bool:
     try:
         flags = get_flags_for_height_and_constants(pre_sp_tx_height, constants)
-        return compute_generator_root(generator, flags) == root
+        return compute_generator_root(generator, flags, constants) == root
     except ValueError:
         # Malformed interned trees cannot match a generator commitment.
         return False

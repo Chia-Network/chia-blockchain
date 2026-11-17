@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import INTERNED_SPEND_LIST, FullBlock, get_flags_for_height_and_constants, tree_hash_2026
+from chia_rs import INTERNED_SPEND_LIST, Coin, FullBlock, get_flags_for_height_and_constants, tree_hash_2026
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from pytest_mock import MockerFixture
@@ -147,7 +147,11 @@ async def test_generated_transactions_across_forks(
             if generator is not None:
                 assert block.transactions_info is not None
                 interned = (await get_flags(constants, blockchain, block)) & INTERNED_SPEND_LIST
-                expected_root = tree_hash_2026(generator) if interned else std_hash(generator)
+                expected_root = (
+                    tree_hash_2026(generator, constants.MAX_BLOCK_COST_CLVM, constants.COST_PER_BYTE)
+                    if interned
+                    else std_hash(generator)
+                )
                 assert block.transactions_info.generator_root == expected_root
                 wrong_root = std_hash(generator) if interned else bytes32.zeros
                 assert wrong_root != expected_root
@@ -167,9 +171,11 @@ def test_generator_root_activation() -> None:
     constants = test_constants.replace(HARD_FORK2_HEIGHT=uint32(10))
     legacy = solution_generator([])
     interned = solution_generator_2026([])
-    assert compute_generator_root(legacy, get_flags_for_height_and_constants(9, constants)) == std_hash(legacy)
-    root = tree_hash_2026(interned)
-    assert compute_generator_root(interned, get_flags_for_height_and_constants(10, constants)) == root
+    assert compute_generator_root(legacy, get_flags_for_height_and_constants(9, constants), constants) == std_hash(
+        legacy
+    )
+    root = tree_hash_2026(interned, constants.MAX_BLOCK_COST_CLVM, constants.COST_PER_BYTE)
+    assert compute_generator_root(interned, get_flags_for_height_and_constants(10, constants), constants) == root
     assert root != std_hash(interned)
     assert validate_generator_root(interned, root, constants, uint32(10))
     assert not validate_generator_root(interned, std_hash(interned), constants, uint32(10))
@@ -181,8 +187,26 @@ def test_generator_root_ignores_interned_encoding() -> None:
     canonical = bytes.fromhex("fdff32303236 01 01 41 03 00 02 01")
     overlong = bytes.fromhex("fdff32303236 01 8001 41 03 00 02 01")
     assert std_hash(canonical) != std_hash(overlong)
-    root = compute_generator_root(canonical, get_flags_for_height_and_constants(0, constants))
+    root = compute_generator_root(canonical, get_flags_for_height_and_constants(0, constants), constants)
     assert validate_generator_root(overlong, root, constants, uint32(0))
+
+
+def test_generator_root_rejects_oversized_generator() -> None:
+    from chia_rs import solution_generator_2026
+
+    coin = Coin(bytes32.zeros, bytes32.zeros, uint64(1))
+    blob = solution_generator_2026([(coin, bytes.fromhex("ff0180"), bytes.fromhex("80"))])
+    active = test_constants.replace(HARD_FORK2_HEIGHT=uint32(0))
+    root = tree_hash_2026(blob, active.MAX_BLOCK_COST_CLVM, active.COST_PER_BYTE)
+    assert validate_generator_root(blob, root, active, uint32(0))
+
+    too_small = active.replace(MAX_BLOCK_COST_CLVM=uint64(0))
+    with pytest.raises(ValueError):
+        compute_generator_root(blob, get_flags_for_height_and_constants(0, too_small), too_small)
+    assert not validate_generator_root(blob, root, too_small, uint32(0))
+
+    pre_hf2 = too_small.replace(HARD_FORK2_HEIGHT=uint32(10))
+    assert validate_generator_root(blob, std_hash(blob), pre_hf2, uint32(0))
 
 
 @pytest.mark.parametrize(
@@ -241,7 +265,11 @@ def test_foliage_generator_root(
         compute_block_fee,
     )
     assert info is not None
-    expected = tree_hash_2026(generator) if interned else std_hash(generator)
+    expected = (
+        tree_hash_2026(generator, constants.MAX_BLOCK_COST_CLVM, constants.COST_PER_BYTE)
+        if interned
+        else std_hash(generator)
+    )
     assert info.generator_root == (expected if has_generator else bytes32.zeros)
     if has_generator:
         assert validate_generator_root(generator, info.generator_root, constants, uint32(pre_sp_tx_height))
