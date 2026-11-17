@@ -166,6 +166,10 @@ class WalletNodeAPI:
         await self.wallet_node.wallet_peers.add_peers(request.peer_list, peer.get_peer_info(), True)
 
     @metadata.request()
+    async def respond_transaction(self, request: full_node_protocol.RespondTransaction) -> None:
+        self.log.error("Unexpected message `respond_transaction`. Peer might be slow to respond")
+
+    @metadata.request()
     async def respond_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution) -> None:
         self.log.error("Unexpected message `respond_puzzle_solution`. Peer might be slow to respond")
 
