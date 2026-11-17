@@ -58,6 +58,7 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     puzzle_for_singleton,
     solution_for_singleton,
 )
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.util.compute_additions import compute_additions
 
 # Mods
@@ -1347,3 +1348,24 @@ class MagicTPCondition(Condition, Generic[_T_Solution]):
             launcher_id=bytes32(launcher_id.as_atom()),
             tp_solution=None if tp_solution == Program.NIL else UnknownSolution(program=tp_solution),
         )
+
+
+def match_revocation_layer(uncurried_puzzle: UncurriedPuzzle) -> tuple[bytes32, bytes32] | None:
+    if uncurried_puzzle.mod != REVOCATION_LAYER:
+        return None
+    return bytes32(uncurried_puzzle.args.at("rf").as_atom()), bytes32(uncurried_puzzle.args.at("rrf").as_atom())
+
+
+def create_revocation_layer(hidden_puzzle_hash: bytes32, inner_puzzle_hash: bytes32) -> Program:
+    return RevocationLayer(
+        hidden_puzzle=UnknownPuzzle(known_tree_hash=hidden_puzzle_hash),
+        inner_puzzle=UnknownPuzzle(known_tree_hash=inner_puzzle_hash),
+    ).program
+
+
+def solve_revocation_layer(puzzle_reveal: Program, inner_solution: Program, hidden: bool = False) -> Program:
+    return RevocationLayerSolution(
+        puzzle_reveal=UnknownPuzzle(known_program=puzzle_reveal),
+        inner_solution=UnknownSolution(program=inner_solution),
+        hidden=hidden,
+    ).program

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Protocol
+from typing import Protocol, TypeVar
 
 from chia_rs.sized_bytes import bytes32
 from typing_extensions import runtime_checkable
@@ -23,6 +23,14 @@ class Puzzle(Protocol):
 
     @classmethod
     def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None: ...
+
+
+_T_Puzzle_co = TypeVar("_T_Puzzle_co", bound=Puzzle, covariant=True)
+
+
+class OuterPuzzle(Puzzle, Protocol[_T_Puzzle_co]):
+    @property
+    def inner_puzzle(self) -> _T_Puzzle_co: ...
 
 
 class Solution(Protocol):

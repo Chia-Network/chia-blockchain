@@ -11,15 +11,14 @@ from chia_rs.sized_ints import uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
+    CAT,
+    CATPuzzle,
     SpendableCAT,
-    construct_cat_puzzle,
-    match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
 
 
 @dataclass(frozen=True)
@@ -31,13 +30,13 @@ class CATOuterPuzzle:
     _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
     def match(self, puzzle: UnknownPuzzle) -> PuzzleInfo | None:
-        args = match_cat_puzzle(puzzle)
-        if args is None:
+        matched_cat = CATPuzzle.match(unknown_puzzle=puzzle)
+        if matched_cat is None:
             return None
-        _, tail_hash, inner_puzzle = args
+        inner_puzzle = matched_cat.inner_puzzle.program
         constructor_dict: dict[str, Any] = {
             "type": "CAT",
-            "tail": "0x" + tail_hash.as_atom().hex(),
+            "tail": "0x" + matched_cat.tail_hash.hex(),
         }
         next_constructor = self._match(UnknownPuzzle(known_program=inner_puzzle))
         if next_constructor is not None:
@@ -47,16 +46,14 @@ class CATOuterPuzzle:
     def get_inner_puzzle(
         self, constructor: PuzzleInfo, puzzle_reveal: UnknownPuzzle, solution: Program | None = None
     ) -> Program | None:
-        args = match_cat_puzzle(puzzle_reveal)
-        if args is None:
+        matched_cat = CATPuzzle.match(unknown_puzzle=puzzle_reveal)
+        if matched_cat is None:
             raise ValueError("This driver is not for the specified puzzle reveal")
-        _, _, inner_puzzle = args
+        inner_puzzle = matched_cat.inner_puzzle.program
         also = constructor.also()
         if also is not None:
             deep_inner_puzzle: Program | None = self._get_inner_puzzle(
-                also,
-                UnknownPuzzle(known_program=inner_puzzle),
-                solution.first() if solution is not None else None,
+                also, UnknownPuzzle(known_program=inner_puzzle), solution.first() if solution is not None else None
             )
             return deep_inner_puzzle
         else:
@@ -78,11 +75,14 @@ class CATOuterPuzzle:
         also = constructor.also()
         if also is not None:
             inner_puzzle = self._construct(also, inner_puzzle)
-        return construct_cat_puzzle(CAT_MOD, constructor["tail"], inner_puzzle)
+        return CATPuzzle(
+            tail_hash=bytes32(constructor["tail"]),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle),
+        ).program
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
         tail_hash: bytes32 = constructor["tail"]
-        spendable_cats: list[SpendableCAT] = []
+        spendable_cats = []
         target_coin: Coin | None = None
         ring = [
             *zip(
@@ -113,19 +113,25 @@ class CATOuterPuzzle:
             else:
                 constructed_solution = solution
                 constructed_puzzle = puzzle
-            args = match_cat_puzzle(UnknownPuzzle(known_program=parent_spend.puzzle_reveal))
-            assert args is not None
-            _, _, parent_inner_puzzle = args
+            matched_cat = CATPuzzle.match(
+                unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(parent_spend.puzzle_reveal))
+            )
+            assert matched_cat is not None
+            parent_inner_puzzle = matched_cat.inner_puzzle.program
             spendable_cats.append(
                 SpendableCAT(
-                    coin,
-                    tail_hash,
-                    constructed_puzzle,
-                    constructed_solution,
-                    lineage_proof=LineageProof(
-                        parent_coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), uint64(parent_coin.amount)
+                    cat=CAT(
+                        coin=coin,
+                        tail_hash=tail_hash,
+                        inner_puzzle=UnknownPuzzle(known_program=constructed_puzzle),
+                        lineage_proof=LineageProof(
+                            parent_coin.parent_coin_info,
+                            parent_inner_puzzle.get_tree_hash(),
+                            uint64(parent_coin.amount),
+                        ),
                     ),
+                    inner_solution=UnknownSolution(program=constructed_solution),
                 )
             )
-        bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats)
+        bundle = unsigned_spend_bundle_for_spendable_cats(spendable_cats)
         return next(Program.from_serialized(cs.solution) for cs in bundle.coin_spends if cs.coin == target_coin)
