@@ -48,6 +48,14 @@ class TestV2Prover:
         with pytest.raises(AssertionError, match="V2 plot groups do not have a single-plot PlotParam"):
             prover.get_param()
 
+    def test_v2_prover_get_param_for_index(self, v2_plot_path: Path) -> None:
+        prover = V2Prover.from_filename(str(v2_plot_path))
+        assert prover.get_group_size() > 0
+        param = prover.get_param_for_index(uint16(0))
+        assert param.plot_index == 0
+        assert param.meta_group == prover.get_meta_group()
+        assert param.strength_v2 == prover.get_strength()
+
     def test_v2_prover_get_memo(self, v2_plot_path: Path) -> None:
         prover = V2Prover.from_filename(str(v2_plot_path))
         assert prover.get_memo()
@@ -68,8 +76,10 @@ class TestV2Prover:
                 break
         else:
             pytest.fail("No V2 qualities found in 100 challenges")
-        assert all(isinstance(quality, V2Quality) for quality in qualities)
-        assert all(isinstance(quality.get_string(), bytes32) for quality in qualities)
+        for quality in qualities:
+            assert isinstance(quality, V2Quality)
+            assert isinstance(quality.get_string(), bytes32)
+            assert quality.get_plot_index() < prover.get_group_size()
 
     def test_v2_prover_bytes(self, v2_plot_path: Path) -> None:
         prover = V2Prover.from_filename(str(v2_plot_path))
@@ -80,6 +90,13 @@ class TestV2Prover:
         restored = V2Prover.from_bytes(bytes(prover))
         assert restored.get_id() == prover.get_id()
         assert restored.get_memo() == prover.get_memo()
+        assert restored.get_size() == prover.get_size()
+
+    def test_get_prover_from_bytes(self, v2_plot_path: Path) -> None:
+        prover = V2Prover.from_filename(str(v2_plot_path))
+        dispatched = get_prover_from_bytes(str(v2_plot_path), bytes(prover))
+        assert isinstance(dispatched, V2Prover)
+        assert dispatched.get_id() == prover.get_id()
 
     def test_get_prover_from_file(self, v2_plot_path: Path) -> None:
         prover = get_prover_from_file(str(v2_plot_path))
