@@ -23,8 +23,20 @@ on:
   release:
     types: [published]
   pull_request:
-    paths-ignore:
-      - "**.md"
+    paths:
+      - "**"
+      - "!**/*.md"
+      - "!.cursor/**"
+      - "!ruff.toml"
+      - "!mypy.ini.template"
+      - "!mypy-exclusions.txt"
+      - "!mypy-strict-bytes-exclusions.txt"
+      - "!.pre-commit-config.yaml"
+      - "!tach.toml"
+      - "!.github/actionlint.yaml"
+      - "!.github/workflows/**"
+      - ".github/workflows/build-linux-installer-rpm.yml"
+      - ".github/workflows/reflow-*.yml"
     branches:
       - "**"
 
@@ -37,10 +49,6 @@ permissions:
   contents: write
 
 jobs:
-  packaging-paths:
-    if: github.event.repository.visibility != 'private' || github.event_name == 'workflow_dispatch' || github.event_name == 'release'
-    uses: ./.github/workflows/packaging-paths.yml
-
   version:
     if: github.event.repository.visibility != 'private' || github.event_name == 'workflow_dispatch' || github.event_name == 'release'
     uses: ./.github/workflows/reflow-version.yml
@@ -51,13 +59,9 @@ jobs:
     name: Build amd64 RPM
     runs-on: ubuntu-latest
     needs:
-      - packaging-paths
       - version
-    if: |
-      !cancelled() &&
-      needs.packaging-paths.result == 'success' &&
-      (needs.packaging-paths.outputs.packaging != 'true' || needs.version.result == 'success')
-    container: ${{ fromJSON(needs.packaging-paths.outputs.packaging == 'true' && '{"image":"chianetwork/rocky8-builder:python312"}' || 'null') }}
+    container:
+      image: chianetwork/rocky8-builder:python312
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -73,42 +77,31 @@ jobs:
       TAG_TYPE: ${{ needs.version.outputs.tag-type }}
 
     steps:
-      - name: Pull request does not change packaging paths
-        if: needs.packaging-paths.outputs.packaging != 'true'
-        run: echo "Packaging paths unchanged; skipping this job's work."
-
       - name: Add safe git directory
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: Chia-Network/actions/git-mark-workspace-safe@main
 
       - name: Checkout Code
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: recursive
 
       - uses: Chia-Network/actions/git-ssh-to-https@main
-        if: needs.packaging-paths.outputs.packaging == 'true'
 
       - name: Cleanup any leftovers that exist from previous runs
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: bash build_scripts/clean-runner.sh || true
 
       - name: Set Env
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node per .nvmrc in GUI
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/setup-node@v7.0.0
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Get latest madmax plotter
-        if: needs.packaging-paths.outputs.packaging == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -120,7 +113,6 @@ jobs:
           chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot_k34
 
       - name: Fetch bladebit versions
-        if: needs.packaging-paths.outputs.packaging == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -144,7 +136,6 @@ jobs:
           echo "LATEST_VERSION=$LATEST_VERSION" >> "$GITHUB_ENV"
 
       - name: Get latest bladebit plotter
-        if: needs.packaging-paths.outputs.packaging == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -158,17 +149,14 @@ jobs:
           cd "$OLDPWD"
 
       - uses: ./.github/actions/install
-        if: needs.packaging-paths.outputs.packaging == 'true'
         with:
           python-version: ${{ matrix.python-version }}
           development: true
           constraints-file-artifact-name: constraints-file-${{ matrix.os.arch-artifact-name }}
 
       - uses: chia-network/actions/activate-venv@main
-        if: needs.packaging-paths.outputs.packaging == 'true'
 
       - name: Prepare GUI cache
-        if: needs.packaging-paths.outputs.packaging == 'true'
         id: gui-ref
         run: |
           gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
@@ -178,14 +166,13 @@ jobs:
           rm -rf ./chia-blockchain-gui
 
       - name: Cache GUI
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/cache@v6
         id: cache-gui
         with:
           path: ./chia-blockchain-gui
           key: ${{ runner.os }}-rpm-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
 
-      - if: needs.packaging-paths.outputs.packaging == 'true' && (steps.cache-gui.outputs.cache-hit != 'true')
+      - if: steps.cache-gui.outputs.cache-hit != 'true'
         name: Build GUI
         continue-on-error: false
         run: |
@@ -193,14 +180,12 @@ jobs:
           bash build_linux_rpm-1-gui.sh
 
       - name: Build .rpm package
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           ldd --version
           cd ./build_scripts
           bash build_linux_rpm-2-installer.sh amd64
 
       - name: Upload fpm-generated rpm spec files
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/upload-artifact@v7
         with:
           if-no-files-found: error
@@ -210,14 +195,12 @@ jobs:
             build_scripts/dist/gui.spec
 
       - name: Upload Linux artifacts
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: chia-installers-linux-rpm-${{ matrix.os.arch-artifact-name }}
           path: build_scripts/final_installer/
 
       - name: Remove working files to exclude from cache
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
@@ -229,17 +212,10 @@ jobs:
       chia-installer-version: ${{ needs.version.outputs.chia-installer-version }}
       chia-dev-version: ${{ needs.version.outputs.chia-dev-version }}
       configuration: ${{ toJSON( matrix.configuration ) }}
-      skip: ${{ needs.packaging-paths.outputs.packaging != 'true' }}
     secrets: inherit
     needs:
-      - packaging-paths
       - version
       - build
-    if: |
-      !cancelled() &&
-      needs.packaging-paths.result == 'success' &&
-      needs.version.result == 'success' &&
-      (needs.packaging-paths.outputs.packaging != 'true' || needs.build.result == 'success')
     strategy:
       fail-fast: false
       matrix:
@@ -292,14 +268,9 @@ jobs:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.state.name }}
     runs-on: ${{ matrix.os }}
     needs:
-      - packaging-paths
       - version
       - build
-    if: |
-      !cancelled() &&
-      needs.packaging-paths.result == 'success' &&
-      (needs.packaging-paths.outputs.packaging != 'true' || (needs.version.result == 'success' && needs.build.result == 'success'))
-    container: ${{ fromJSON(needs.packaging-paths.outputs.packaging == 'true' && format('"{0}"', matrix.distribution.url) || 'null') }}
+    container: ${{ matrix.distribution.url }}
     strategy:
       fail-fast: false
       matrix:
@@ -342,25 +313,19 @@ jobs:
             matrix: clean
 
     steps:
-      - name: Pull request does not change packaging paths
-        if: needs.packaging-paths.outputs.packaging != 'true'
-        run: echo "Packaging paths unchanged; skipping this job's work."
-
       - uses: Chia-Network/actions/clean-workspace@main
-        if: needs.packaging-paths.outputs.packaging == 'true'
 
       - name: Set rocky8 repo
-        if: ${{ needs.packaging-paths.outputs.packaging == 'true' && (matrix.distribution.name == 'rockylinux:8') }}
+        if: ${{ matrix.distribution.name == 'rockylinux:8' }}
         run: |
           sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/Rocky-*.repo
 
       - name: Set rocky9 repo
-        if: ${{ needs.packaging-paths.outputs.packaging == 'true' && (matrix.distribution.name == 'rockylinux:9') }}
+        if: ${{ matrix.distribution.name == 'rockylinux:9' }}
         run: |
           sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/rocky-*.repo
 
       - name: Download packages
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/download-artifact@v8
         id: download
         with:
@@ -368,7 +333,7 @@ jobs:
           path: packages
 
       - name: Dirty the environment for the sake of testing
-        if: needs.packaging-paths.outputs.packaging == 'true' && (matrix.state.matrix == 'dirty')
+        if: matrix.state.matrix == 'dirty'
         run: |
           # this has been known to mess up the version detection, the empty directory should be removed
           mkdir --parents /opt/chia/chia_blockchain-0.1.dist-info
@@ -376,23 +341,19 @@ jobs:
           touch /opt/chia/touched
 
       - name: Install package
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           ls -l "${{ steps.download.outputs.download-path }}"
           yum install -y numactl-libs "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
 
       - name: List /opt/chia contents
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           find /opt/chia
 
       - name: Run chia dev installers test
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           chia dev installers test --require-no-madmax --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
 
       - name: Verify /opt/chia present
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           if [ ! -e /opt/chia ]
           then
@@ -401,12 +362,11 @@ jobs:
           fi
 
       - name: Remove package
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           yum remove -y ${{ matrix.distribution.noautoremove[matrix.mode.matrix] }} ${{ matrix.mode.package }}
 
       - name: Verify /opt/chia not present
-        if: needs.packaging-paths.outputs.packaging == 'true' && (matrix.state.matrix == 'clean')
+        if: matrix.state.matrix == 'clean'
         run: |
           if [ -e /opt/chia ]
           then
@@ -415,7 +375,7 @@ jobs:
           fi
 
       - name: Verify /opt/chia contains only touched file
-        if: needs.packaging-paths.outputs.packaging == 'true' && (matrix.state.matrix == 'dirty')
+        if: matrix.state.matrix == 'dirty'
         run: |
           ACTUAL=$(ls -a /opt/chia)
           EXPECTED=$(echo -e '.\n..\ntouched')

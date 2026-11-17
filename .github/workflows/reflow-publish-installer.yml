@@ -15,11 +15,6 @@ on:
       configuration:
         required: true
         type: string
-      skip:
-        description: Succeed without uploading. Set when a pull request did not change packaging paths.
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -51,54 +46,41 @@ jobs:
       TRACKER_URL: udp://tracker.opentrackr.org:1337/announce
 
     steps:
-      - name: Pull request does not change packaging paths
-        if: inputs.skip
-        run: echo "Packaging paths unchanged; not publishing."
-
       - uses: Chia-Network/actions/clean-workspace@main
-        if: inputs.skip != true
 
       - uses: Chia-Network/actions/setup-python@main
-        if: inputs.skip != true
         with:
           python-version: ${{ matrix.python-version }}
 
       - uses: chia-network/actions/create-venv@main
-        if: inputs.skip != true
         id: create-venv
 
       - uses: chia-network/actions/activate-venv@main
-        if: inputs.skip != true
         with:
           directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
 
       - name: Download constraints file
-        if: inputs.skip != true
         uses: actions/download-artifact@v8
         with:
           name: constraints-file-${{ matrix.arch.artifact-name }}
           path: venv
 
       - name: Install utilities
-        if: inputs.skip != true
         run: |
           pip install --constraint venv/constraints.txt py3createtorrent
 
       - name: Download packages
-        if: inputs.skip != true
         uses: actions/download-artifact@v8
         with:
           name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.arch.artifact-name }}
           path: artifacts/
 
       - name: Set Env
-        if: inputs.skip != true
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Test for secrets access
-        if: inputs.skip != true
         id: check_secrets
         run: |
           unset HAS_AWS_SECRET
@@ -114,27 +96,26 @@ jobs:
           GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
 
       - name: Configure AWS credentials
-        if: inputs.skip != true && (steps.check_secrets.outputs.HAS_AWS_SECRET)
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET
         uses: aws-actions/configure-aws-credentials@v6.3.0
         with:
           role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
           aws-region: us-west-2
 
       - name: Create Checksums
-        if: inputs.skip != true
         run: |
           ls artifacts/
           sha256sum "artifacts/${FILE}" > "artifacts/${FILE}.sha256"
 
       - name: Upload to s3
-        if: inputs.skip != true && (steps.check_secrets.outputs.HAS_AWS_SECRET)
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET
         run: |
           ls artifacts/
           aws s3 cp "artifacts/${FILE}" "${DEV_S3_URL}/${DEV_FILE}"
           aws s3 cp "artifacts/${FILE}.sha256" "${LATEST_DEV_S3_URL}/${DEV_FILE}.sha256"
 
       - name: Create torrent
-        if: inputs.skip != true && (env.RELEASE == 'true' && matrix.mode.matrix == 'gui')
+        if: env.RELEASE == 'true' && matrix.mode.matrix == 'gui'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -142,24 +123,24 @@ jobs:
           gh release upload --repo "${{ github.repository }}" "$RELEASE_TAG" "artifacts/${FILE}.torrent"
 
       - name: Upload Dev Installer
-        if: inputs.skip != true && (steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main')
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
         run: |
           aws s3 cp "artifacts/${FILE}" "${LATEST_DEV_S3_URL}/${LATEST_DEV_FILE}"
           aws s3 cp "artifacts/${FILE}.sha256" "${LATEST_DEV_S3_URL}/${LATEST_DEV_FILE}.sha256"
 
       - name: Upload Release Files
-        if: inputs.skip != true && (steps.check_secrets.outputs.HAS_AWS_SECRET && env.RELEASE == 'true')
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.RELEASE == 'true'
         run: |
           aws s3 cp "artifacts/${FILE}" "${INSTALL_S3_URL}/"
           aws s3 cp "artifacts/${FILE}.sha256" "${INSTALL_S3_URL}/"
 
       - name: Upload Release Torrent
-        if: inputs.skip != true && (steps.check_secrets.outputs.HAS_AWS_SECRET && env.RELEASE == 'true' && matrix.mode.matrix == 'gui')
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.RELEASE == 'true' && matrix.mode.matrix == 'gui'
         run: |
           aws s3 cp "artifacts/${FILE}.torrent" "${TORRENT_S3_URL}"
 
       - name: Upload release artifacts
-        if: inputs.skip != true && (env.RELEASE == 'true')
+        if: env.RELEASE == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -170,7 +151,7 @@ jobs:
 
       - name: Mark installer complete
         uses: Chia-Network/actions/github/glue@main
-        if: inputs.skip != true && (steps.check_secrets.outputs.HAS_GLUE_SECRET && (env.RELEASE == 'true'))
+        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && (env.RELEASE == 'true')
         env:
           REPO_SUFFIX: ${{ env.PRE_RELEASE == 'true' && '-prerelease' || '' }}
         with:

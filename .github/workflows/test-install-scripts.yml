@@ -11,8 +11,19 @@ on:
   release:
     types: [published]
   pull_request:
-    paths-ignore:
-      - "**.md"
+    paths:
+      - "**"
+      - "!**/*.md"
+      - "!.cursor/**"
+      - "!ruff.toml"
+      - "!mypy.ini.template"
+      - "!mypy-exclusions.txt"
+      - "!mypy-strict-bytes-exclusions.txt"
+      - "!.pre-commit-config.yaml"
+      - "!tach.toml"
+      - "!.github/actionlint.yaml"
+      - "!.github/workflows/**"
+      - ".github/workflows/test-install-scripts.yml"
     branches:
       - "**"
 
@@ -25,14 +36,9 @@ defaults:
     shell: bash
 
 jobs:
-  packaging-paths:
-    uses: ./.github/workflows/packaging-paths.yml
-
   test_scripts:
     name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
-    runs-on: ${{ needs.packaging-paths.outputs.packaging == 'true' && matrix.os.runs-on[matrix.arch.matrix] || 'ubuntu-latest' }}
-    needs: packaging-paths
-    if: ${{ !cancelled() && needs.packaging-paths.result == 'success' }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
       matrix:
@@ -82,31 +88,23 @@ jobs:
               matrix: arm
 
     steps:
-      - name: Pull request does not change packaging paths
-        if: needs.packaging-paths.outputs.packaging != 'true'
-        run: echo "Packaging paths unchanged; skipping this job's work."
-
       - name: Checkout Code
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: recursive
 
       - name: Setup Python environment
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python.major-dot-minor }}
 
       - name: Setup Node per .nvmrc in GUI
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/setup-node@v7.0.0
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Remove GUI submodule for gui script testing
-        if: needs.packaging-paths.outputs.packaging == 'true'
         env:
           GUI_DIRECTORY: chia-blockchain-gui
         run: |
@@ -114,7 +112,6 @@ jobs:
           rm -rf "${GUI_DIRECTORY}"
 
       - uses: ./.github/actions/install
-        if: needs.packaging-paths.outputs.packaging == 'true'
         with:
           python-version: ${{ matrix.python.major-dot-minor }}
           development: ${{ matrix.development.value }}
@@ -122,26 +119,23 @@ jobs:
           do-system-installs: true
 
       - uses: chia-network/actions/activate-venv@main
-        if: needs.packaging-paths.outputs.packaging == 'true'
 
       - name: Run chia --help
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           chia --help
 
       - name: Run install-gui script (Linux, macOS)
-        if: needs.packaging-paths.outputs.packaging == 'true' && (matrix.os.matrix != 'windows')
+        if: matrix.os.matrix != 'windows'
         run: |
           sh install-gui.sh
 
       - name: Run install-gui script (Windows)
-        if: needs.packaging-paths.outputs.packaging == 'true' && (matrix.os.matrix == 'windows')
+        if: matrix.os.matrix == 'windows'
         shell: pwsh
         run: |
           ./Install-gui.ps1
 
       - name: Collect editable info
-        if: needs.packaging-paths.outputs.packaging == 'true'
         id: editable-info
         shell: bash
         run: |
@@ -150,7 +144,7 @@ jobs:
           echo "post-edit-version=$(chia version)" >> "$GITHUB_OUTPUT"
 
       - name: Check editable
-        if: needs.packaging-paths.outputs.packaging == 'true' && (matrix.editable.matrix == 'editable')
+        if: matrix.editable.matrix == 'editable'
         shell: bash
         env:
           PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
@@ -159,7 +153,7 @@ jobs:
           [ "$POST_VERSION" = "shooby-doowah" ] && [ "$PRE_VERSION" != "shooby-doowah" ]
 
       - name: Check non-editable
-        if: needs.packaging-paths.outputs.packaging == 'true' && (matrix.editable.matrix == 'non-editable')
+        if: matrix.editable.matrix == 'non-editable'
         shell: bash
         env:
           PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
@@ -169,11 +163,12 @@ jobs:
 
   test_scripts_in_docker:
     name: Docker ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
-    runs-on: ${{ needs.packaging-paths.outputs.packaging == 'true' && matrix.os.runs-on[matrix.arch.matrix] || 'ubuntu-latest' }}
-    needs: packaging-paths
-    if: ${{ !cancelled() && needs.packaging-paths.result == 'success' }}
-    # OCI images may omit PATH; retain system tools when GITHUB_PATH adds the virtualenv.
-    container: ${{ fromJSON(needs.packaging-paths.outputs.packaging == 'true' && format('{{"image":"{0}","env":{{"PATH":"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}}}}', matrix.distribution.url) || 'null') }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    container:
+      image: ${{ matrix.distribution.url }}
+      env:
+        # OCI images may omit PATH; retain system tools when GITHUB_PATH adds the virtualenv.
+        PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     strategy:
       fail-fast: false
       matrix:
@@ -234,19 +229,15 @@ jobs:
           #      matrix: arm
 
     steps:
-      - name: Pull request does not change packaging paths
-        if: needs.packaging-paths.outputs.packaging != 'true'
-        run: echo "Packaging paths unchanged; skipping this job's work."
-
       - name: Prepare Amazon Linux
-        if: ${{ needs.packaging-paths.outputs.packaging == 'true' && (matrix.distribution.type == 'amazon') }}
+        if: ${{ matrix.distribution.type == 'amazon' }}
         run: |
           dnf update -y
           dnf search python3.12
           dnf install git python3.12 -y
 
       - name: Prepare Arch
-        if: ${{ needs.packaging-paths.outputs.packaging == 'true' && (matrix.distribution.type == 'arch') }}
+        if: ${{ matrix.distribution.type == 'arch' }}
         run: |
           pacman --noconfirm -Syu
           pacman --noconfirm -S base git openssl-1.1
@@ -256,7 +247,7 @@ jobs:
           pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.13.5-1-x86_64.pkg.tar.zst
 
       - name: Prepare Debian
-        if: ${{ needs.packaging-paths.outputs.packaging == 'true' && (matrix.distribution.type == 'debian') }}
+        if: ${{ matrix.distribution.type == 'debian' }}
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
@@ -264,29 +255,29 @@ jobs:
           apt-get install --yes git lsb-release python3-venv
 
       - name: Prepare Fedora
-        if: ${{ needs.packaging-paths.outputs.packaging == 'true' && (matrix.distribution.type == 'fedora') }}
+        if: ${{ matrix.distribution.type == 'fedora' }}
         run: |
           yum install --assumeyes git python
 
       - name: Set rocky8 repo
-        if: ${{ needs.packaging-paths.outputs.packaging == 'true' && (matrix.distribution.name == 'rockylinux:8') }}
+        if: ${{ matrix.distribution.name == 'rockylinux:8' }}
         run: |
           sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/Rocky-*.repo
 
       - name: Set rocky9 repo
-        if: ${{ needs.packaging-paths.outputs.packaging == 'true' && (matrix.distribution.name == 'rockylinux:9') }}
+        if: ${{ matrix.distribution.name == 'rockylinux:9' }}
         run: |
           sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/rocky-*.repo
 
       - name: Prepare Rocky
-        if: ${{ needs.packaging-paths.outputs.packaging == 'true' && (matrix.distribution.type == 'rocky') }}
+        if: ${{ matrix.distribution.type == 'rocky' }}
         run: |
           dnf update -y
           dnf search python3.12
           dnf install git python3.12 -y
 
       - name: Prepare Ubuntu
-        if: ${{ needs.packaging-paths.outputs.packaging == 'true' && (matrix.distribution.type == 'ubuntu') }}
+        if: ${{ matrix.distribution.type == 'ubuntu' }}
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
@@ -299,26 +290,21 @@ jobs:
           fi
 
       - name: Add safe git directory
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       # after installing git so we use that copy
       - name: Checkout Code
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - uses: ./.github/actions/install
-        if: needs.packaging-paths.outputs.packaging == 'true'
         with:
           development: true
           do-system-installs: true
 
       - uses: chia-network/actions/activate-venv@main
-        if: needs.packaging-paths.outputs.packaging == 'true'
 
       - name: Run chia --help
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           chia --help

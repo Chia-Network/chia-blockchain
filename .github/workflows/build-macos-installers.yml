@@ -23,8 +23,20 @@ on:
   release:
     types: [published]
   pull_request:
-    paths-ignore:
-      - "**.md"
+    paths:
+      - "**"
+      - "!**/*.md"
+      - "!.cursor/**"
+      - "!ruff.toml"
+      - "!mypy.ini.template"
+      - "!mypy-exclusions.txt"
+      - "!mypy-strict-bytes-exclusions.txt"
+      - "!.pre-commit-config.yaml"
+      - "!tach.toml"
+      - "!.github/actionlint.yaml"
+      - "!.github/workflows/**"
+      - ".github/workflows/build-macos-installers.yml"
+      - ".github/workflows/reflow-*.yml"
     branches:
       - "**"
 
@@ -37,10 +49,6 @@ permissions:
   contents: write
 
 jobs:
-  packaging-paths:
-    if: github.event.repository.visibility != 'private' || github.event_name == 'workflow_dispatch' || github.event_name == 'release'
-    uses: ./.github/workflows/packaging-paths.yml
-
   version:
     if: github.event.repository.visibility != 'private' || github.event_name == 'workflow_dispatch' || github.event_name == 'release'
     uses: ./.github/workflows/reflow-version.yml
@@ -49,14 +57,9 @@ jobs:
 
   build:
     name: Build ${{ matrix.os.name }} DMG
-    runs-on: ${{ needs.packaging-paths.outputs.packaging == 'true' && matrix.os.runs-on || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.os.runs-on }}
     needs:
-      - packaging-paths
       - version
-    if: |
-      !cancelled() &&
-      needs.packaging-paths.result == 'success' &&
-      (needs.packaging-paths.outputs.packaging != 'true' || needs.version.result == 'success')
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -79,36 +82,26 @@ jobs:
       TAG_TYPE: ${{ needs.version.outputs.tag-type }}
 
     steps:
-      - name: Pull request does not change packaging paths
-        if: needs.packaging-paths.outputs.packaging != 'true'
-        run: echo "Packaging paths unchanged; skipping this job's work."
-
       - uses: Chia-Network/actions/clean-workspace@main
-        if: needs.packaging-paths.outputs.packaging == 'true'
 
       - name: Checkout Code
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: recursive
 
       - uses: Chia-Network/actions/git-ssh-to-https@main
-        if: needs.packaging-paths.outputs.packaging == 'true'
 
       - name: Cleanup any leftovers that exist from previous runs
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: bash build_scripts/clean-runner.sh || true
 
       - name: Set Env
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MACOSX_DEPLOYMENT_TARGET: 15
 
       - name: Test for secrets access
-        if: needs.packaging-paths.outputs.packaging == 'true'
         id: check_secrets
         shell: bash
         run: |
@@ -120,7 +113,6 @@ jobs:
           APPLE_SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
 
       - name: Setup Python environment
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
@@ -128,18 +120,16 @@ jobs:
       # This will be recreated in the next step
       # Done now and at the end of the workflow in case the last workflow fails, and this is still around
       - name: Delete keychain if it already exists
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: security delete-keychain signing_temp.keychain || true
 
       - name: Import Apple app signing certificate
-        if: needs.packaging-paths.outputs.packaging == 'true' && (steps.check_secrets.outputs.HAS_APPLE_SECRET)
+        if: steps.check_secrets.outputs.HAS_APPLE_SECRET
         uses: Apple-Actions/import-codesign-certs@v7
         with:
           p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
           p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
 
       - name: Get latest madmax plotter
-        if: needs.packaging-paths.outputs.packaging == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -153,7 +143,6 @@ jobs:
           chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot_k34
 
       - name: Fetch bladebit versions
-        if: needs.packaging-paths.outputs.packaging == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -177,7 +166,6 @@ jobs:
           echo "LATEST_VERSION=$LATEST_VERSION" >> "$GITHUB_ENV"
 
       - name: Get latest bladebit plotter
-        if: needs.packaging-paths.outputs.packaging == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -195,23 +183,19 @@ jobs:
           cd "$OLDPWD"
 
       - uses: ./.github/actions/install
-        if: needs.packaging-paths.outputs.packaging == 'true'
         with:
           python-version: ${{ matrix.python-version }}
           development: true
           constraints-file-artifact-name: constraints-file-${{ matrix.os.arch-artifact-name }}
 
       - uses: chia-network/actions/activate-venv@main
-        if: needs.packaging-paths.outputs.packaging == 'true'
 
       - name: Setup Node per .nvmrc in GUI
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/setup-node@v7.0.0
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Prepare GUI cache
-        if: needs.packaging-paths.outputs.packaging == 'true'
         id: gui-ref
         run: |
           gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
@@ -221,14 +205,13 @@ jobs:
           rm -rf ./chia-blockchain-gui
 
       - name: Cache GUI
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/cache@v6
         id: cache-gui
         with:
           path: ./chia-blockchain-gui
           key: ${{ runner.os }}-${{ matrix.os.name }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
 
-      - if: needs.packaging-paths.outputs.packaging == 'true' && (steps.cache-gui.outputs.cache-hit != 'true')
+      - if: steps.cache-gui.outputs.cache-hit != 'true'
         name: Build GUI
         continue-on-error: false
         run: |
@@ -236,7 +219,6 @@ jobs:
           sh build_macos-1-gui.sh
 
       - name: Build MacOS DMG
-        if: needs.packaging-paths.outputs.packaging == 'true'
         env:
           NOTARIZE: ${{ steps.check_secrets.outputs.HAS_APPLE_SECRET }}
           APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
@@ -249,14 +231,12 @@ jobs:
           sh build_macos-2-installer.sh
 
       - name: Upload MacOS artifacts
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: chia-installers-macos-dmg-${{ matrix.os.arch-artifact-name }}
           path: build_scripts/final_installer/
 
       - name: Remove working files to exclude from cache
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
@@ -268,17 +248,10 @@ jobs:
       chia-installer-version: ${{ needs.version.outputs.chia-installer-version }}
       chia-dev-version: ${{ needs.version.outputs.chia-dev-version }}
       configuration: ${{ toJSON( matrix.configuration ) }}
-      skip: ${{ needs.packaging-paths.outputs.packaging != 'true' }}
     secrets: inherit
     needs:
-      - packaging-paths
       - version
       - build
-    if: |
-      !cancelled() &&
-      needs.packaging-paths.result == 'success' &&
-      needs.version.result == 'success' &&
-      (needs.packaging-paths.outputs.packaging != 'true' || needs.build.result == 'success')
     strategy:
       fail-fast: false
       matrix:
@@ -326,15 +299,10 @@ jobs:
 
   test:
     name: Test ${{ matrix.os.name }} ${{ matrix.arch.name }}
-    runs-on: ${{ needs.packaging-paths.outputs.packaging == 'true' && matrix.os.runs-on[matrix.arch.matrix] || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
-      - packaging-paths
       - version
       - build
-    if: |
-      !cancelled() &&
-      needs.packaging-paths.result == 'success' &&
-      (needs.packaging-paths.outputs.packaging != 'true' || (needs.version.result == 'success' && needs.build.result == 'success'))
     strategy:
       fail-fast: false
       matrix:
@@ -353,15 +321,9 @@ jobs:
             artifact-name: intel
 
     steps:
-      - name: Pull request does not change packaging paths
-        if: needs.packaging-paths.outputs.packaging != 'true'
-        run: echo "Packaging paths unchanged; skipping this job's work."
-
       - uses: Chia-Network/actions/clean-workspace@main
-        if: needs.packaging-paths.outputs.packaging == 'true'
 
       - name: Download packages
-        if: needs.packaging-paths.outputs.packaging == 'true'
         uses: actions/download-artifact@v8
         id: download
         with:
@@ -369,7 +331,6 @@ jobs:
           path: packages
 
       - name: Mount .dmg
-        if: needs.packaging-paths.outputs.packaging == 'true'
         env:
           PACKAGE_PATH: artifacts/
         run: |
@@ -377,23 +338,21 @@ jobs:
           hdiutil attach "${{ steps.download.outputs.download-path }}"/Chia-*.dmg
 
       - name: List .dmg contents
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           find "/Volumes/Chia "*
 
       - name: Test for homebrew rpath
-        if: needs.packaging-paths.outputs.packaging == 'true' && (matrix.arch.name == 'ARM64')
+        if: matrix.arch.name == 'ARM64'
         run: |
           ! otool -l "/Volumes/Chia "*/Chia.app/Contents/Resources/app.asar.unpacked/daemon/_internal/lib-dynload/_ssl.*darwin.so | grep /opt/homebrew/lib
 
       - name: Run chia dev installers test
-        if: needs.packaging-paths.outputs.packaging == 'true'
         run: |
           # TODO: maybe fix this and remove the disable
           # shellcheck disable=SC2211
           "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
 
       - name: Detach .dmg
-        if: needs.packaging-paths.outputs.packaging == 'true' && (always())
+        if: always()
         run: |
           hdiutil detach -force "/Volumes/Chia "*
