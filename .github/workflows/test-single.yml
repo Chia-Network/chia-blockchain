@@ -104,40 +104,15 @@ jobs:
           mv "${GITHUB_WORKSPACE}/test-cache-${BLOCKS_AND_PLOTS_VERSION}/"* "${GITHUB_WORKSPACE}/.chia"
 
   # Full-suite source vs installed collect, once per OS and Python in matrix_mode.
-  # Shards do not need this job. Keep this Python list in sync with the test job.
+  # Shards do not need this job. all runs every supported Python; every other mode runs 3.12.
   collect-installed:
-    name: ${{ inputs.os-emoji }} ${{ inputs.arch-emoji }} collect installed tests - ${{ matrix.python.name }}
+    name: ${{ inputs.os-emoji }} ${{ inputs.arch-emoji }} collect installed tests - ${{ matrix.python }}
     runs-on: ${{ inputs.runs-on }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        python:
-          - name: "3.11"
-            action: "3.11"
-            install_sh: "3.11"
-            exclude_from:
-              limited: True
-              main: True
-          - name: "3.12"
-            action: "3.12"
-            install_sh: "3.12"
-          - name: "3.13"
-            action: "3.13"
-            install_sh: "3.13"
-            exclude_from:
-              limited: True
-              main: True
-          - name: "3.14"
-            action: "3.14"
-            install_sh: "3.14"
-            exclude_from:
-              limited: True
-              main: True
-        exclude:
-          - python:
-              exclude_from:
-                ${{ inputs.matrix_mode }}: True
+        python: ${{ fromJSON(inputs.matrix_mode == 'all' && '["3.11","3.12","3.13","3.14"]' || '["3.12"]') }}
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
@@ -152,7 +127,7 @@ jobs:
         if: ${{ !contains(inputs.runs-on, 'blacksmith-4vcpu-windows') }}
         uses: Chia-Network/actions/setup-python@main
         with:
-          python-version: ${{ matrix.python.action }}
+          python-version: ${{ matrix.python }}
 
       - name: Create keychain for CI use (macOS)
         if: inputs.matrix == 'macos'
@@ -168,7 +143,7 @@ jobs:
 
       - uses: ./.github/actions/install
         with:
-          python-version: ${{ matrix.python.install_sh }}
+          python-version: ${{ matrix.python }}
           development: true
           editable: false
 
