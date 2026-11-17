@@ -1,5 +1,15 @@
 from __future__ import annotations
 
+__all__ = [
+    "PlotNFT",
+    "PlotNFTInnerPuzzle",
+    "PlotNFTLaunchResult",
+    "PoolConfig",
+    "PoolReward",
+    "RewardPuzzle",
+    "SingletonStruct",
+]
+
 import dataclasses
 from dataclasses import dataclass, field, replace
 from functools import cached_property
@@ -54,12 +64,20 @@ from chia.wallet.puzzles.singleton_drivers import (
     P2Singleton,
     P2SingletonPuzzle,
     Singleton,
+    SingletonCorePuzzles,
     SingletonLaunchInfo,
     SingletonLaunchResult,
     SingletonPuzzle,
     SingletonSolution,
     SingletonStruct,
 )
+
+
+# Back-compat alias used by wallet_rpc_api / older call sites
+class RewardPuzzle(P2SingletonPuzzle):
+    def puzzle_hash(self) -> bytes32:
+        return self.tree_hash
+
 
 CLAIM_POOL_REWARDS_DELEGATED_PUZZLE = load_clvm_maybe_recompile(
     "claim_pool_rewards_dpuz.clsp", package_or_requirement="chia.pools"
@@ -357,6 +375,7 @@ class PlotNFTLaunchResult(SingletonLaunchResult[PlotNFTInnerPuzzle]):
 
 @dataclass(kw_only=True, frozen=True)
 class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
+    singleton_puzzles: ClassVar[SingletonCorePuzzles] = SingletonStruct.singleton_puzzles
     coin: Coin
     remarks: list[Remark] = field(default_factory=list)
 

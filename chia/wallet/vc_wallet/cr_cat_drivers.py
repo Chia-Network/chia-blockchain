@@ -122,6 +122,9 @@ class ProofsChecker(PuzzleBase, Streamable):
 
     flags: list[str]
 
+    def as_program(self) -> Program:
+        return self.program
+
     @property
     def program(self) -> Program:
         def byte_sort_flags(f1: str, f2: str) -> int:
@@ -145,6 +148,13 @@ class ProofsChecker(PuzzleBase, Streamable):
         (flags,) = unknown_puzzle.curried_args
 
         return ProofsChecker([flag.at("f").as_atom().decode("utf8") for flag in flags.as_iter()])
+
+    @classmethod
+    def from_program(cls, unknown_puzzle: UnknownPuzzle) -> ProofsChecker:
+        matched = cls.match(unknown_puzzle=unknown_puzzle)
+        if matched is None:
+            raise ValueError("Puzzle was not a proof checker")
+        return matched
 
 
 _T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle)
@@ -309,6 +319,10 @@ class PendingApprovalPuzzle(PuzzleBase):
         if not isinstance(create_coin, CreateCoin):
             return None
         return PendingApprovalPuzzle(target_puzzle_hash=create_coin.puzzle_hash, amount=create_coin.amount)
+
+
+def construct_pending_approval_state(puzzle_hash: bytes32, amount: uint64) -> Program:
+    return PendingApprovalPuzzle(target_puzzle_hash=puzzle_hash, amount=amount).program
 
 
 @dataclass(frozen=True, kw_only=True)

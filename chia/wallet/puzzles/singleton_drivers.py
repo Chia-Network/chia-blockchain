@@ -87,6 +87,9 @@ class SingletonStruct:
             )
         )
 
+    def to_program(self) -> Program:
+        return self.program
+
     @classmethod
     def from_program(cls, program: Program) -> Self:
         return cls(launcher_id=bytes32(program.at("rf").as_atom()))
