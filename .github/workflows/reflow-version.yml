@@ -21,7 +21,7 @@ on:
 jobs:
   version:
     name: identify version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     outputs:
       chia-dev-version: ${{ steps.version-number.outputs.chia-dev-version }}

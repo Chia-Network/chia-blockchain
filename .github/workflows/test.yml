@@ -110,7 +110,7 @@ jobs:
       !cancelled() &&
       (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true') &&
       (github.event_name != 'schedule' || github.event.repository.visibility != 'private')
-    runs-on: ${{ github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }}
+    runs-on: ${{ github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-slim' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
