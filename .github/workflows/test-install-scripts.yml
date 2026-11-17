@@ -260,6 +260,7 @@ jobs:
         if: ${{ matrix.distribution.type == 'rocky' }}
         shell: sh
         run: |
+          echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> "$GITHUB_ENV"
           dnf update -y
           dnf search python3.12
           dnf install bash git python3.12 -y
