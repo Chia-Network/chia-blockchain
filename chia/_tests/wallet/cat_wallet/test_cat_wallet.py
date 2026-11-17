@@ -1407,7 +1407,8 @@ async def test_cat_hint(wallet_environments: WalletTestFramework, wallet_type: t
         {
             "num_environments": 1,
             "blocks_needed": [1],
-            "reuse_puzhash": False,  # the manual derivation record entry makes this awkward
+            # The manual derivation record entry makes this awkward
+            "reuse_puzhash": False,
             "config_overrides": {"automatically_add_unknown_cats": True},
         },
     ],
@@ -1781,10 +1782,7 @@ async def test_cat_puzzle_hashes(wallet_environments: WalletTestFramework, walle
 
     # When no derivation is marked used, get_cat_puzzle_hash(new=False) should still allocate one
     async with env.wallet_state_manager.puzzle_store.db_wrapper.writer() as conn:
-        await conn.execute(
-            "UPDATE derivation_paths SET used=0 WHERE wallet_id=?",
-            (env.wallet_aliases["cat"],),
-        )
+        await conn.execute("UPDATE derivation_paths SET used = 0 WHERE wallet_id = ?", (env.wallet_aliases["cat"],))
 
     used_count = await env.wallet_state_manager.puzzle_store.get_used_count(uint32(env.wallet_aliases["cat"]))
     await cat_wallet.get_cat_puzzle_hash(new=False)
