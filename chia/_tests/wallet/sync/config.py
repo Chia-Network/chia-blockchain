@@ -2,3 +2,5 @@ from __future__ import annotations
 
 job_timeout = 60
 checkout_blocks_and_plots = True
+# One file. The two shards split that file's collected tests in collection order.
+matrix_shards = 2
