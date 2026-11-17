@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Generic, TypeVar
 
-from chia_rs import G1Element
+from chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
 
 from chia.types.blockchain_format.program import Program
@@ -147,3 +147,8 @@ class StandardPuzzleSolution(Generic[_T_Puzzle, _T_Solution]):
             delegated_puzzle=UnknownPuzzle(known_program=list_of_values[1]),
             delegated_solution=UnknownSolution(program=list_of_values[2]),
         )
+
+
+@dataclass(kw_only=True, frozen=True)
+class StandardXCHCoin(StandardPuzzle[DefaultHiddenPuzzle]):
+    coin: Coin

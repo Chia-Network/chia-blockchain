@@ -86,7 +86,7 @@ class DIDRecoveryPuzzle(PuzzleBase, Generic[_T_Puzzle]):
             self.inner_puzzle.tree_hash,
             self.recovery_list.pre_hashed,
             Program.to(self.num_of_backup_ids_needed).get_tree_hash(),
-            self.struct_driver(launcher_id=self.self_launcher_id).struct_hash(),
+            self.struct_driver(launcher_id=self.self_launcher_id).struct_hash,
             self.metadata.tree_hash,
         )
 

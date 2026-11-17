@@ -349,7 +349,7 @@ class DefaultTransferProgram(PuzzleBase):
     def tree_hash_optimized(self) -> bytes32:
         return curry_and_treehash(
             HASH_OF_TRANSFER_PROGRAM_QUOTED_MOD_HASH,
-            self.struct_driver(launcher_id=self.self_launcher_id).struct_hash(),
+            self.struct_driver(launcher_id=self.self_launcher_id).struct_hash,
             Program.to(self.royalty_address).get_tree_hash(),
             Program.to(self.royalty_basis_points).get_tree_hash(),
         )
