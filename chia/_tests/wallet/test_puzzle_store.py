@@ -92,7 +92,9 @@ async def test_puzzle_store(seeded_random: random.Random) -> None:
         assert await db.get_derivation_record(uint32(0), uint32(2), False) == derivation_recs[1]
         await db.mark_used(uint32(249))
         assert await db.get_unused_derivation_path() == 0
-        assert (await db.get_window_statistics(1)).maximum_used_index == 249  # type: ignore[union-attr]
+        window_statistics = await db.get_window_statistics(1)
+        assert window_statistics is not None
+        assert window_statistics.maximum_used_index == 249
 
 
 def get_derivation_record(index: int, wallet_id: int) -> DerivationRecord:
@@ -122,8 +124,10 @@ async def test_add_derivation_paths_inherits_used() -> None:
 
         assert await db.get_unused_derivation_path() == 1
         assert await db.get_used_count(uint32(2)) == 2
-        assert (await db.get_window_statistics(2)).maximum_used_index == 2  # type: ignore[union-attr]
-        assert (await db.get_window_statistics(2)).minimum_unused_index == 1  # type: ignore[union-attr]
+        window_statistics = await db.get_window_statistics(2)
+        assert window_statistics is not None
+        assert window_statistics.maximum_used_index == 2
+        assert window_statistics.minimum_unused_index == 1
 
 
 @pytest.mark.anyio
