@@ -3,11 +3,14 @@ from __future__ import annotations
 import logging
 
 import pytest
+from chia_rs import CoinRecord
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.core.full_node.test_full_node import find_reward_coin
+from chia._tests.util.coin_store import add_coin_records_to_db
 from chia._tests.util.db_connection import DBConnection
+from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
@@ -17,6 +20,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.casts import int_to_bytes
+from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +28,7 @@ log = logging.getLogger(__name__)
 @pytest.mark.anyio
 async def test_basic_store(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
-        hint_store = await HintStore.create(db_wrapper)
+        hint_store = await HintStore.create(await CoinStore.create(db_wrapper))
         hint_0 = 32 * b"\0"
         hint_1 = 32 * b"\1"
         not_existing_hint = 32 * b"\3"
@@ -50,7 +54,7 @@ async def test_basic_store(db_version: int) -> None:
 @pytest.mark.anyio
 async def test_duplicate_coins(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
-        hint_store = await HintStore.create(db_wrapper)
+        hint_store = await HintStore.create(await CoinStore.create(db_wrapper))
         hint_0 = 32 * b"\0"
         hint_1 = 32 * b"\1"
 
@@ -68,7 +72,7 @@ async def test_duplicate_coins(db_version: int) -> None:
 @pytest.mark.anyio
 async def test_duplicate_hints(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
-        hint_store = await HintStore.create(db_wrapper)
+        hint_store = await HintStore.create(await CoinStore.create(db_wrapper))
         hint_0 = 32 * b"\0"
         hint_1 = 32 * b"\1"
 
@@ -88,7 +92,7 @@ async def test_duplicate_hints(db_version: int) -> None:
 @pytest.mark.anyio
 async def test_duplicates(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
-        hint_store = await HintStore.create(db_wrapper)
+        hint_store = await HintStore.create(await CoinStore.create(db_wrapper))
         hint_0 = 32 * b"\0"
         coin_id_0 = bytes32(32 * b"\4")
 
@@ -110,7 +114,7 @@ async def test_duplicates(db_version: int) -> None:
 @pytest.mark.anyio
 async def test_coin_ids_multi(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
-        hint_store = await HintStore.create(db_wrapper)
+        hint_store = await HintStore.create(await CoinStore.create(db_wrapper))
         hints = [32 * i.to_bytes(1, byteorder="big", signed=False) for i in range(256)]
         coin_ids = [bytes32(32 * i.to_bytes(1, byteorder="big", signed=False)) for i in range(256)]
 
@@ -186,7 +190,7 @@ async def test_hints_in_blockchain(
 @pytest.mark.anyio
 async def test_counts(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
-        hint_store = await HintStore.create(db_wrapper)
+        hint_store = await HintStore.create(await CoinStore.create(db_wrapper))
         count = await hint_store.count_hints()
         assert count == 0
 
@@ -205,7 +209,7 @@ async def test_counts(db_version: int) -> None:
 @pytest.mark.anyio
 async def test_limits(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
-        hint_store = await HintStore.create(db_wrapper)
+        hint_store = await HintStore.create(await CoinStore.create(db_wrapper))
 
         # Add 200 coins, all with the same hint
         hint = 32 * b"\0"
@@ -228,7 +232,7 @@ async def test_multi_batch_limit(db_version: int, monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr("chia.full_node.hint_store.SQLITE_MAX_VARIABLE_NUMBER", 5)
 
     async with DBConnection(db_version) as db_wrapper:
-        hint_store = await HintStore.create(db_wrapper)
+        hint_store = await HintStore.create(await CoinStore.create(db_wrapper))
 
         num_hints = 20
         coins_per_hint = 3
@@ -265,7 +269,7 @@ async def test_get_coin_ids_by_hints(db_version: int, monkeypatch: pytest.Monkey
     monkeypatch.setattr("chia.full_node.hint_store.SQLITE_MAX_VARIABLE_NUMBER", 5)
 
     async with DBConnection(db_version) as db_wrapper:
-        hint_store = await HintStore.create(db_wrapper)
+        hint_store = await HintStore.create(await CoinStore.create(db_wrapper))
 
         # empty input returns an empty set without opening a transaction
         assert await hint_store.get_coin_ids_by_hints(set()) == set()
@@ -299,4 +303,41 @@ async def test_get_coin_ids_by_hints(db_version: int, monkeypatch: pytest.Monkey
 async def test_unsupported_version() -> None:
     with pytest.raises(RuntimeError, match="HintStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:
-            await HintStore.create(db_wrapper)
+            await HintStore.create(CoinStore(db_wrapper))
+
+
+@pytest.mark.anyio
+async def test_explorer_queries_forward_to_coin_store() -> None:
+    async with DBConnection(2) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        hint_store = await HintStore.create(coin_store)
+        # one database, so hints and coin records are visible to the same queries
+        assert hint_store.db_wrapper is coin_store.db_wrapper
+
+        ph = std_hash(b"puzzle hash")
+        parent = CoinRecord(Coin(std_hash(b"grandparent"), ph, uint64(1)), uint32(1), uint32(2), False, uint64(1000))
+        child = CoinRecord(Coin(parent.coin.name(), ph, uint64(1)), uint32(2), uint32(0), False, uint64(1001))
+        hinted = CoinRecord(
+            Coin(std_hash(b"other parent"), std_hash(b"other ph"), uint64(5)), uint32(3), uint32(0), False, uint64(1)
+        )
+        await add_coin_records_to_db(coin_store, [parent, child, hinted])
+        await hint_store.add_hints([(hinted.coin.name(), ph)])
+
+        names = [parent.coin.name(), child.coin.name(), hinted.coin.name()]
+        assert set(await hint_store.get_coin_records_by_puzzle_hash(True, ph)) == {parent, child}
+        assert set(await hint_store.get_coin_records_by_puzzle_hashes(False, [ph])) == {child}
+        assert set(await hint_store.get_coin_records_by_names(True, names)) == {parent, child, hinted}
+        assert await hint_store.get_coin_records_by_parent_ids(True, [parent.coin.name()]) == [child]
+        assert await hint_store.get_coin_states_by_puzzle_hashes(True, {ph}) == {parent.coin_state, child.coin_state}
+        assert set(await hint_store.get_coin_states_by_ids(True, names)) == {
+            parent.coin_state,
+            child.coin_state,
+            hinted.coin_state,
+        }
+        # the batch query joins coin_record with hints
+        coin_states, next_height = await hint_store.batch_coin_states_by_puzzle_hashes([ph])
+        assert set(coin_states) == {parent.coin_state, child.coin_state, hinted.coin_state}
+        assert next_height is None
+        assert await hint_store.get_unspent_lineage_info_for_puzzle_hash(
+            ph
+        ) == await coin_store.get_unspent_lineage_info_for_puzzle_hash(ph)
