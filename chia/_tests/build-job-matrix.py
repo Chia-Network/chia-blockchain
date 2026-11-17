@@ -18,7 +18,17 @@ project_root_path = root_path.parent.parent
 
 # Not per-directory settings. Kept on testconfig so the matrix script is the
 # only place that decides which directories share a row.
-_NON_DIRECTORY_KEYS = {"matrix_packs"}
+# Directories whose slowest OS finished in <= 8.5 min on baseline run
+# 43897580454 (2026-11-16). Packed into shared rows so one setup covers about
+# 15-21 min of that OS's job time. parallel / install_timelord must match
+# inside a group; core/services stays alone because parallel is False.
+# Paths are relative to chia/_tests. Kept here so testconfig.py stays a
+# per-directory default map.
+MATRIX_PACKS: list[list[str]] = [
+    ["clvm", "core/ssl", "solver", "tools"],
+    ["core/consensus", "core/consensus/stores", "rpc", "wallet/remote_wallet"],
+    ["cmds/wallet", "db", "wallet/simple_sync"],
+]
 
 
 def skip(path: Path) -> bool:
@@ -56,7 +66,7 @@ def module_dict(module: types.ModuleType) -> dict[str, Any]:
 
 
 def directory_defaults() -> dict[str, Any]:
-    return {key: value for key, value in module_dict(testconfig).items() if key not in _NON_DIRECTORY_KEYS}
+    return module_dict(testconfig)
 
 
 def dir_config(dir: Path) -> dict[str, Any]:
@@ -182,8 +192,8 @@ def compatible_pack(members: list[DirectoryPlan]) -> None:
                 member.relative for member in members
             )
             raise Exception(msg)
-        if int(member.conf["matrix_shards"]) != 1 or int(first["matrix_shards"]) != 1:
-            msg = "refusing to pack a directory that also sets matrix_shards: " + ", ".join(
+        if member.conf.get("matrix_shard_files") or first.get("matrix_shard_files"):
+            msg = "refusing to pack a directory that also sets matrix_shard_files: " + ", ".join(
                 member.relative for member in members
             )
             raise Exception(msg)
@@ -281,7 +291,7 @@ for path in test_paths:
         )
     )
 
-pack_groups: list[list[str]] = list(module_dict(testconfig).get("matrix_packs", []))
+pack_groups: list[list[str]] = MATRIX_PACKS
 pack_by_member: dict[str, int] = {}
 if args.per == "directory":
     available = {plan.relative for plan in plans}
@@ -289,6 +299,9 @@ if args.per == "directory":
         present = [member for member in group if member in available]
         missing = [member for member in group if member not in available]
         if len(present) > 0 and len(missing) > 0:
+            # --only selects a subset on purpose. Leave those directories unpacked.
+            if len(args.only) > 0:
+                continue
             msg = f"matrix pack group is missing directories: present={present} missing={missing}"
             raise Exception(msg)
         if len(present) != len(group) or len(group) == 0:
@@ -330,9 +343,11 @@ for plan in plans:
         continue
 
     refs = [test_file_ref(path) for path in plan.files]
-    shard_count = int(plan.conf["matrix_shards"]) if plan.path.is_dir() else 1
-    weights = plan.conf.get("matrix_shard_weights") or None
-    pieces_by_shard = matrix_shard.plan_shards(refs, shard_count, weights)
+    shard_lists = plan.conf.get("matrix_shard_files") if plan.path.is_dir() else None
+    if shard_lists:
+        pieces_by_shard = matrix_shard.plan_explicit(refs, shard_lists)
+    else:
+        pieces_by_shard = [[ref.whole() for ref in refs]]
     module_import_path = tests_import_path(plan.path)
     configuration.extend(
         shard_rows(

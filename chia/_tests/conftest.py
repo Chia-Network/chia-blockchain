@@ -621,15 +621,6 @@ def pytest_addoption(parser: pytest.Parser):
     default_repeats = 1
     group = parser.getgroup("chia")
     group.addoption(
-        "--matrix-shard",
-        action="append",
-        default=None,
-        help=(
-            "Run one contiguous slice of a test file. Repeat for each split file. "
-            "Format: chia/_tests/.../test_foo.py=INDEX/COUNT. Set by the CI matrix."
-        ),
-    )
-    group.addoption(
         "--benchmark-repeats",
         action="store",
         default=default_repeats,
@@ -739,16 +730,6 @@ def pytest_configure(config):
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_collection_modifyitems(session, config: pytest.Config, items: list[pytest.Function]) -> Iterator[None]:
-    shard_specs = list(config.getoption("--matrix-shard") or [])
-    if len(shard_specs) > 0:
-        from chia._tests.matrix_shard import filter_nodeids
-
-        keep = set(filter_nodeids([item.nodeid for item in items], shard_specs))
-        deselected = [item for item in items if item.nodeid not in keep]
-        if len(deselected) > 0:
-            config.hook.pytest_deselected(items=deselected)
-            items[:] = [item for item in items if item.nodeid in keep]
-
     collected = {item.nodeid for item in items}
     # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
     removed = []

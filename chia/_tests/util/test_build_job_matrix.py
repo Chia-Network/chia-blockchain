@@ -82,9 +82,9 @@ def test_shard_and_pack_partition() -> None:
 
     names = [entry["name"] for entry in matrix]
     assert len(names) == len(set(names))
-    assert "util 1/3" in names
-    assert "util 2/3" in names
-    assert "util 3/3" in names
+    assert "util 1/2" in names
+    assert "util 2/2" in names
+    assert "util 3/3" not in names
     assert "core.full_node 1/3" in names
     assert "wallet.sync 1/2" in names
     assert "wallet.sync 2/2" in names
@@ -95,8 +95,9 @@ def test_shard_and_pack_partition() -> None:
     by_module = {entry["module_import_path"]: entry for entry in matrix}
     full_node = [entry for entry in matrix if entry["module_import_path"] == "core.full_node"]
     assert len(full_node) == 3
-    assert any("test_full_node.py=0/2" in entry["test_files"] for entry in full_node)
-    assert any("test_full_node.py=1/2" in entry["test_files"] for entry in full_node)
+    split_rows = [entry for entry in full_node if "test_full_node.py=" in entry["test_files"]]
+    assert len(split_rows) == 2
+    assert all("-p chia._tests.matrix_shard" in entry["test_files"] for entry in split_rows)
     assert {entry["job_timeout"] for entry in full_node} == {110}
     assert all(entry["checkout_blocks_and_plots"] for entry in full_node)
     assert all(entry["install_timelord"] is False for entry in full_node)
@@ -164,31 +165,92 @@ def test_configuration_counts_stay_under_matrix_limit() -> None:
         assert row["main"] == row["configs"]
 
 
-def test_duration_balance_splits_heavy_file_across_shards() -> None:
-    from chia._tests.matrix_shard import TestFile, plan_duration_balanced
+def test_explicit_shards_put_unlisted_files_on_the_last_shard() -> None:
+    from chia._tests.matrix_shard import TestFile, plan_explicit
 
     files = [
         TestFile("heavy.py", "pkg.heavy", "pkg/heavy.py"),
-        TestFile("medium.py", "pkg.medium", "pkg/medium.py"),
-        TestFile("light_a.py", "pkg.light_a", "pkg/light_a.py"),
-        TestFile("light_b.py", "pkg.light_b", "pkg/light_b.py"),
-        TestFile("light_c.py", "pkg.light_c", "pkg/light_c.py"),
-        TestFile("light_d.py", "pkg.light_d", "pkg/light_d.py"),
+        TestFile("other.py", "pkg.other", "pkg/other.py"),
+        TestFile("new.py", "pkg.new", "pkg/new.py"),
     ]
-    # total 320, target ~106.7. 200 is heavy enough to split in two, not three.
-    weights = {
-        "heavy.py": 200.0,
-        "medium.py": 40.0,
-        "light_a.py": 20.0,
-        "light_b.py": 20.0,
-        "light_c.py": 20.0,
-        "light_d.py": 20.0,
-    }
-    shards = plan_duration_balanced(files, 3, weights)
-    assert len(shards) == 3
-    parts = [piece for shard in shards for piece in shard if piece.filename == "heavy.py"]
-    assert sorted((piece.part_index, piece.part_count) for piece in parts) == [(0, 2), (1, 2)]
-    assert sum(1 for shard in shards if any(piece.filename == "heavy.py" for piece in shard)) == 2
+    shards = plan_explicit(files, [["heavy.py=0/2"], ["heavy.py=1/2"]])
+    assert [piece.filename for piece in shards[0]] == ["heavy.py"]
+    assert [piece.filename for piece in shards[1]] == ["heavy.py", "new.py", "other.py"]
+    assert shards[1][0].part_index == 1
+
+
+def test_only_packed_directory_stays_unpacked() -> None:
+    matrix = json.loads(run(args=["--per", "directory", "--only", "clvm"]))
+    assert [entry["name"] for entry in matrix] == ["clvm"]
+
+
+def test_installed_nodeids_split_and_a_miss_raises() -> None:
+    from chia._tests.matrix_shard import filter_nodeids
+
+    prefix = ".venv/lib/python3.12/site-packages/"
+    nodeids = [f"{prefix}chia/_tests/wallet/sync/test_wallet_sync.py::test_{index}" for index in range(4)]
+    first = filter_nodeids(nodeids, ["chia/_tests/wallet/sync/test_wallet_sync.py=0/2"])
+    second = filter_nodeids(nodeids, ["chia/_tests/wallet/sync/test_wallet_sync.py=1/2"])
+    assert first + second == nodeids
+    assert len(first) == 2
+    try:
+        filter_nodeids(nodeids, ["chia/_tests/wallet/sync/test_missing.py=0/2"])
+    except ValueError as exc:
+        assert "matched no collected tests" in str(exc)
+    else:
+        raise AssertionError("missing shard file did not fail")
+
+
+def test_matrix_shard_plugin_pyargs_outside_source_tree(tmp_path: pathlib.Path) -> None:
+    """CI collects installed tests with --pyargs after the source tree is moved aside."""
+    import os
+    import sys
+
+    package_root = tmp_path / "site-packages"
+    test_dir = package_root / "pkg"
+    test_dir.mkdir(parents=True)
+    (test_dir / "__init__.py").write_text("")
+    (test_dir / "test_split.py").write_text(
+        "def test_0():\n    assert True\n\ndef test_1():\n    assert True\n\n"
+        "def test_2():\n    assert True\n\ndef test_3():\n    assert True\n"
+    )
+    work = tmp_path / "work"
+    work.mkdir()
+    repo_root = build_job_matrix_path.parents[2]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([str(package_root), str(repo_root), env.get("PYTHONPATH", "")])
+    collected: list[str] = []
+    for part in (0, 1):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-p",
+                "chia._tests.matrix_shard",
+                "--matrix-shard",
+                f"pkg/test_split.py={part}/2",
+                "--pyargs",
+                "pkg.test_split",
+                "--collect-only",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                "-o",
+                "addopts=",
+            ],
+            check=False,
+            cwd=work,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode == 0, completed.stdout + completed.stderr
+        collected.append(completed.stdout)
+    assert "test_0" in collected[0] and "test_1" in collected[0]
+    assert "test_2" in collected[1] and "test_3" in collected[1]
+    assert "test_2" not in collected[0]
+    assert "test_0" not in collected[1]
 
 
 def test_filter_nodeids_covers_each_item_once() -> None:

@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-import math
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-
-# Split a file across shards only when it is meaningfully heavier than the
-# per-shard target. A file just over the target stays whole so it is not cut
-# in half and then stacked onto the next-heaviest file.
-SPLIT_RATIO = 1.5
 
 
 @dataclass(frozen=True)
@@ -79,118 +73,70 @@ def _piece(test_file: TestFile, part_index: int, part_count: int) -> Piece:
     )
 
 
-def plan_contiguous(files: Sequence[TestFile], shards: int) -> list[list[Piece]]:
-    """Equal-count contiguous chunks of the sorted file list.
+def parse_shard_entry(entry: str) -> tuple[str, int | None, int | None]:
+    """``test_foo.py`` is the whole file. ``test_foo.py=0/2`` is one slice."""
+    if "=" not in entry:
+        return entry, None, None
+    filename, fraction = entry.split("=", 1)
+    index_text, count_text = fraction.split("/", 1)
+    return filename, int(index_text), int(count_text)
 
-    When there are fewer files than shards, extra shards split files so the
-    caller still gets ``shards`` non-empty rows (a one-file directory can be
-    two shards).
+
+def plan_explicit(files: Sequence[TestFile], shard_lists: Sequence[Sequence[str]]) -> list[list[Piece]]:
+    """Place named files on the listed shards. Anything unnamed joins the last shard.
+
+    The last shard is the catch-all, so a new test file is still run and does
+    not become its own setup-only job.
     """
-    if shards < 1:
-        msg = f"shards must be positive, got {shards}"
+    if len(shard_lists) == 0:
+        msg = "matrix_shard_files must list at least one shard"
         raise ValueError(msg)
-    if shards == 1 or len(files) == 0:
-        return [[_whole(test_file) for test_file in files]]
-    if len(files) >= shards:
-        chunks: list[list[Piece]] = []
-        base, extra = divmod(len(files), shards)
-        start = 0
-        for shard in range(shards):
-            size = base + (1 if shard < extra else 0)
-            chunks.append([_whole(test_file) for test_file in files[start : start + size]])
-            start += size
-        return chunks
-
-    part_counts = [1] * len(files)
-    extra_parts = shards - len(files)
-    cursor = 0
-    while extra_parts:
-        part_counts[cursor % len(files)] += 1
-        extra_parts -= 1
-        cursor += 1
-    planned: list[list[Piece]] = []
-    for test_file, part_count in zip(files, part_counts):
-        for part_index in range(part_count):
-            planned.append([_piece(test_file, part_index, part_count)])
-    return planned
-
-
-def plan_duration_balanced(
-    files: Sequence[TestFile],
-    shards: int,
-    weights: Mapping[str, float],
-) -> list[list[Piece]]:
-    """Longest-processing-time pack. Heavy files split into contiguous parts.
-
-    ``weights`` maps a filename to a relative duration (worker-minutes on the
-    slowest OS). Filenames that are missing weigh 1, so a new test file is
-    still scheduled and lands on the lightest shard.
-    """
-    if shards < 1:
-        msg = f"shards must be positive, got {shards}"
+    by_name = {test_file.filename: test_file for test_file in files}
+    mentioned: set[str] = set()
+    whole_files: set[str] = set()
+    parts_by_file: dict[str, list[tuple[int, int]]] = {}
+    shards: list[list[Piece]] = []
+    for shard in shard_lists:
+        pieces: list[Piece] = []
+        for entry in shard:
+            filename, part_index, part_count = parse_shard_entry(entry)
+            test_file = by_name.get(filename)
+            if test_file is None:
+                msg = f"matrix_shard_files names missing file {filename}"
+                raise ValueError(msg)
+            if part_index is None or part_count is None:
+                if filename in mentioned:
+                    msg = f"{filename} is listed more than once"
+                    raise ValueError(msg)
+                mentioned.add(filename)
+                whole_files.add(filename)
+                pieces.append(_whole(test_file))
+                continue
+            if filename in whole_files:
+                msg = f"{filename} is both a whole file and a split slice"
+                raise ValueError(msg)
+            mentioned.add(filename)
+            parts_by_file.setdefault(filename, []).append((part_index, part_count))
+            pieces.append(_piece(test_file, part_index, part_count))
+        shards.append(pieces)
+    for filename, parts in parts_by_file.items():
+        counts = {part_count for _, part_count in parts}
+        if len(counts) != 1:
+            msg = f"{filename} uses more than one part count"
+            raise ValueError(msg)
+        part_count = counts.pop()
+        indexes = sorted(part_index for part_index, _ in parts)
+        if indexes != list(range(part_count)):
+            msg = f"{filename} slices {indexes} are not 0..{part_count - 1} exactly once"
+            raise ValueError(msg)
+    catch_all = [_whole(test_file) for test_file in files if test_file.filename not in mentioned]
+    shards[-1].extend(catch_all)
+    if any(len(planned) == 0 for planned in shards):
+        msg = "matrix_shard_files produced an empty shard"
         raise ValueError(msg)
-    if shards == 1 or len(files) == 0:
-        return [[_whole(test_file) for test_file in files]]
-
-    weighted = [(test_file, float(weights.get(test_file.filename, 1.0))) for test_file in files]
-    total = sum(weight for _, weight in weighted)
-    if total <= 0:
-        return plan_contiguous(files, shards)
-    target = total / shards
-
-    part_counts: list[tuple[TestFile, int, float]] = []
-    for test_file, weight in weighted:
-        if weight > target * SPLIT_RATIO:
-            part_count = min(shards, max(2, math.ceil(weight / target)))
-        else:
-            part_count = 1
-        part_counts.append((test_file, part_count, weight))
-
-    def piece_total() -> int:
-        return sum(part_count for _, part_count, _ in part_counts)
-
-    while piece_total() < shards:
-        growable = [index for index, (_, part_count, _) in enumerate(part_counts) if part_count < shards]
-        if len(growable) == 0:
-            break
-        index = max(growable, key=lambda i: (part_counts[i][2] / part_counts[i][1], part_counts[i][2]))
-        test_file, part_count, weight = part_counts[index]
-        part_counts[index] = (test_file, part_count + 1, weight)
-
-    expanded: list[tuple[Piece, float]] = []
-    for test_file, part_count, weight in part_counts:
-        for part_index in range(part_count):
-            expanded.append((_piece(test_file, part_index, part_count), weight / part_count))
-    expanded.sort(key=lambda item: (-item[1], item[0].repo_path, item[0].part_index))
-
-    bins: list[list[Piece]] = [[] for _ in range(shards)]
-    loads = [0.0] * shards
-    members: list[set[str]] = [set() for _ in range(shards)]
-    for piece, weight in expanded:
-        candidates = [index for index in range(shards) if piece.repo_path not in members[index]]
-        if len(candidates) == 0:
-            candidates = list(range(shards))
-        chosen = min(candidates, key=lambda index: (loads[index], index))
-        bins[chosen].append(piece)
-        loads[chosen] += weight
-        members[chosen].add(piece.repo_path)
-
-    if any(len(bin_) == 0 for bin_ in bins):
-        msg = f"duration packing left an empty shard for {shards} shards"
-        raise ValueError(msg)
-    for bin_ in bins:
-        bin_.sort(key=lambda piece: (piece.repo_path, piece.part_index))
-    return bins
-
-
-def plan_shards(
-    files: Sequence[TestFile],
-    shards: int,
-    weights: Mapping[str, float] | None,
-) -> list[list[Piece]]:
-    if weights:
-        return plan_duration_balanced(files, shards, weights)
-    return plan_contiguous(files, shards)
+    for planned in shards:
+        planned.sort(key=lambda piece: (piece.repo_path, piece.part_index))
+    return shards
 
 
 def render_test_files(pieces: Sequence[Piece]) -> str:
@@ -207,8 +153,10 @@ def render_test_files(pieces: Sequence[Piece]) -> str:
     pyargs = "--pyargs " + " ".join(modules)
     if len(specs) == 0:
         return pyargs
+    # -p loads this module before pytest parses --matrix-shard. CI moves chia/
+    # aside, so the option cannot live only in chia/_tests/conftest.py.
     filters = " ".join(f"--matrix-shard {spec}" for spec in specs)
-    return f"{filters} {pyargs}"
+    return f"-p chia._tests.matrix_shard {filters} {pyargs}"
 
 
 def parse_matrix_shard_spec(spec: str) -> tuple[str, int, int]:
@@ -222,15 +170,17 @@ def pieces_from_test_files(test_files: str) -> list[tuple[str, int, int]]:
 
     A ``--pyargs`` module with no ``--matrix-shard`` spec is the whole file.
     """
-    specs: dict[str, tuple[int, int]] = {}
+    specs: list[tuple[str, int, int]] = []
     modules: list[str] = []
     arguments = test_files.split()
     index = 0
     while index < len(arguments):
         argument = arguments[index]
+        if argument == "-p":
+            index += 2
+            continue
         if argument == "--matrix-shard":
-            path, part_index, part_count = parse_matrix_shard_spec(arguments[index + 1])
-            specs[path] = (part_index, part_count)
+            specs.append(parse_matrix_shard_spec(arguments[index + 1]))
             index += 2
             continue
         if argument == "--pyargs":
@@ -244,10 +194,14 @@ def pieces_from_test_files(test_files: str) -> list[tuple[str, int, int]]:
     covered: list[tuple[str, int, int]] = []
     for module in modules:
         repo_path = module.replace(".", "/") + ".py"
-        part_index, part_count = specs.pop(repo_path, (0, 1))
-        covered.append((repo_path, part_index, part_count))
+        matched = [spec for spec in specs if spec[0] == repo_path]
+        specs = [spec for spec in specs if spec[0] != repo_path]
+        if len(matched) == 0:
+            covered.append((repo_path, 0, 1))
+        else:
+            covered.extend(matched)
     if len(specs) > 0:
-        msg = f"--matrix-shard paths missing from --pyargs: {sorted(specs)}"
+        msg = f"--matrix-shard paths missing from --pyargs: {sorted({spec[0] for spec in specs})}"
         raise ValueError(msg)
     return covered
 
@@ -284,28 +238,99 @@ def assert_file_partition(expected: Iterable[str], test_file_rows: Iterable[str]
             raise AssertionError(msg)
 
 
-def filter_nodeids(nodeids: Sequence[str], specs: Sequence[str]) -> list[str]:
-    """Keep every item whose file is whole, plus one contiguous slice of each split file."""
+def nodeid_matches(nodeid: str, spec_path: str, file_path: str = "") -> bool:
+    """Match a source nodeid, an installed nodeid, or the file path.
+
+    CI nodeids look like ``.venv/lib/python3.12/site-packages/chia/_tests/...py::test``.
+    ``--pyargs`` outside the root can also report ``::test_0`` while ``item.path``
+    still ends with the spec.
+    """
+    if nodeid == spec_path or nodeid.startswith(spec_path + "::"):
+        return True
+    marker = "/" + spec_path
+    if nodeid.endswith(marker) or (marker + "::") in nodeid:
+        return True
+    normalized = file_path.replace("\\", "/")
+    return normalized.endswith(("/" + spec_path, spec_path))
+
+
+def filter_nodeids(
+    nodeids: Sequence[str],
+    specs: Sequence[str],
+    file_paths: Sequence[str] | None = None,
+) -> list[str]:
+    """Keep every item whose file is whole, plus one contiguous slice of each split file.
+
+    A spec that matches nothing raises. That is the installed-id failure mode:
+    a prefix check would otherwise drop every item or, if unmatched ids were
+    kept, run the whole file on every shard.
+    """
     if len(specs) == 0:
         return list(nodeids)
-    parsed: dict[str, tuple[int, int]] = {}
-    for spec in specs:
-        path, part_index, part_count = parse_matrix_shard_spec(spec)
-        parsed[path] = (part_index, part_count)
-    grouped: dict[str, list[str]] = {path: [] for path in parsed}
+    parsed = [parse_matrix_shard_spec(spec) for spec in specs]
+    paths = list(dict.fromkeys(path for path, _, _ in parsed))
+    locations = list(file_paths) if file_paths is not None else [""] * len(nodeids)
+    grouped: dict[str, list[str]] = {path: [] for path in paths}
     rest: list[str] = []
-    for nodeid in nodeids:
+    for nodeid, file_path in zip(nodeids, locations, strict=True):
         matched = False
-        for path in parsed:
-            if nodeid == path or nodeid.startswith(path + "::"):
+        for path in paths:
+            if nodeid_matches(nodeid, path, file_path):
                 grouped[path].append(nodeid)
                 matched = True
                 break
         if not matched:
             rest.append(nodeid)
     keep: set[str] = set(rest)
-    for path, (part_index, part_count) in parsed.items():
+    for path, part_index, part_count in parsed:
         group = grouped[path]
+        if len(group) == 0:
+            msg = f"--matrix-shard {path}={part_index}/{part_count} matched no collected tests"
+            raise ValueError(msg)
         start, end = shard_bounds(len(group), part_count, part_index)
-        keep.update(group[start:end])
+        chosen = group[start:end]
+        if len(chosen) == 0:
+            msg = f"--matrix-shard {path}={part_index}/{part_count} selected no tests"
+            raise ValueError(msg)
+        keep.update(chosen)
+    if len(keep) == 0:
+        msg = "--matrix-shard selected no tests"
+        raise ValueError(msg)
     return [nodeid for nodeid in nodeids if nodeid in keep]
+
+
+def pytest_addoption(parser: object) -> None:
+    """Register ``--matrix-shard`` when this module is loaded with ``-p``.
+
+    pytest parses arguments before it imports ``chia/_tests/conftest.py`` from
+    an installed package, and CI has already moved the source tree aside.
+    """
+    group = parser.getgroup("chia")  # type: ignore[attr-defined]
+    group.addoption(
+        "--matrix-shard",
+        action="append",
+        default=None,
+        help=(
+            "Run one contiguous slice of a test file. Repeat for each split file. "
+            "Format: chia/_tests/.../test_foo.py=INDEX/COUNT. Set by the CI matrix."
+        ),
+    )
+
+
+def pytest_collection_modifyitems(config: object, items: list[object]) -> None:
+    specs = list(config.getoption("--matrix-shard") or [])  # type: ignore[attr-defined]
+    if len(specs) == 0:
+        return
+    nodeids = [item.nodeid for item in items]  # type: ignore[attr-defined]
+    file_paths = [str(getattr(item, "path", "")) for item in items]
+    try:
+        kept = filter_nodeids(nodeids, specs, file_paths)
+    except ValueError as exc:
+        import pytest
+
+        raise pytest.UsageError(str(exc)) from exc
+    keep = set(kept)
+    deselected = [item for item in items if item.nodeid not in keep]  # type: ignore[attr-defined]
+    if len(deselected) > 0:
+        config.hook.pytest_deselected(items=deselected)  # type: ignore[attr-defined]
+        items[:] = [item for item in items if item.nodeid in keep]  # type: ignore[attr-defined]
