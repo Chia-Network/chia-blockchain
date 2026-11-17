@@ -172,7 +172,8 @@ jobs:
     runs-on: ${{ needs.packaging-paths.outputs.packaging == 'true' && matrix.os.runs-on[matrix.arch.matrix] || 'ubuntu-latest' }}
     needs: packaging-paths
     if: ${{ !cancelled() && needs.packaging-paths.result == 'success' }}
-    container: ${{ fromJSON(needs.packaging-paths.outputs.packaging == 'true' && format('"{0}"', matrix.distribution.url) || 'null') }}
+    # OCI images may omit PATH; retain system tools when GITHUB_PATH adds the virtualenv.
+    container: ${{ fromJSON(needs.packaging-paths.outputs.packaging == 'true' && format('{{"image":"{0}","env":{{"PATH":"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}}}}', matrix.distribution.url) || 'null') }}
     strategy:
       fail-fast: false
       matrix:
