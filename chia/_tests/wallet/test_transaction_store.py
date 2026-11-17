@@ -864,9 +864,13 @@ async def test_get_not_sent_include_accepted_does_not_persist(seeded_random: ran
         for original in (accepted, clawback, plain):
             stored = await store.get_transaction_record(original.name)
             assert stored == original
-        assert (await store.get_transaction_record(accepted.name)).is_in_mempool()
+        record = await store.get_transaction_record(accepted.name)
+        assert record is not None
+        assert record.is_in_mempool()
         # Clawback claims treat sent > 0 as "already in a pending spend".
-        assert (await store.get_transaction_record(clawback.name)).sent == 0
+        record = await store.get_transaction_record(clawback.name)
+        assert record is not None
+        assert record.sent == 0
 
         assert filter_ok_mempool_status(sent_to) == [
             ("peer-bad", uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name)
