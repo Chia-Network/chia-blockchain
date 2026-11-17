@@ -337,7 +337,7 @@ class TransferProgramCondition(Condition):
         _, launcher_id, trade_prices_list, inner_puzzle_hash = program.as_iter()
         return TransferProgramCondition(
             trade_prices_list={
-                bytes32(tp_tuple.at("f").as_atom()): tp_tuple.at("r").as_int()
+                bytes32(tp_tuple.at("rf").as_atom()): tp_tuple.first().as_int()
                 for tp_tuple in trade_prices_list.as_iter()
             },
             new_owner=SingletonPuzzle(

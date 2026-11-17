@@ -24,6 +24,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
     NFT,
+    NFT_METADATA_UPDATER,
     DefaultMetadataUpdater,
     DefaultTransferProgram,
     MetadataLayer,
@@ -430,6 +431,42 @@ async def test_default_transfer_program(cost_logger: CostLogger, monkeypatch: py
         await sim.farm_block()
 
 
+def test_update_metadata_condition() -> None:
+    for condition in (
+        UpdateMetadataCondition(data_uri="https://example.com/data"),
+        UpdateMetadataCondition(meta_uri="https://example.com/meta"),
+        UpdateMetadataCondition(license_uri="https://example.com/license"),
+    ):
+        assert UpdateMetadataCondition.from_program(condition.to_program()) == condition
+
+    with pytest.raises(ValueError, match="Only one of"):
+        UpdateMetadataCondition(data_uri="a", meta_uri="b")
+    with pytest.raises(ValueError, match="Only one of"):
+        UpdateMetadataCondition()
+
+    other = UpdateMetadataCondition(other_update=("foo", "bar"))
+    assert other.to_program() == Program.to([-24, NFT_METADATA_UPDATER, (b"foo", "bar")])
+    with pytest.raises(ValueError, match="Invalid key"):
+        UpdateMetadataCondition.from_program(other.to_program())
+
+
+def test_transfer_program_condition() -> None:
+    owner = bytes32([1] * 32)
+    inner = bytes32([2] * 32)
+    asset_a = bytes32([3] * 32)
+    asset_b = bytes32([4] * 32)
+
+    empty = TransferProgramCondition(trade_prices_list={})
+    assert TransferProgramCondition.from_program(empty.to_program()) == empty
+
+    full = TransferProgramCondition(
+        trade_prices_list={asset_a: 100, asset_b: 250},
+        new_owner=SingletonPuzzle(launcher_id=owner, inner_puzzle=UnknownPuzzle(known_tree_hash=inner)),
+    )
+    assert TransferProgramCondition.from_program(full.to_program()) == full
+    assert full.to_program() == Program.to([-10, owner, [[100, asset_a], [250, asset_b]], inner])
+
+
 def test_nft_puzzle_utils_edge_cases() -> None:
 
     # other_update path is covered by lifecycle tests; unreachable else needs bypass of __post_init__
@@ -472,6 +509,41 @@ def test_nft_puzzle_utils_edge_cases() -> None:
     assert OwnershipLayerSolution.match(unknown_solution=UnknownSolution(program=Program.to([1, 2]))) is None
 
     assert DefaultTransferProgram.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
+    assert DefaultMetadataUpdater.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
+
+    matched_updater = DefaultMetadataUpdater.match(
+        unknown_puzzle=UnknownPuzzle(known_program=DefaultMetadataUpdater().program)
+    )
+    assert matched_updater == DefaultMetadataUpdater()
+
+    transfer_program = DefaultTransferProgram(
+        self_launcher_id=bytes32.zeros,
+        royalty_address=bytes32([1] * 32),
+        royalty_basis_points=300,
+    )
+    matched_tp = DefaultTransferProgram.match(unknown_puzzle=UnknownPuzzle(known_program=transfer_program.program))
+    assert matched_tp == transfer_program
+
+    ownership = OwnershipLayer(
+        current_owner=None,
+        transfer_program=transfer_program,
+        inner_puzzle=ACSPuzzle(),
+    )
+    matched_ownership = OwnershipLayer.match(unknown_puzzle=UnknownPuzzle(known_program=ownership.program))
+    assert matched_ownership is not None
+    assert matched_ownership.current_owner is None
+    assert DefaultTransferProgram.match(unknown_puzzle=matched_ownership.transfer_program) == transfer_program
+
+    metadata_layer = MetadataLayer(
+        metadata=NFTMetadata(data_uris=["u"], data_hash=b"\x00" * 32).program,
+        metadata_updater=DefaultMetadataUpdater(),
+        inner_puzzle=ownership,
+    )
+    matched_metadata = MetadataLayer.match(unknown_puzzle=UnknownPuzzle(known_program=metadata_layer.program))
+    assert matched_metadata is not None
+    assert matched_metadata.metadata == metadata_layer.metadata
+    assert OwnershipLayer.match(unknown_puzzle=matched_metadata.inner_puzzle) is not None
+
     assert NFTSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
     # Valid singleton solution shape but invalid metadata layer solution (atom inner)
     singleton_shaped = Program.to([[bytes32.zeros, bytes32.zeros, 1], 1, Program.to(1)])
@@ -483,12 +555,12 @@ def test_nft_puzzle_utils_edge_cases() -> None:
         transfer_program=UnknownPuzzle(known_program=Program.to("not default tp")),
         inner_puzzle=ACSPuzzle(),
     )
-    metadata_layer = MetadataLayer(
+    metadata_layer_non_default = MetadataLayer(
         metadata=NFTMetadata(data_uris=["u"], data_hash=b"\x00" * 32).program,
         metadata_updater=DefaultMetadataUpdater(),
         inner_puzzle=ownership_non_default,
     )
-    singleton_puz = SingletonPuzzle(launcher_id=bytes32.zeros, inner_puzzle=metadata_layer)
+    singleton_puz = SingletonPuzzle(launcher_id=bytes32.zeros, inner_puzzle=metadata_layer_non_default)
     assert NFT.match(unknown_puzzle=UnknownPuzzle(known_program=singleton_puz.program)) is None
 
     with pytest.raises(ValueError, match="Invalid puzzle for NFT"):
