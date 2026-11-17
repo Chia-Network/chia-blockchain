@@ -83,6 +83,7 @@ from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_sync_scope import WebSocketEvent
+from chia.wallet.wallet_transaction_store import filter_ok_mempool_status
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler, get_wp_fork_point
 
 
@@ -577,7 +578,12 @@ class WalletNode:
                 continue
             msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(record.spend_bundle))
             already_sent = set()
-            for peer, status, _ in record.sent_to:
+            # On the periodic retry, SUCCESS/PENDING must not count as "already
+            # sent" or the peer is skipped and the spend is never offered again.
+            # FAILED still counts: a peer that rejected the spend is not retried
+            # here. This is a view of sent_to, not a store update.
+            sent_to = filter_ok_mempool_status(record.sent_to) if retry_accepted_txs else record.sent_to
+            for peer, status, _ in sent_to:
                 if status in {MempoolInclusionStatus.SUCCESS.value, MempoolInclusionStatus.FAILED.value}:
                     already_sent.add(bytes32.from_hexstr(peer))
             messages.append((msg, already_sent))

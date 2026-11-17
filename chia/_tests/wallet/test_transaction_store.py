@@ -825,32 +825,63 @@ async def test_get_not_sent(seeded_random: random.Random) -> None:
 
 
 @pytest.mark.anyio
-async def test_get_not_sent_include_accepted_keeps_stored_mempool_status() -> None:
-    """Resend filtering must not erase a mempool ack from the store.
+async def test_get_not_sent_include_accepted_does_not_persist(seeded_random: random.Random) -> None:
+    """include_accepted_txs returns stored rows and only updates the in-memory throttle.
 
-    ``include_accepted_txs`` returns a copy with SUCCESS/PENDING removed so the
-    caller will submit the spend again. The stored record has to keep that ack:
-    ``TransactionRecord.is_in_mempool`` is what the wallet test harness waits on.
+    Filtering SUCCESS/PENDING for a retry belongs to the resend caller. Persisting
+    that filter cleared mempool acks and set sent=1 on records that were never
+    submitted, including clawback incoming rows (those are skipped when sent > 0).
     """
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
         sent_to = [
             ("peer-ok", uint8(MempoolInclusionStatus.SUCCESS), None),
+            ("peer-pending", uint8(MempoolInclusionStatus.PENDING), None),
             ("peer-bad", uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name),
         ]
-        accepted = dataclasses.replace(tr1, sent=uint32(1), sent_to=sent_to)
+        accepted = dataclasses.replace(
+            tr1,
+            name=bytes32.random(seeded_random),
+            sent=uint32(4),
+            sent_to=sent_to,
+        )
+        clawback = dataclasses.replace(
+            tr1,
+            name=bytes32.random(seeded_random),
+            sent=uint32(0),
+            sent_to=[],
+            type=uint32(TransactionType.INCOMING_CLAWBACK_RECEIVE),
+            spend_bundle=None,
+        )
+        plain = dataclasses.replace(tr1, name=bytes32.random(seeded_random), sent=uint32(0), sent_to=[])
         await store.add_transaction_record(accepted)
+        await store.add_transaction_record(clawback)
+        await store.add_transaction_record(plain)
 
         returned = await store.get_not_sent(include_accepted_txs=True)
+        assert cmp(returned, [accepted, clawback, plain])
 
-        assert len(returned) == 1
-        assert returned[0].sent_to == [
+        for original in (accepted, clawback, plain):
+            stored = await store.get_transaction_record(original.name)
+            assert stored == original
+        assert (await store.get_transaction_record(accepted.name)).is_in_mempool()
+        # Clawback claims treat sent > 0 as "already in a pending spend".
+        assert (await store.get_transaction_record(clawback.name)).sent == 0
+
+        assert filter_ok_mempool_status(sent_to) == [
             ("peer-bad", uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name)
         ]
-        stored = await store.get_transaction_record(tr1.name)
-        assert stored is not None
-        assert stored == accepted
-        assert stored.is_in_mempool()
+
+        # include_accepted sets the throttle to 1. The next calls still return
+        # the row while the count is below minimum_send_attempts, and the
+        # stored ack stays put the whole time.
+        for _ in range(minimum_send_attempts - 1):
+            again = await store.get_not_sent()
+            assert accepted in again
+            assert await store.get_transaction_record(accepted.name) == accepted
+        assert accepted not in await store.get_not_sent()
+        assert await store.get_transaction_record(accepted.name) == accepted
+        assert await store.get_transaction_record(clawback.name) == clawback
 
 
 @pytest.mark.anyio

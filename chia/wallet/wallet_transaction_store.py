@@ -251,14 +251,9 @@ class WalletTransactionStore:
         for row in rows:
             record = (await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0])]))[0]
             if include_accepted_txs:
-                # Hand the caller a copy whose SUCCESS/PENDING peer entries are
-                # removed so an accepted spend is sent again. Do not write that
-                # copy back: persisting it clears is_in_mempool() until the next
-                # ack. The first resend of a process always takes this path
-                # (last_wallet_tx_resend_time starts at 0), and a second
-                # overlapping resend then drops a just-recorded ack for the
-                # whole retry interval.
-                record = dataclasses.replace(record, sent=uint32(1), sent_to=filter_ok_mempool_status(record.sent_to))
+                # Caller decides which peers to retry. Do not rewrite sent or
+                # sent_to here: writing a filtered copy used to clear mempool
+                # acks and stamp sent=1 onto records that were never sent.
                 self.tx_submitted[record.name] = current_time, 1
                 records.append(record)
             elif record.name in self.tx_submitted:
