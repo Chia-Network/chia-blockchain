@@ -364,7 +364,7 @@ async def test_plotnft_pooling_claim(
         plotnft = PlotNFT.get_next_from_coin_spend(coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft)
 
 
-def test_plotnft_errors() -> None:
+def test_plotnft_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(
         ValueError, match=re.escape("Cannot initialize a PlotNFTPuzzle with an empty pool config and exiting=True")
     ):
@@ -422,17 +422,21 @@ def test_plotnft_errors() -> None:
         )
 
     with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton launcher for next PlotNFT")):
+        with monkeypatch.context() as m:
+            m.setattr(
+                SingletonStruct,
+                "singleton_puzzles",
+                SingletonPuzzles(
+                    singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
+                ),
+            )
+            puzzle = Program.to(SingletonStruct.singleton_puzzles.singleton_mod).curry(
+                SingletonStruct(launcher_id=bytes32.zeros).to_program()
+            )
         PlotNFT.get_next_from_coin_spend(
             coin_spend=make_spend(
                 default_coin,
-                Program.to(PlotNFT.singleton_puzzles.singleton_mod).curry(
-                    SingletonStruct(
-                        launcher_id=bytes32.zeros,
-                        singleton_puzzles=SingletonPuzzles(
-                            singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
-                        ),
-                    ).to_program()
-                ),
+                puzzle,
                 Program.to(None),
             ),
             genesis_challenge=bytes32.zeros,
@@ -441,7 +445,7 @@ def test_plotnft_errors() -> None:
     def wrap_inner_puz(inner_puz: Program) -> UnknownPuzzle:
         return UnknownPuzzle.from_uncurried(
             UncurriedPuzzle(
-                mod=PlotNFT.singleton_puzzles.singleton_mod,
+                mod=SingletonStruct.singleton_puzzles.singleton_mod,
                 args=Program.to([SingletonStruct(launcher_id=bytes32.zeros).to_program(), inner_puz]),
             )
         )

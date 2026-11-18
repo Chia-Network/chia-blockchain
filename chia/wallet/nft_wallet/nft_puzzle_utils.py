@@ -169,6 +169,10 @@ class NFTMetadata:
             return self.prepend_value(key=self.meta_key, value=condition.meta_uri)
         if condition.license_uri is not None:
             return self.prepend_value(key=self.license_key, value=condition.license_uri)
+        if condition.other_update is not None:
+            other_key, value = condition.other_update
+            new_other_metadata = {**self.other_metadata, other_key.encode("utf8"): value}
+            return replace(self, other_metadata=new_other_metadata)
         raise NotImplementedError("Impossible to reach")  # pragma: no cover
 
     @property
@@ -224,6 +228,10 @@ class NFTMetadata:
                     meta_uris = value_list
                 elif key == cls.license_key:
                     license_uris = value_list
+                elif key == cls.edition_number_key and value_list == []:
+                    edition_number = 0
+                elif key == cls.edition_total_key and value_list == []:
+                    edition_total = 0
                 else:
                     other_metadata[key] = value_list
 
@@ -341,12 +349,15 @@ class DefaultTransferProgram(PuzzleBase):
     self_launcher_id: bytes32
     royalty_address: bytes32 | None
     royalty_basis_points: int
-    struct_driver: ClassVar[type[SingletonStruct]] = SingletonStruct
+
+    @property
+    def singleton_struct(self) -> SingletonStruct:
+        return SingletonStruct(launcher_id=self.self_launcher_id)
 
     @property
     def program(self) -> Program:
         return NFT_TRANSFER_PROGRAM_DEFAULT.curry(
-            self.struct_driver(launcher_id=self.self_launcher_id).to_program(),
+            self.singleton_struct.to_program(),
             self.royalty_address,
             self.royalty_basis_points,
         )
@@ -355,7 +366,7 @@ class DefaultTransferProgram(PuzzleBase):
     def tree_hash_optimized(self) -> bytes32:
         return curry_and_treehash(
             HASH_OF_TRANSFER_PROGRAM_QUOTED_MOD_HASH,
-            self.struct_driver(launcher_id=self.self_launcher_id).struct_hash(),
+            self.singleton_struct.struct_hash(),
             Program.to(self.royalty_address).get_tree_hash(),
             Program.to(self.royalty_basis_points).get_tree_hash(),
         )
@@ -366,9 +377,10 @@ class DefaultTransferProgram(PuzzleBase):
             return None
 
         (singleton_struct, royalty_address, royalty_basis_points) = unknown_puzzle.curried_args
+        matched_struct = SingletonStruct.from_program(singleton_struct)
 
         return DefaultTransferProgram(
-            self_launcher_id=cls.struct_driver.from_program(singleton_struct).launcher_id,
+            self_launcher_id=matched_struct.launcher_id,
             royalty_address=bytes32(royalty_address.as_atom()) if royalty_address != Program.NIL else None,
             royalty_basis_points=royalty_basis_points.as_int(),
         )

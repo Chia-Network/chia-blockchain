@@ -9,6 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
+from chia.pools.plotnft_drivers import SingletonPuzzles, SingletonStruct
 from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -253,15 +254,26 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
 
 
 @pytest.mark.anyio
-async def test_default_transfer_program(cost_logger: CostLogger) -> None:
+async def test_default_transfer_program(cost_logger: CostLogger, monkeypatch: pytest.MonkeyPatch) -> None:
     async with sim_and_client() as (sim, sim_client):
         # Now make the ownership coin
         FAKE_SINGLETON_MOD = Program.to([2, 5, 11])  # (a 5 11) | (mod (_ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
         FAKE_CAT_MOD = Program.to([2, 11, 23])  # (a 11 23) or (mod (_ _ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
         FAKE_LAUNCHER_ID = bytes32.zeros
         FAKE_TAIL = bytes32([2] * 32)
-        FAKE_SINGLETON_STRUCT = Program.to((FAKE_SINGLETON_MOD.get_tree_hash(), (FAKE_LAUNCHER_ID, FAKE_LAUNCHER_ID)))
-        FAKE_SINGLETON = FAKE_SINGLETON_MOD.curry(FAKE_SINGLETON_STRUCT, ACS)
+        # Match the pre-driver test shape: (FAKE_MOD_HASH, (launcher_id, launcher_id)).
+        monkeypatch.setattr(
+            SingletonStruct,
+            "singleton_puzzles",
+            SingletonPuzzles(
+                singleton_mod=FAKE_SINGLETON_MOD,
+                singleton_mod_hash_pre_computed=None,
+            ),
+        )
+        FAKE_SINGLETON = FAKE_SINGLETON_MOD.curry(
+            SingletonStruct(launcher_id=FAKE_LAUNCHER_ID).to_program(),
+            ACS,
+        )
         FAKE_CAT = FAKE_CAT_MOD.curry(FAKE_CAT_MOD.get_tree_hash(), FAKE_TAIL, ACS)
 
         ROYALTY_ADDRESS = bytes32([1] * 32)
