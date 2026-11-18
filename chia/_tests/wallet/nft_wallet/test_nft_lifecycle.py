@@ -13,6 +13,7 @@ from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
+from chia.wallet.cat_wallet.cat_utils import CATCorePuzzles, CATPuzzle
 from chia.wallet.conditions import AssertPuzzleAnnouncement, CreateCoin, CreatePuzzleAnnouncement, UnknownCondition
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
     DefaultMetadataUpdater,
@@ -25,8 +26,9 @@ from chia.wallet.nft_wallet.nft_puzzle_utils import (
     TransferProgramCondition,
     UpdateMetadataCondition,
 )
-from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, NFT_TRANSFER_PROGRAM_DEFAULT
+from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER
 from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, ACSSolution, UnknownPuzzle, UnknownSolution
+from chia.wallet.puzzles.singleton_drivers import SingletonCorePuzzles, SingletonPuzzle, SingletonStruct
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 ACS = Program.to(1)
@@ -253,28 +255,42 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
 
 
 @pytest.mark.anyio
-async def test_default_transfer_program(cost_logger: CostLogger) -> None:
+async def test_default_transfer_program(cost_logger: CostLogger, monkeypatch: pytest.MonkeyPatch) -> None:
     async with sim_and_client() as (sim, sim_client):
         # Now make the ownership coin
         FAKE_SINGLETON_MOD = Program.to([2, 5, 11])  # (a 5 11) | (mod (_ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
         FAKE_CAT_MOD = Program.to([2, 11, 23])  # (a 11 23) or (mod (_ _ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
-        FAKE_LAUNCHER_ID = bytes32.zeros
         FAKE_TAIL = bytes32([2] * 32)
-        FAKE_SINGLETON_STRUCT = Program.to((FAKE_SINGLETON_MOD.get_tree_hash(), (FAKE_LAUNCHER_ID, FAKE_LAUNCHER_ID)))
-        FAKE_SINGLETON = FAKE_SINGLETON_MOD.curry(FAKE_SINGLETON_STRUCT, ACS)
-        FAKE_CAT = FAKE_CAT_MOD.curry(FAKE_CAT_MOD.get_tree_hash(), FAKE_TAIL, ACS)
+        monkeypatch.setattr(
+            SingletonStruct,
+            "singleton_puzzles",
+            SingletonCorePuzzles(
+                singleton_mod=FAKE_SINGLETON_MOD,
+                singleton_mod_hash_pre_computed=None,
+                hash_of_quoted_mod_hash_pre_computed=None,
+            ),
+        )
+        monkeypatch.setattr(
+            CATPuzzle,
+            "cat_puzzles",
+            CATCorePuzzles(
+                cat_mod=FAKE_CAT_MOD, cat_mod_hash_pre_computed=None, hash_of_quoted_mod_hash_pre_computed=None
+            ),
+        )
+        FAKE_SINGLETON = SingletonPuzzle(launcher_id=bytes32.zeros, inner_puzzle=ACSPuzzle())
+        FAKE_CAT = CATPuzzle(tail_hash=FAKE_TAIL, inner_puzzle=ACSPuzzle())
 
         ROYALTY_ADDRESS = bytes32([1] * 32)
         TRADE_PRICE_PERCENTAGE = 5000  # 50%
         # Build with a non-default singleton struct (fake mods), matching the pre-driver test shape.
-        transfer_program_program: Program = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
-            FAKE_SINGLETON_STRUCT,
-            ROYALTY_ADDRESS,
-            TRADE_PRICE_PERCENTAGE,
+        transfer_program = DefaultTransferProgram(
+            self_launcher_id=FAKE_SINGLETON.launcher_id,
+            royalty_address=ROYALTY_ADDRESS,
+            royalty_basis_points=TRADE_PRICE_PERCENTAGE,
         )
         ownership_puzzle = OwnershipLayer(
             current_owner=None,
-            transfer_program=UnknownPuzzle(known_program=transfer_program_program),
+            transfer_program=transfer_program,
             inner_puzzle=ACSPuzzle(),
         )
         await sim.farm_block(ownership_puzzle.tree_hash)
@@ -305,15 +321,15 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         await sim.rewind(BLOCK_HEIGHT)
 
         # Now try an owner update plus royalties
-        await sim.farm_block(FAKE_SINGLETON.get_tree_hash())
-        await sim.farm_block(FAKE_CAT.get_tree_hash())
+        await sim.farm_block(FAKE_SINGLETON.tree_hash)
+        await sim.farm_block(FAKE_CAT.tree_hash)
         await sim.farm_block(ACS_PH)
         singleton_coin = (
-            await sim_client.get_coin_records_by_puzzle_hash(FAKE_SINGLETON.get_tree_hash(), include_spent_coins=False)
+            await sim_client.get_coin_records_by_puzzle_hash(FAKE_SINGLETON.tree_hash, include_spent_coins=False)
         )[0].coin
-        cat_coin = (
-            await sim_client.get_coin_records_by_puzzle_hash(FAKE_CAT.get_tree_hash(), include_spent_coins=False)
-        )[0].coin
+        cat_coin = (await sim_client.get_coin_records_by_puzzle_hash(FAKE_CAT.tree_hash, include_spent_coins=False))[
+            0
+        ].coin
         xch_coin = (await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False))[0].coin
 
         ownership_spend = make_spend(
@@ -326,9 +342,9 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
                         TransferProgramCondition(
                             trade_prices_list={
                                 ACS_PH: 100,
-                                FAKE_CAT.get_tree_hash(): 100,
+                                FAKE_CAT.tree_hash: 100,
                             },
-                            new_owner=FAKE_LAUNCHER_ID,
+                            new_owner=FAKE_SINGLETON.launcher_id,
                             new_owner_inner_puzzle_hash=ACS_PH,
                         ),
                     ]
@@ -338,12 +354,12 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
 
         did_announcement_spend = make_spend(
             singleton_coin,
-            FAKE_SINGLETON,
-            Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=FAKE_LAUNCHER_ID)]).program]),
+            FAKE_SINGLETON.program,
+            Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=FAKE_SINGLETON.launcher_id)]).program]),
         )
 
         expected_announcement_data = Program.to(
-            (FAKE_LAUNCHER_ID, [[ROYALTY_ADDRESS, 50, [ROYALTY_ADDRESS]]])
+            (FAKE_SINGLETON.launcher_id, [[ROYALTY_ADDRESS, 50, [ROYALTY_ADDRESS]]])
         ).get_tree_hash()
         xch_announcement_spend = make_spend(
             xch_coin,
@@ -353,7 +369,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
 
         cat_announcement_spend = make_spend(
             cat_coin,
-            FAKE_CAT,
+            FAKE_CAT.program,
             Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=expected_announcement_data)]).program]),
         )
 
@@ -379,8 +395,8 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
 
         # Finally, make sure we can just clear the DID label off
         new_ownership_puzzle = OwnershipLayer(
-            current_owner=FAKE_LAUNCHER_ID,
-            transfer_program=UnknownPuzzle(known_program=transfer_program_program),
+            current_owner=FAKE_SINGLETON.launcher_id,
+            transfer_program=transfer_program,
             inner_puzzle=ACSPuzzle(),
         )
         await sim.farm_block(new_ownership_puzzle.tree_hash)
