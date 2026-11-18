@@ -505,7 +505,7 @@ class NFTWallet:
             # eve coin DID can be set to whatever so we keep it empty
             # WARNING: wallets should always ignore DID value for eve coins as they can be set
             #          to any DID without approval
-            inner_puzzle: Program = OwnershipLayer(
+            inner_puzzle: OwnershipLayer[UnknownPuzzle, DefaultTransferProgram] | UnknownPuzzle = OwnershipLayer(
                 current_owner=None,
                 inner_puzzle=UnknownPuzzle(known_program=p2_inner_puzzle),
                 transfer_program=DefaultTransferProgram(
@@ -515,18 +515,18 @@ class NFTWallet:
                     else p2_inner_puzzle.get_tree_hash(),
                     royalty_basis_points=int(percentage),
                 ),
-            ).program
+            )
             self.log.debug("Got back ownership inner puzzle: %s", inner_puzzle)
         else:
             self.log.debug("Creating standard NFT")
-            inner_puzzle = p2_inner_puzzle
+            inner_puzzle = UnknownPuzzle(known_program=p2_inner_puzzle)
 
         # singleton eve puzzle
         eve_fullpuz = nft_puzzle_utils.create_full_puzzle(
             launcher_coin.name(),
             metadata,
             DefaultMetadataUpdater().tree_hash,
-            inner_puzzle,
+            inner_puzzle.program,
         )
         eve_fullpuz_hash = eve_fullpuz.get_tree_hash()
         # launcher announcement
