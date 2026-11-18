@@ -1668,7 +1668,7 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
         {
             "num_environments": 2,
             "blocks_needed": [3, 3],
-            "config_overrides": {"automatically_add_unknown_cats": True},
+            "config_overrides": {"automatically_add_unknown_cats": True, "initial_num_public_keys": 10},
             "reorg_exempt": True,
         }
     ],
