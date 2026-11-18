@@ -107,7 +107,7 @@ TEST_COIN3 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT3)
 TEST_COIN_ID3 = TEST_COIN3.name()
 TEST_COIN_RECORD3 = CoinRecord(TEST_COIN3, uint32(0), uint32(0), False, TEST_TIMESTAMP)
 TEST_HEIGHT = uint32(5)
-TEST_MINIMUM_BLOCK_FEE_PER_COST = 4
+TEST_MINIMUM_FEE_ESTIMATE_PER_COST = 5
 
 
 @pytest.fixture(name="test_bundles")
@@ -3727,29 +3727,24 @@ async def test_new_peak_txs_added(condition_and_error: tuple[ConditionOpcode, Er
 
 
 @pytest.mark.anyio
-# The default minimum block fee applies until it expires
+# The minimum fee estimate applies until it expires
 @pytest.mark.parametrize(
-    "peak_timestamp, default_minimum_block_fpc",
-    [(MINIMUM_BLOCK_FEE_EXPIRATION - 1, TEST_MINIMUM_BLOCK_FEE_PER_COST), (MINIMUM_BLOCK_FEE_EXPIRATION, 0)],
+    "peak_timestamp, minimum_fee_estimate_per_cost",
+    [(MINIMUM_BLOCK_FEE_EXPIRATION - 1, TEST_MINIMUM_FEE_ESTIMATE_PER_COST), (MINIMUM_BLOCK_FEE_EXPIRATION, 0)],
 )
-# Without a minimum of its own and with one above the network's
-@pytest.mark.parametrize("node_minimum_block_fpc", [0, 2 * DEFAULT_MINIMUM_BLOCK_FEE_PER_COST])
-async def test_fee_estimates_use_network_minimum_block_fee(
-    peak_timestamp: int, default_minimum_block_fpc: int, node_minimum_block_fpc: int
-) -> None:
+async def test_fee_estimates_use_minimum_fee_estimate(peak_timestamp: int, minimum_fee_estimate_per_cost: int) -> None:
     """
-    Covers fee estimates to make sure they don't go below the default minimum
-    block fee per cost regardless of what the full node's own value is.
+    Covers fee estimates to make sure they don't go below the minimum fee
+    estimate per cost until it expires.
     """
     async with instantiate_mempool_manager(
         get_coin_records=zero_calls_get_coin_records,
         block_timestamp=uint64(peak_timestamp),
-        minimum_block_fee_per_cost=uint64(node_minimum_block_fpc),
+        minimum_block_fee_per_cost=uint64(0),
     ) as mempool_manager:
-        assert mempool_manager.minimum_block_fee_per_cost == node_minimum_block_fpc
-        # The estimate should be the default minimum as we have no data
+        # The estimate should be the minimum fee estimate as we have no data
         fee_rate = mempool_manager.mempool.fee_estimator.estimate_fee_rate(time_offset_seconds=60)
-        assert fee_rate.mojos_per_clvm_cost == default_minimum_block_fpc
+        assert fee_rate.mojos_per_clvm_cost == minimum_fee_estimate_per_cost
 
 
 @pytest.mark.anyio
