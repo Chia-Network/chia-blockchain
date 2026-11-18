@@ -1853,6 +1853,8 @@ async def test_offer_endpoints(
     trade_record = (await env_1.rpc_client.get_offer(GetOffer(trade_id=offer.name()))).trade_record
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
 
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_1.node)
+
     offer_file_2 = tmp_path / "second.offer"
     await MakeOfferCMD(
         rpc_info=wallet_environments.cmd_tx_endpoint_args(env_1)["rpc_info"],
@@ -2138,6 +2140,7 @@ async def test_offer_endpoints(
     await env_1.rpc_client.cancel_offers(
         CancelOffers(secure=True, asset_id=cat_asset_id.hex(), push=True), tx_config=wallet_environments.tx_config
     )
+    await wallet_environments.full_node.wait_for_wallet_synced(env_1.node)
     assert (
         len(
             [
@@ -2712,13 +2715,15 @@ async def _check_delete_key(
     # set farmer to first private key
     create_sk = master_sk_to_wallet_sk_unhardened if observer else master_sk_to_wallet_sk
 
-    sk = await wallet_node.get_key_for_fingerprint(farmer_fp, private=True)
-    assert sk is not None
-    farmer_ph = puzzle_hash_for_pk(create_sk(sk, uint32(0)).get_g1())
+    key_info = await wallet_node.get_key_for_fingerprint(farmer_fp, private=True)
+    assert key_info is not None
+    assert key_info.secret_key is not None
+    farmer_ph = puzzle_hash_for_pk(create_sk(key_info.secret_key, uint32(0)).get_g1())
 
-    sk = await wallet_node.get_key_for_fingerprint(pool_fp, private=True)
-    assert sk is not None
-    pool_ph = puzzle_hash_for_pk(create_sk(sk, uint32(0)).get_g1())
+    key_info = await wallet_node.get_key_for_fingerprint(pool_fp, private=True)
+    assert key_info is not None
+    assert key_info.secret_key is not None
+    pool_ph = puzzle_hash_for_pk(create_sk(key_info.secret_key, uint32(0)).get_g1())
 
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
         test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(farmer_ph, "txch")
@@ -2847,6 +2852,7 @@ async def test_key_and_address_endpoints(
     show_config = env.node.config
     if "wallet" not in show_config:
         show_config = {**show_config, "wallet": show_config}
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node)
     await ShowCMD(
         rpc_info=NeedsWalletRPC(
             client_info=WalletClientInfo(

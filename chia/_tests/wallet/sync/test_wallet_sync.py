@@ -1821,11 +1821,6 @@ async def test_long_sync_untrusted_break(
 @pytest.mark.anyio
 @pytest.mark.parametrize("chain_length", [0, 100])
 @pytest.mark.parametrize("fork_point", [500, 1500])
-# TODO: todo_v2_plots once we have new test chains, we can probably re-enable this
-@pytest.mark.limit_consensus_modes(
-    allows=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
-    reason="after plot-v1 phase-out, the chains aren't valid anymore",
-)
 async def test_long_reorg_nodes_and_wallet(
     chain_length: int,
     fork_point: int,

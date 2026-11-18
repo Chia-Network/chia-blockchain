@@ -121,8 +121,8 @@ async def test_get_private_key(wallet_node_and_keychain: tuple[WalletNode, Keych
     key = await node.get_key(fingerprint)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -139,8 +139,8 @@ async def test_get_private_key_default_key(wallet_node_and_keychain: tuple[Walle
     key = await node.get_key(None)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -169,8 +169,8 @@ async def test_get_private_key_missing_key_use_default(wallet_node_and_keychain:
     key = await node.get_key(1234567890)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -186,8 +186,8 @@ async def test_get_public_key(wallet_node_and_keychain: tuple[WalletNode, Keycha
     key = await node.get_key(fingerprint, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -216,8 +216,8 @@ async def test_get_public_key_default_key(wallet_node_and_keychain: tuple[Wallet
     key = await node.get_key(None, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -250,8 +250,38 @@ async def test_get_public_key_missing_key_use_default(wallet_node_and_keychain: 
     key = await node.get_key(1234567890, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
+
+
+@pytest.mark.anyio
+async def test_start_with_fingerprint_no_keys(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, _keychain = wallet_node_and_keychain  # empty keyring
+
+    assert await node._start_with_fingerprint() is False
+    assert node.logged_in is False
+
+
+@pytest.mark.anyio
+async def test_start_with_fingerprint_public_only_key(
+    wallet_node_and_keychain: tuple[WalletNode, Keychain],
+) -> None:
+    """
+    Starting with a public-only key must succeed for both local and daemon keychains.
+    This exercises the `or_public` fallback: private lookup finds the key but has no secrets.
+    """
+    node, keychain = wallet_node_and_keychain
+    pk: G1Element = keychain.add_key(
+        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        None,
+        private=False,
+    )
+    fingerprint = pk.get_fingerprint()
+
+    assert await node._start_with_fingerprint(fingerprint=fingerprint) is True
+    assert node.logged_in_fingerprint == fingerprint
+    assert node.wallet_state_manager.private_key is None
+    assert node.wallet_state_manager.root_pubkey == pk
 
 
 def test_log_in(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
@@ -479,14 +509,6 @@ def test_timestamp_in_sync(root_path_populated_with_config: Path, testing: bool,
 
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
-# todo_v2_plots
-# NOTE: HARD_FORK_3_0 can fail this log assertion because height 1-2 are non-tx,
-# so earlier timestamp lookups backtrack to height 0 and cache _timestamps[0].
-# clear_after_height(0) keeps height 0, so get_timestamp(1) returns early
-# this test expects a certine chain state
-@pytest.mark.limit_consensus_modes(
-    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
-)
 async def test_get_timestamp_for_height_from_peer(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -522,18 +544,29 @@ async def test_get_timestamp_for_height_from_peer(
     cache.clear_after_height(0)
     assert await get_timestamp(peak.height) == timestamp_at_peak
     # Test block cache usage
+    # Start at a non transaction block to exercise backtracking to the previous
+    # transaction block, where the timestamp is cached.
+    height = next(
+        (
+            h
+            for h in range(1, peak.height)
+            if not full_node_api.full_node.blockchain.height_to_block_record(uint32(h)).is_transaction_block
+        ),
+        None,
+    )
+    assert height is not None
     cache.clear_after_height(0)
     with caplog.at_level(logging.DEBUG):
-        await get_timestamp(1)
-    block_1 = cache.get_block(uint32(1))
-    assert block_1 is not None
-    assert f"get_timestamp_for_height_from_peer cache miss for height {1}" in caplog.text
-    assert f"get_timestamp_for_height_from_peer add to cache for height {1}" in caplog.text
+        await get_timestamp(height)
+    block = cache.get_block(uint32(height))
+    assert block is not None
+    assert f"get_timestamp_for_height_from_peer cache miss for height {height}" in caplog.text
+    assert f"get_timestamp_for_height_from_peer add to cache for height {height}" in caplog.text
     caplog.clear()
     with caplog.at_level(logging.DEBUG):
-        await get_timestamp(1)
-    assert f"get_timestamp_for_height_from_peer use cached block for height {0}" not in caplog.text
-    assert f"get_timestamp_for_height_from_peer use cached block for height {1}" in caplog.text
+        await get_timestamp(height)
+    assert f"get_timestamp_for_height_from_peer use cached block for height {height - 1}" not in caplog.text
+    assert f"get_timestamp_for_height_from_peer use cached block for height {height}" in caplog.text
 
 
 @pytest.mark.anyio
