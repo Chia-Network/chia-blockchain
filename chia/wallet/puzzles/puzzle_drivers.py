@@ -10,6 +10,7 @@ from chia_rs.sized_bytes import bytes32
 from typing_extensions import runtime_checkable
 
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.wallet.conditions import Condition, parse_conditions_non_consensus
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
@@ -72,21 +73,27 @@ class PuzzleBase:
 
 @dataclass(kw_only=True, frozen=True)
 class UnknownPuzzle(PuzzleBase):
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("UnknownPuzzle", None)
-
-    known_program: Program | None = None
+    known_program: Program | SerializedProgram | None = None
     known_tree_hash: bytes32 | None = None
+    _uncurried_puzzle: UncurriedPuzzle | None = None
 
     def __post_init__(self) -> None:
-        if self.known_program is None and self.known_tree_hash is None:
-            raise ValueError("Must specify either a puzzle or puzzle hash that is unknown")
+        if self.known_program is None and self.known_tree_hash is None and self._uncurried_puzzle is None:
+            raise ValueError("Must specify either a program or tree hash that is unknown")
 
     @property
     def program(self) -> Program:
         if self.known_program is None:
-            raise ValueError("Attempting to access puzzle when only puzzle hash is known")
-        return self.known_program
+            if self._uncurried_puzzle is None:
+                raise ValueError("Attempting to access program when only tree hash is known")
+            known_program = self._uncurried_puzzle.mod.curry(*self._uncurried_puzzle.args.as_iter())
+            object.__setattr__(self, "known_program", known_program)
+            return known_program
+        return (
+            Program.from_serialized(self.known_program)
+            if isinstance(self.known_program, SerializedProgram)
+            else self.known_program
+        )
 
     @property
     def tree_hash_optimized(self) -> bytes32:
@@ -94,6 +101,8 @@ class UnknownPuzzle(PuzzleBase):
 
     @cached_property
     def _uncurry_result(self) -> UncurriedPuzzle:
+        if self._uncurried_puzzle is not None:
+            return self._uncurried_puzzle
         return uncurry_puzzle(self.program)
 
     @cached_property
@@ -109,7 +118,11 @@ class UnknownPuzzle(PuzzleBase):
         return list(self._uncurry_result.args.as_iter())
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:  # pragma: no cover
+    def from_uncurried(cls, uncurried_puzzle: UncurriedPuzzle) -> UnknownPuzzle:
+        return cls(_uncurried_puzzle=uncurried_puzzle)
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> UnknownPuzzle | None:  # pragma: no cover
         raise NotImplementedError("UnknownPuzzles cannot match anything, they are for being matched")
 
 

@@ -319,7 +319,7 @@ class TransferProgramCondition(Condition):
     new_owner: SingletonPuzzle[Any] | None = None
 
     def __post_init__(self) -> None:
-        # Ignoring streamable post init
+        # Driver-only condition; fields are not streamable-serializable.
         return None
 
     def to_program(self) -> Program:
@@ -362,7 +362,9 @@ class DefaultTransferProgram(PuzzleBase):
     @property
     def program(self) -> Program:
         return NFT_TRANSFER_PROGRAM_DEFAULT.curry(
-            SingletonStruct(launcher_id=self.self_launcher_id).program, self.royalty_address, self.royalty_basis_points
+            self.struct_driver(launcher_id=self.self_launcher_id).to_program(),
+            self.royalty_address,
+            self.royalty_basis_points,
         )
 
     @property

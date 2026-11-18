@@ -757,7 +757,16 @@ class NFTWallet:
                 ),
             )
         if metadata_update is not None:
-            extra_conditions = (*extra_conditions, UpdateMetadataCondition(other_update=metadata_update))
+            key, uri = metadata_update
+            if key == "u":
+                metadata_condition: Condition = UpdateMetadataCondition(data_uri=uri)
+            elif key == "mu":
+                metadata_condition = UpdateMetadataCondition(meta_uri=uri)
+            elif key == "lu":
+                metadata_condition = UpdateMetadataCondition(license_uri=uri)
+            else:
+                metadata_condition = UpdateMetadataCondition(other_update=(key, uri))
+            extra_conditions = (*extra_conditions, metadata_condition)
 
         innersol: Program = self.standard_wallet.make_solution(
             primaries=payments,

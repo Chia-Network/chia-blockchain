@@ -18,7 +18,6 @@ from chia.wallet.puzzles.puzzle_drivers import (
     OuterPuzzle,
     Puzzle,
     PuzzleBase,
-    SmartCoin,
     Solution,
     UnknownPuzzle,
     UnknownSolution,
@@ -119,9 +118,6 @@ class CATPuzzle(PuzzleBase, Generic[_T_Puzzle]):
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class CAT(CATPuzzle[_T_Puzzle], Generic[_T_Puzzle]):
-    if TYPE_CHECKING:
-        _smart_coin_protocol_check: ClassVar[SmartCoin] = cast("CAT[_T_Puzzle]", None)
-
     coin: Coin
     lineage_proof: LineageProof
 

@@ -29,7 +29,6 @@ from chia.wallet.puzzles.puzzle_drivers import (
     OuterPuzzle,
     Puzzle,
     PuzzleBase,
-    SmartCoin,
     Solution,
     UnknownPuzzle,
     UnknownSolution,
@@ -216,9 +215,6 @@ def new_create_coin_from_inner_puzzle_and_solution(inner_puzzle: Puzzle, solutio
 
 @dataclass(kw_only=True, frozen=True)
 class Singleton(SingletonPuzzle[_T_Puzzle]):
-    if TYPE_CHECKING:
-        _smart_coin_protocol_check: ClassVar[SmartCoin] = cast("Singleton[_T_Puzzle]", None)
-
     coin: Coin
     lineage_proof: LineageProof
 

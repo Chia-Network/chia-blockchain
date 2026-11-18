@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar, cast
+from typing import Generic, TypeVar
 
 from chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
@@ -21,7 +21,6 @@ from chia.wallet.puzzles.puzzle_drivers import (
     P2Conditions,
     Puzzle,
     PuzzleBase,
-    SmartCoin,
     Solution,
     UnknownPuzzle,
     UnknownSolution,
@@ -152,7 +151,4 @@ class StandardPuzzleSolution(Generic[_T_Puzzle, _T_Solution]):
 
 @dataclass(kw_only=True, frozen=True)
 class StandardXCHCoin(StandardPuzzle[DefaultHiddenPuzzle]):
-    if TYPE_CHECKING:
-        _smart_coin_protocol_check: ClassVar[SmartCoin] = cast("StandardXCHCoin", None)
-
     coin: Coin

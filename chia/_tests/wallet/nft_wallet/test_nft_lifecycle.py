@@ -269,27 +269,29 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
 
 @pytest.mark.anyio
 async def test_default_transfer_program(cost_logger: CostLogger, monkeypatch: pytest.MonkeyPatch) -> None:
-    FAKE_SINGLETON_MOD = Program.to([2, 5, 11])  # (a 5 11) | (mod (_ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
-    FAKE_CAT_MOD = Program.to([2, 11, 23])  # (a 11 23) or (mod (_ _ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
-    FAKE_TAIL = bytes32([2] * 32)
-    monkeypatch.setattr(
-        SingletonStruct,
-        "singleton_puzzles",
-        SingletonCorePuzzles(
-            singleton_mod=FAKE_SINGLETON_MOD,
-            singleton_mod_hash_pre_computed=None,
-            hash_of_quoted_mod_hash_pre_computed=None,
-        ),
-    )
-    monkeypatch.setattr(
-        CATPuzzle,
-        "cat_puzzles",
-        CATCorePuzzles(cat_mod=FAKE_CAT_MOD, cat_mod_hash_pre_computed=None, hash_of_quoted_mod_hash_pre_computed=None),
-    )
-    FAKE_SINGLETON = SingletonPuzzle(launcher_id=bytes32.zeros, inner_puzzle=ACSPuzzle())
-    FAKE_CAT = CATPuzzle(tail_hash=FAKE_TAIL, inner_puzzle=ACSPuzzle())
     async with sim_and_client() as (sim, sim_client):
         # Now make the ownership coin
+        FAKE_SINGLETON_MOD = Program.to([2, 5, 11])  # (a 5 11) | (mod (_ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
+        FAKE_CAT_MOD = Program.to([2, 11, 23])  # (a 11 23) or (mod (_ _ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
+        FAKE_TAIL = bytes32([2] * 32)
+        monkeypatch.setattr(
+            SingletonStruct,
+            "singleton_puzzles",
+            SingletonCorePuzzles(
+                singleton_mod=FAKE_SINGLETON_MOD,
+                singleton_mod_hash_pre_computed=None,
+                hash_of_quoted_mod_hash_pre_computed=None,
+            ),
+        )
+        monkeypatch.setattr(
+            CATPuzzle,
+            "cat_puzzles",
+            CATCorePuzzles(
+                cat_mod=FAKE_CAT_MOD, cat_mod_hash_pre_computed=None, hash_of_quoted_mod_hash_pre_computed=None
+            ),
+        )
+        FAKE_SINGLETON = SingletonPuzzle(launcher_id=bytes32.zeros, inner_puzzle=ACSPuzzle())
+        FAKE_CAT = CATPuzzle(tail_hash=FAKE_TAIL, inner_puzzle=ACSPuzzle())
 
         ROYALTY_ADDRESS = bytes32([1] * 32)
         TRADE_PRICE_PERCENTAGE = 5000  # 50%
@@ -467,7 +469,7 @@ def test_transfer_program_condition() -> None:
     assert full.to_program() == Program.to([-10, owner, [[100, asset_a], [250, asset_b]], inner])
 
 
-def test_nft_puzzle_utils_edge_cases() -> None:
+def test_nft_metadata_ownership_driver_edge_cases() -> None:
 
     # other_update path is covered by lifecycle tests; unreachable else needs bypass of __post_init__
     unreachable = object.__new__(UpdateMetadataCondition)

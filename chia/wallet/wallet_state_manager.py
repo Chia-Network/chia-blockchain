@@ -940,7 +940,7 @@ class WalletStateManager:
 
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
 
-        uncurried = UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
+        uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
 
         # Check if the coin is a CAT
         matched_cat = CATPuzzle.match(unknown_puzzle=uncurried)
@@ -1349,9 +1349,7 @@ class WalletStateManager:
                                 # if there is a child coin that is not owned by the wallet.
                                 coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
                                 # Check if the parent coin is a Clawback coin
-                                uncurried = UnknownPuzzle(
-                                    known_program=Program.from_serialized(coin_spend.puzzle_reveal)
-                                )
+                                uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
                                 clawback_metadata = match_clawback_puzzle(
                                     uncurried, coin_spend.puzzle_reveal, coin_spend.solution
                                 )

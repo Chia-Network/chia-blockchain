@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar, cast
+from typing import ClassVar, Generic, TypeVar
 
 from chia_puzzles_py.programs import DID_INNERPUZ, DID_INNERPUZ_HASH
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.program import Program
-from chia.wallet.puzzles.puzzle_drivers import OuterPuzzle, Puzzle, PuzzleBase, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import Puzzle, PuzzleBase, UnknownPuzzle
 from chia.wallet.puzzles.singleton_drivers import SingletonStruct
 from chia.wallet.util.curry_and_treehash import (
     calculate_hash_of_quoted_mod_hash,
@@ -62,9 +62,6 @@ class RecoveryList:
 
 @dataclass(frozen=True, kw_only=True)
 class DIDRecoveryPuzzle(PuzzleBase, Generic[_T_Puzzle]):
-    if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast("DIDRecoveryPuzzle[_T_Puzzle]", None)
-
     inner_puzzle: _T_Puzzle
     self_launcher_id: bytes32
     metadata: DIDMetadata
