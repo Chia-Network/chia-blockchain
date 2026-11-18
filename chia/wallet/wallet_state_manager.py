@@ -485,19 +485,27 @@ class WalletStateManager:
                     if target.unused_after_maximum_used is not None
                     else self.initial_num_public_keys
                 )
-                # We use the highest maximum used index across all wallets primarily for backwards compatibility reasons
-                # Whether or not we actually have to do this is unclear, but it's the safest path at not much cost
+                # Keep wallets aligned to the shared used frontier + cushion, but never shorter than
+                # the highest index already generated on any wallet (e.g. after extend_derivation_index).
                 used_indexes = [
                     window.maximum_used_index
                     for window in windows.values()
                     if window is not None and window.maximum_used_index is not None
+                ]
+                generated_indexes = [
+                    window.maximum_generated_index
+                    for window in windows.values()
+                    if window is not None and window.maximum_generated_index is not None
                 ]
                 generate_to = (
                     target.total_generated
                     if target.total_generated is not None
                     else (max(used_indexes) if used_indexes else 0)
                 )
-                last_index = generate_to + cushion
+                last_index = max(
+                    generate_to + cushion,
+                    max(generated_indexes) if generated_indexes else 0,
+                )
 
                 indexes_by_wallet: dict[uint32, list[int]] = {}
                 for wallet_id, current_window in windows.items():
