@@ -8,9 +8,9 @@ from chia_puzzles_py.programs import DID_INNERPUZ, DID_INNERPUZ_HASH
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.pools.plotnft_drivers import SingletonStruct
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.puzzle_drivers import Puzzle, PuzzleBase, UnknownPuzzle
+from chia.wallet.puzzles.singleton_drivers import SingletonStruct
 from chia.wallet.util.curry_and_treehash import (
     calculate_hash_of_quoted_mod_hash,
     curry_and_treehash,
