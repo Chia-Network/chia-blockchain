@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, Protocol, Self, TypeVar, cast
+from typing import Protocol, TypeVar
 
-from chia_rs import Coin
 from chia_rs.sized_bytes import bytes32
 from typing_extensions import runtime_checkable
 
@@ -42,11 +41,6 @@ class Solution(Protocol):
     def match(cls, *, unknown_solution: UnknownSolution) -> Solution | None: ...
 
 
-class SmartCoin(Puzzle, Protocol):
-    @property
-    def coin(self) -> Coin: ...
-
-
 @runtime_checkable
 class OptimizedPuzzleHashPuzzle(Protocol):
     @property
@@ -58,17 +52,17 @@ class PuzzleBase:
     This is designed to be a base class to `Inner/OuterPuzzle`s which provides caching on the puzzle hash generation
     """
 
-    pre_computed_puzzle_hash: bytes32 | None = None
+    pre_computed_tree_hash: bytes32 | None = None
 
     @property
     def tree_hash(self) -> bytes32:
-        if self.pre_computed_puzzle_hash is None:
+        if self.pre_computed_tree_hash is None:
             if isinstance(self, OptimizedPuzzleHashPuzzle):
-                object.__setattr__(self, "pre_computed_puzzle_hash", self.tree_hash_optimized)
+                object.__setattr__(self, "pre_computed_tree_hash", self.tree_hash_optimized)
             else:
-                object.__setattr__(self, "pre_computed_puzzle_hash", self.program.get_tree_hash())  # type: ignore[attr-defined]
-        assert self.pre_computed_puzzle_hash is not None
-        return self.pre_computed_puzzle_hash
+                object.__setattr__(self, "pre_computed_tree_hash", self.program.get_tree_hash())  # type: ignore[attr-defined]
+        assert self.pre_computed_tree_hash is not None
+        return self.pre_computed_tree_hash
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -126,23 +120,23 @@ class UnknownPuzzle(PuzzleBase):
         raise NotImplementedError("UnknownPuzzles cannot match anything, they are for being matched")
 
 
-@dataclass
+@dataclass(frozen=True)
 class UnknownSolution:
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Solution] = cast("UnknownSolution", None)
-
     program: Program
 
     @classmethod
-    def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:  # pragma: no cover
+    def match(cls, *, unknown_solution: UnknownSolution) -> UnknownSolution | None:  # pragma: no cover
         raise NotImplementedError("UnknownPuzzles cannot match anything, they are for being matched")
+
+
+@dataclass(frozen=True)
+class DelegatedPuzzleAndSolution:
+    puzzle: Puzzle
+    solution: Solution
 
 
 @dataclass(kw_only=True, frozen=True)
 class P2Conditions(PuzzleBase):
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("P2Conditions", None)
-
     conditions: Sequence[Condition]
 
     @property
@@ -150,7 +144,7 @@ class P2Conditions(PuzzleBase):
         return Program.to((1, [cond.to_program() for cond in self.conditions]))
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> P2Conditions | None:
         if unknown_puzzle.program.atom is not None or unknown_puzzle.program.at("f") != Program.to(1):
             return None
 
@@ -166,25 +160,18 @@ ACS_PH = ACS.get_tree_hash()
 
 @dataclass(kw_only=True, frozen=True)
 class ACSPuzzle(PuzzleBase):
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("ACSPuzzle", None)
-
-    @property
-    def program(self) -> Program:
-        return ACS
+    program: Program = field(init=False, default_factory=lambda: ACS)
+    tree_hash_optimized: bytes32 = field(init=False, default=ACS_PH)
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:
-        if unknown_puzzle.program == ACS:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> ACSPuzzle | None:
+        if unknown_puzzle.tree_hash == ACS_PH:
             return cls()
         return None
 
 
 @dataclass(kw_only=True, frozen=True)
 class ACSSolution:
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Solution] = cast("ACSSolution", None)
-
     conditions: Sequence[Condition]
 
     @property
@@ -192,12 +179,9 @@ class ACSSolution:
         return Program.to([cond.to_program() for cond in self.conditions])
 
     @classmethod
-    def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:
-        if unknown_solution.program == Program.NIL:
-            return cls(conditions=[])
-        if unknown_solution.program.atom is not None:
+    def match(cls, *, unknown_solution: UnknownSolution) -> ACSSolution | None:
+        if unknown_solution.program.atom is not None and unknown_solution.program != Program.NIL:
             return None
-
         try:
             return cls(conditions=parse_conditions_non_consensus(unknown_solution.program.as_iter()))
         except Exception:
@@ -209,41 +193,22 @@ NIL_HASH = Program.NIL.get_tree_hash()
 
 @dataclass(kw_only=True, frozen=True)
 class NilPuzzle(PuzzleBase):
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("NilPuzzle", None)
-
-    @property
-    def program(self) -> Program:
-        return Program.NIL
-
-    @property
-    def tree_hash_optimized(self) -> bytes32:
-        return NIL_HASH
+    program: Program = field(init=False, default_factory=lambda: Program.NIL)
+    tree_hash_optimized: bytes32 = field(init=False, default=NIL_HASH)
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:
-        if unknown_puzzle.program == Program.NIL:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> NilPuzzle | None:
+        if unknown_puzzle.tree_hash == NIL_HASH:
             return cls()
         return None
 
 
 @dataclass(kw_only=True, frozen=True)
 class NilSolution:
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Solution] = cast("NilSolution", None)
-
-    @property
-    def program(self) -> Program:
-        return Program.NIL
+    program: Program = field(init=False, default_factory=lambda: Program.NIL)
 
     @classmethod
-    def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:
+    def match(cls, *, unknown_solution: UnknownSolution) -> NilSolution | None:
         if unknown_solution.program == Program.NIL:
             return cls()
         return None
-
-
-@dataclass
-class DelegatedPuzzleAndSolution:
-    puzzle: Puzzle
-    solution: Solution

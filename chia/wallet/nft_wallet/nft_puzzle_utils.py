@@ -32,7 +32,6 @@ from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.puzzles.puzzle_drivers import (
     Puzzle,
     PuzzleBase,
-    SmartCoin,
     Solution,
     UnknownPuzzle,
     UnknownSolution,
@@ -469,9 +468,6 @@ class NFT(
     Singleton[MetadataLayer[_T_Puzzle | OwnershipLayer[_T_Puzzle, DefaultTransferProgram], DefaultMetadataUpdater]],
     Generic[_T_Puzzle],
 ):
-    if TYPE_CHECKING:
-        _smart_coin_protocol_check: ClassVar[SmartCoin] = cast("NFT[UnknownPuzzle]", None)
-
     @property
     def is_nft1(self) -> bool:
         return isinstance(self.inner_puzzle.inner_puzzle, OwnershipLayer)

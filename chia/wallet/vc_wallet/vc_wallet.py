@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import traceback
 from dataclasses import replace
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from chia_rs import CoinSpend, CoinState, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -34,7 +34,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, PendingApprovalPuzzle
-from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
+from chia.wallet.vc_wallet.vc_drivers import MagicTPCondition, VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord, VCStore
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -341,7 +341,9 @@ class VCWallet:
                                 continue  # pragma: no cover
                 else:
                     raise ValueError("VC could not be updated with specified DID info")  # pragma: no cover
-            magic_condition = vc.magic_condition_for_new_proofs(new_proof_hash, provider_inner_puzhash)
+            magic_condition: MagicTPCondition[Any] = vc.magic_condition_for_new_proofs(
+                new_proof_hash, provider_inner_puzhash
+            )
         elif self_revoke:
             magic_condition = vc.magic_condition_for_self_revoke()
         else:

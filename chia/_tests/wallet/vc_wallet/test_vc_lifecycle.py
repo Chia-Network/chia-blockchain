@@ -978,13 +978,17 @@ def test_magic_tp_condition() -> None:
         parent_proof_hash=bytes32([4] * 32),
     )
 
-    standard = MagicTPCondition(eml_lineage_proof=steady_lineage, launcher_id=launcher_id, tp_solution=None)
+    standard: MagicTPCondition[UnknownSolution] = MagicTPCondition(
+        eml_lineage_proof=steady_lineage, launcher_id=launcher_id, tp_solution=None
+    )
     parsed_standard = MagicTPCondition.from_program(standard.to_program())
     assert parsed_standard.launcher_id == launcher_id
     assert parsed_standard.tp_solution is None
     assert parsed_standard.eml_lineage_proof == steady_lineage
 
-    eve = MagicTPCondition(eml_lineage_proof=eve_lineage, launcher_id=launcher_id, tp_solution=None)
+    eve: MagicTPCondition[UnknownSolution] = MagicTPCondition(
+        eml_lineage_proof=eve_lineage, launcher_id=launcher_id, tp_solution=None
+    )
     parsed_eve = MagicTPCondition.from_program(eve.to_program())
     assert parsed_eve.eml_lineage_proof.parent_name == eve_lineage.parent_name
     assert parsed_eve.eml_lineage_proof.inner_puzzle_hash is None
@@ -994,7 +998,7 @@ def test_magic_tp_condition() -> None:
     with_tp = MagicTPCondition(
         eml_lineage_proof=steady_lineage,
         launcher_id=launcher_id,
-        tp_solution=tp_solution.program,
+        tp_solution=tp_solution,
     )
     parsed_with_tp = MagicTPCondition.from_program(with_tp.to_program())
     assert parsed_with_tp.tp_solution is not None
@@ -1003,11 +1007,11 @@ def test_magic_tp_condition() -> None:
     revoke = MagicTPCondition(
         eml_lineage_proof=steady_lineage,
         launcher_id=launcher_id,
-        tp_solution=UnknownSolution(program=Program.to(ACS_TRANSFER_PROGRAM.get_tree_hash())).program,
+        tp_solution=UnknownSolution(program=Program.to(ACS_TRANSFER_PROGRAM.get_tree_hash())),
     )
     parsed_revoke = MagicTPCondition.from_program(revoke.to_program())
     assert parsed_revoke.tp_solution is not None
-    assert parsed_revoke.tp_solution == Program.to(ACS_TRANSFER_PROGRAM.get_tree_hash())
+    assert parsed_revoke.tp_solution.program == Program.to(ACS_TRANSFER_PROGRAM.get_tree_hash())
 
 
 def test_vc_driver_match_edge_cases() -> None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, final
+from typing import Any, ClassVar, Generic, TypeVar, final
 
 from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
 from chia_puzzles_py.programs import COVENANT_LAYER as COVENANT_LAYER_BYTES
@@ -40,7 +40,6 @@ from chia.wallet.conditions import (
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.puzzle_drivers import (
-    OuterPuzzle,
     P2Conditions,
     Puzzle,
     PuzzleBase,
@@ -88,9 +87,6 @@ REVOCATION_LAYER_HASH: bytes32 = bytes32(REVOCATION_LAYER_HASH_BYTES)
 
 @dataclass(frozen=True, kw_only=True)
 class StandardBrickPuzzle(PuzzleBase):
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("StandardBrickPuzzle", None)
-
     singleton_puzzles: ClassVar[SingletonCorePuzzles] = SingletonCorePuzzles()
 
     @property
@@ -129,10 +125,6 @@ _T_CovenantPuzzle = TypeVar("_T_CovenantPuzzle", bound=Puzzle)
 
 @dataclass(frozen=True, kw_only=True)
 class CovenantLayer(PuzzleBase, Generic[_T_ParentMorpher, _T_CovenantPuzzle]):
-    if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
-            "CovenantLayer[_T_ParentMorpher, _T_CovenantPuzzle]", None
-        )
     initial_puzzle_hash: bytes32
     parent_morpher: _T_ParentMorpher
     inner_puzzle: _T_CovenantPuzzle
@@ -164,11 +156,6 @@ _T_InnerSolution = TypeVar("_T_InnerSolution", bound=Solution)
 
 @dataclass(frozen=True, kw_only=True)
 class CovenantLayerSolution(Generic[_T_MorpherSolution, _T_InnerSolution]):
-    if TYPE_CHECKING:
-        _solution_protocol_check: ClassVar[Solution] = cast(
-            "CovenantLayerSolution[_T_MorpherSolution, _T_InnerSolution]", None
-        )
-
     lineage_proof: LineageProof
     morpher_solution: _T_MorpherSolution
     inner_solution: _T_InnerSolution
@@ -207,9 +194,6 @@ class CovenantLayerSolution(Generic[_T_MorpherSolution, _T_InnerSolution]):
 
 @dataclass(frozen=True, kw_only=True)
 class StdParentMorpher(PuzzleBase):
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("StdParentMorpher", None)
-
     initial_puzzle_hash: bytes32
 
     @property
@@ -238,11 +222,6 @@ _T_CovenantLayer = TypeVar("_T_CovenantLayer", bound=Puzzle)
 
 @dataclass(frozen=True, kw_only=True)
 class TransferProgramCovenantAdapter(PuzzleBase, Generic[_T_CovenantLayer]):
-    if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
-            "TransferProgramCovenantAdapter[_T_CovenantLayer]", None
-        )
-
     inner_puzzle: _T_CovenantLayer
 
     @property
@@ -264,9 +243,6 @@ class TransferProgramCovenantAdapter(PuzzleBase, Generic[_T_CovenantLayer]):
 
 @dataclass(frozen=True, kw_only=True)
 class DidTransferProgram(PuzzleBase):
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("DidTransferProgram", None)
-
     singleton_puzzles: ClassVar[SingletonCorePuzzles] = SingletonCorePuzzles()
 
     @property
@@ -284,9 +260,6 @@ class DidTransferProgram(PuzzleBase):
 
 @dataclass(frozen=True, kw_only=True)
 class DidTpSolution:
-    if TYPE_CHECKING:
-        _solution_protocol_check: ClassVar[Solution] = cast("DidTpSolution", None)
-
     provider_innerpuzhash: bytes32
     my_coin_id: bytes32
     new_metadata: Program
@@ -332,11 +305,6 @@ _T_RevocationHiddenPuzzle = TypeVar("_T_RevocationHiddenPuzzle", bound=Puzzle)
 
 @dataclass(frozen=True, kw_only=True)
 class RevocationLayer(PuzzleBase, Generic[_T_RevocationPuzzle, _T_RevocationHiddenPuzzle]):
-    if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
-            "RevocationLayer[_T_RevocationPuzzle, _T_RevocationHiddenPuzzle]", None
-        )
-
     inner_puzzle: _T_RevocationPuzzle
     hidden_puzzle: _T_RevocationHiddenPuzzle
 
@@ -360,11 +328,6 @@ _T_RevocationPuzzleReveal = TypeVar("_T_RevocationPuzzleReveal", bound=Puzzle)
 
 @dataclass(frozen=True, kw_only=True)
 class RevocationLayerSolution(Generic[_T_RevocationPuzzleReveal, _T_InnerSolution]):
-    if TYPE_CHECKING:
-        _solution_protocol_check: ClassVar[Solution] = cast(
-            "RevocationLayerSolution[_T_RevocationPuzzleReveal, _T_InnerSolution]", None
-        )
-
     puzzle_reveal: _T_RevocationPuzzleReveal
     inner_solution: _T_InnerSolution
     hidden: bool = False
@@ -405,9 +368,6 @@ _T_EmlCovenantMorpherTp = TypeVar("_T_EmlCovenantMorpherTp", bound=Puzzle)
 
 @dataclass(frozen=True, kw_only=True)
 class EmlCovenantMorpher(PuzzleBase, Generic[_T_EmlCovenantMorpherTp]):
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("EmlCovenantMorpher[_T_EmlCovenantMorpherTp]", None)
-
     transfer_program: _T_EmlCovenantMorpherTp
     singleton_puzzles: ClassVar[SingletonCorePuzzles] = SingletonCorePuzzles()
 
@@ -438,9 +398,6 @@ class EmlCovenantMorpher(PuzzleBase, Generic[_T_EmlCovenantMorpherTp]):
 
 @dataclass(frozen=True, kw_only=True)
 class EmlCovenantMorpherSolution:
-    if TYPE_CHECKING:
-        _solution_protocol_check: ClassVar[Solution] = cast("EmlCovenantMorpherSolution", None)
-
     parent_proof_hash: bytes32 | None
     launcher_id: bytes32
 
@@ -470,11 +427,6 @@ _T_EMLPuzzle = TypeVar("_T_EMLPuzzle", bound=Puzzle)
 
 @dataclass(frozen=True, kw_only=True)
 class ExigentMetadataLayer(PuzzleBase, Generic[_T_TransferProgram, _T_EMLPuzzle]):
-    if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
-            "ExigentMetadataLayer[_T_TransferProgram, _T_EMLPuzzle]", None
-        )
-
     metadata: Program | None
     transfer_program: _T_TransferProgram
     inner_puzzle: _T_EMLPuzzle
@@ -503,9 +455,6 @@ class ExigentMetadataLayer(PuzzleBase, Generic[_T_TransferProgram, _T_EMLPuzzle]
 
 @dataclass(frozen=True, kw_only=True)
 class ExigentMetadataLayerSolution(Generic[_T_InnerSolution]):
-    if TYPE_CHECKING:
-        _solution_protocol_check: ClassVar[Solution] = cast("ExigentMetadataLayerSolution[_T_InnerSolution]", None)
-
     inner_solution: _T_InnerSolution
 
     @property
@@ -537,9 +486,6 @@ class StandardBrickPuzzleSolution:
     """
     Solution to StandardBrickPuzzle. Requires proof info about pretty much the whole puzzle stack.
     """
-
-    if TYPE_CHECKING:
-        _solution_protocol_check: ClassVar[Solution] = cast("StandardBrickPuzzleSolution", None)
 
     launcher_id: bytes32
     metadata_hash: bytes32
@@ -627,29 +573,6 @@ OWNERSHIP_LAYER_LAUNCHER_HASH = OWNERSHIP_LAYER_LAUNCHER.tree_hash
 ########################
 # Verified Credentials #
 ########################
-
-
-@final
-@streamable
-@dataclass(kw_only=True, frozen=True)
-class MagicTPCondition(Condition):
-    eml_lineage_proof: VCLineageProof
-    launcher_id: bytes32
-    tp_solution: Program | None
-
-    def to_program(self) -> Program:
-        return Program.to(
-            [
-                -10,
-                self.eml_lineage_proof.to_program(),
-                [self.eml_lineage_proof.parent_proof_hash, self.launcher_id],
-                self.tp_solution,
-            ]
-        )
-
-    @classmethod
-    def from_program(cls, program: Program) -> MagicTPCondition:
-        raise NotImplementedError
 
 
 @streamable
@@ -1023,7 +946,7 @@ class VerifiedCredential(Singleton[VerifiedCredentialInnerPuzzle[_T_VCPuzzle]], 
         self,
         new_proof_hash: bytes32 | None,
         provider_innerpuzhash: bytes32,
-    ) -> MagicTPCondition:
+    ) -> MagicTPCondition[DidTpSolution]:
         """
         Returns the 'magic' condition that can update the metadata with a new proof hash. Returning this condition from
         the inner puzzle will require a corresponding announcement from the provider DID authorizing that proof hash
@@ -1038,10 +961,10 @@ class VerifiedCredential(Singleton[VerifiedCredentialInnerPuzzle[_T_VCPuzzle]], 
                 new_metadata=Program.to(new_proof_hash),
                 # TP update is not allowed because then the singleton will leave the VC protocol
                 new_transfer_program=None,
-            ).program,
+            ),
         )
 
-    def standard_magic_condition(self) -> MagicTPCondition:
+    def standard_magic_condition(self) -> MagicTPCondition[None]:  # type: ignore[type-var]
         """
         Returns the standard magic condition that needs to be returned to the metadata layer. Returning this condition
         from the inner puzzle will leave the proof hash and transfer program the same.
@@ -1052,11 +975,11 @@ class VerifiedCredential(Singleton[VerifiedCredentialInnerPuzzle[_T_VCPuzzle]], 
             tp_solution=None,
         )
 
-    def magic_condition_for_self_revoke(self) -> MagicTPCondition:
+    def magic_condition_for_self_revoke(self) -> MagicTPCondition[UnknownSolution]:
         return MagicTPCondition(
             eml_lineage_proof=self.inner_puzzle.eml_lineage_proof,
             launcher_id=self.launcher_id,
-            tp_solution=Program.to(ACS_TRANSFER_PROGRAM.get_tree_hash()),
+            tp_solution=UnknownSolution(program=Program.to(ACS_TRANSFER_PROGRAM.get_tree_hash())),
         )
 
     def wrap_inner_with_backdoor(self) -> Program:
@@ -1187,6 +1110,52 @@ class VerifiedCredential(Singleton[VerifiedCredentialInnerPuzzle[_T_VCPuzzle]], 
                 proof_provider=streamable_object.proof_provider,
                 proof_hash=streamable_object.proof_hash,
             ),
+        )
+
+
+_T_Solution = TypeVar("_T_Solution", bound=Solution)
+
+
+@final
+@dataclass(kw_only=True, frozen=True)
+class MagicTPCondition(Condition, Generic[_T_Solution]):
+    eml_lineage_proof: VCLineageProof
+    launcher_id: bytes32
+    tp_solution: _T_Solution | None
+
+    def __post_init__(self) -> None:
+        # Driver-only condition; fields are not streamable-serializable.
+        return None
+
+    def to_program(self) -> Program:
+        return Program.to(
+            [
+                -10,
+                self.eml_lineage_proof.to_program(),
+                [self.eml_lineage_proof.parent_proof_hash, self.launcher_id],
+                self.tp_solution.program if self.tp_solution is not None else None,
+            ]
+        )
+
+    @classmethod
+    def from_program(cls, program: Program) -> MagicTPCondition[UnknownSolution]:  # type: ignore[override]
+        _, eml_lineage_proof, proof_hash_and_launcher_id, tp_solution = program.as_iter()
+        proof_hash, launcher_id = proof_hash_and_launcher_id.as_iter()
+        num_values = eml_lineage_proof.list_len()
+        inner_puzzle_hash = None
+        if num_values == 2:
+            parent_id, amount = eml_lineage_proof.as_iter()
+        else:
+            parent_id, inner_puzzle_hash, amount = eml_lineage_proof.as_iter()
+        return MagicTPCondition(
+            eml_lineage_proof=VCLineageProof(
+                parent_proof_hash=bytes32(proof_hash.as_atom()) if proof_hash != Program.NIL else None,
+                inner_puzzle_hash=bytes32(inner_puzzle_hash.as_atom()) if inner_puzzle_hash is not None else None,
+                amount=uint64(amount.as_int()),
+                parent_name=bytes32(parent_id.as_atom()),
+            ),
+            launcher_id=bytes32(launcher_id.as_atom()),
+            tp_solution=None if tp_solution == Program.NIL else UnknownSolution(program=tp_solution),
         )
 
 
