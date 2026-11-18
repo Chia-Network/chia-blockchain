@@ -84,7 +84,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import match_singleton_puzzle
+from chia.wallet.puzzles.singleton_drivers import SingletonPuzzle
 from chia.wallet.puzzles.standard_puzzle_drivers import StandardPuzzle
 from chia.wallet.remote_wallet.remote_coin_store import RemoteCoinStore
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
@@ -981,16 +981,15 @@ class WalletStateManager:
             return await NFTWallet.identify(self, nft_data, sync_scope), nft_data
 
         # Check if the coin is a DID
-        is_match, curried_args = match_singleton_puzzle(uncurried)
-        if is_match:
-            singleton_struct, inner_puzzle = curried_args
-            did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
+        singleton_match = SingletonPuzzle.match(unknown_puzzle=uncurried)
+        if singleton_match is not None:
+            did_match = DIDRecoveryPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
             if did_match is not None and coin_state.coin.amount % 2 == 1:
                 did_data: DIDCoinData = DIDCoinData(
                     did_match.inner_puzzle.program,
                     did_match.recovery_list.ids_hash,
                     uint16(did_match.num_of_backup_ids_needed),
-                    SingletonStruct(launcher_id=bytes32(singleton_struct.at("rf").as_atom())).to_program(),
+                    SingletonStruct(launcher_id=singleton_match.launcher_id).program,
                     did_match.metadata.as_program(),
                     did_match.program,
                     parent_coin_state,
@@ -1105,13 +1104,13 @@ class WalletStateManager:
             )
             assert len(did_coin) == 1 and did_coin[0].spent_height is not None
             did_spend = await fetch_coin_spend_for_coin_state(did_coin[0], peer)
-            uncurried = UnknownPuzzle(known_program=did_spend.puzzle_reveal)
-            is_match, curried_args = match_singleton_puzzle(uncurried)
-            if is_match:
-                singleton_struct, inner_puzzle = curried_args
-                did_curried_args = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
-                if did_curried_args is not None:
-                    minter_did = bytes32(singleton_struct.at("rf").as_atom())
+            singleton_match = SingletonPuzzle.match(
+                unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(did_spend.puzzle_reveal))
+            )
+            if singleton_match is not None:
+                did_match = DIDRecoveryPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
+                if did_match is not None:
+                    minter_did = singleton_match.launcher_id
         return minter_did
 
     async def _add_coin_state(
@@ -2321,12 +2320,12 @@ class WalletStateManager:
     async def manual_did_search(self, coin_id: bytes32, latest: bool = True) -> ManualDIDSearchResults:
         peer = self.wallet_node.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, latest)
-        uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
-        is_match, curried_args = match_singleton_puzzle(uncurried)
-        if not is_match:
+        singleton_match = SingletonPuzzle.match(
+            unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
+        )
+        if singleton_match is None:
             raise ValueError("The coin is not a singleton.")
-        singleton_struct, inner_puzzle = curried_args
-        did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
+        did_match = DIDRecoveryPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
         if did_match is None:
             raise ValueError("The coin is not a DID.")
         uncurried_p2 = StandardPuzzle.match(unknown_puzzle=did_match.inner_puzzle)
@@ -2340,7 +2339,7 @@ class WalletStateManager:
                 hints.append(memo)
 
         return ManualDIDSearchResults(
-            launcher_id=bytes32(singleton_struct.at("rf").as_atom()),
+            launcher_id=singleton_match.launcher_id,
             latest_coin=coin_state.coin.name(),
             p2_puzzle_hash=uncurried_p2.tree_hash,
             public_key=uncurried_p2.synthetic_public_key,
@@ -2417,19 +2416,19 @@ class WalletStateManager:
         # Get coin state
         peer = self.wallet_node.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
-        uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
-        is_match, curried_args = match_singleton_puzzle(uncurried)
-        if not is_match:
+        singleton_match = SingletonPuzzle.match(
+            unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
+        )
+        if singleton_match is None:
             raise ValueError("The coin is not a DID.")
-        singleton_struct, inner_puzzle = curried_args
-        did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
+        did_match = DIDRecoveryPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
         if did_match is None:
             raise ValueError("The coin is not a DID.")
         did_data: DIDCoinData = DIDCoinData(
             did_match.inner_puzzle.program,
             did_match.recovery_list.ids_hash,
             uint16(did_match.num_of_backup_ids_needed),
-            singleton_struct,
+            singleton_match.singleton_struct.program,
             did_match.metadata.as_program(),
             get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
             coin_state,
@@ -2450,7 +2449,7 @@ class WalletStateManager:
                 did_match.inner_puzzle.tree_hash
             )
 
-        launcher_id = bytes32(singleton_struct.rest().first().as_atom())
+        launcher_id = singleton_match.launcher_id
         if derivation_record is None:
             raise ValueError(f"This DID {launcher_id} does not belong to the connected wallet")
         else:
@@ -2459,12 +2458,16 @@ class WalletStateManager:
                 our_inner_puzzle,
                 did_match.recovery_list.ids_hash,
                 did_match.num_of_backup_ids_needed,
-                singleton_struct,
+                singleton_match.singleton_struct.program,
                 did_match.metadata.as_program(),
             )
             full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, NIL_TREEHASH, uint64(0), singleton_struct, did_match.metadata.as_program()
+                our_inner_puzzle,
+                NIL_TREEHASH,
+                uint64(0),
+                singleton_match.singleton_struct.program,
+                did_match.metadata.as_program(),
             )
             # Check if we have the DID wallet
             did_wallet: DIDWallet | None = None
@@ -2508,7 +2511,7 @@ class WalletStateManager:
                         our_inner_puzzle,
                         recovery_list_hash,
                         num_verification,
-                        singleton_struct,
+                        singleton_match.singleton_struct.program,
                         metadata.as_program(),
                     )
                     full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
@@ -2526,7 +2529,7 @@ class WalletStateManager:
                                 our_inner_puzzle,
                                 recovery_list_hash,
                                 num_verification,
-                                singleton_struct,
+                                singleton_match.singleton_struct.program,
                                 metadata.as_program(),
                             )
                             full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)

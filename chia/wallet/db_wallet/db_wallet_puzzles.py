@@ -10,9 +10,9 @@ from chia_rs.sized_ints import uint64
 from chia.types.blockchain_format.program import INFINITE_COST, Program, run_with_cost, uncurry
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.wallet.nft_wallet.nft_puzzle_utils import MetadataLayer
-from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, NFT_STATE_LAYER_MOD_HASH
+from chia.wallet.nft_wallet.nft_puzzle_utils import NFT_STATE_LAYER_MOD, MetadataLayer
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.singleton_drivers import SingletonPuzzle
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     SINGLETON_TOP_LAYER_MOD,
@@ -24,29 +24,24 @@ GRAFTROOT_DL_OFFERS = Program.from_bytes(GRAFTROOT_DL_OFFERS_BYTES)
 P2_PARENT = Program.from_bytes(P2_PARENT_BYTES)
 
 
-def create_host_fullpuz(innerpuz: Program | bytes32, current_root: bytes32, genesis_id: bytes32) -> Program:
-    db_layer = create_host_layer_puzzle(innerpuz, current_root)
-    mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
-    singleton_struct = Program.to((mod_hash, (genesis_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
-    return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, db_layer)
+def create_host_fullpuz(
+    innerpuz: UnknownPuzzle, current_root: bytes32, genesis_id: bytes32
+) -> SingletonPuzzle[MetadataLayer[UnknownPuzzle, UnknownPuzzle]]:
+    return SingletonPuzzle(
+        launcher_id=genesis_id,
+        inner_puzzle=create_host_layer_puzzle(innerpuz, current_root),
+    )
 
 
-def create_host_layer_puzzle(innerpuz: Program | bytes32, current_root: bytes32) -> Program:
+def create_host_layer_puzzle(
+    innerpuz: UnknownPuzzle, current_root: bytes32
+) -> MetadataLayer[UnknownPuzzle, UnknownPuzzle]:
     # some hard coded metadata formatting and metadata updater for now
-    # Keep Program|bytes32 compatibility for get_tree_hash_precalc callers: when only a
-    # puzzle hash is known, curry it as an atom the same way the legacy helper did.
-    if isinstance(innerpuz, bytes32):
-        return NFT_STATE_LAYER_MOD.curry(
-            NFT_STATE_LAYER_MOD_HASH,
-            Program.to((current_root, None)),
-            ACS_MU_PH,
-            innerpuz,
-        )
     return MetadataLayer(
         metadata=Program.to((current_root, None)),
-        metadata_updater=UnknownPuzzle(known_program=ACS_MU, known_tree_hash=ACS_MU_PH),
-        inner_puzzle=UnknownPuzzle(known_program=innerpuz),
-    ).program
+        metadata_updater=UnknownPuzzle(known_program=ACS_MU),
+        inner_puzzle=innerpuz,
+    )
 
 
 def match_dl_singleton(puzzle: Program | SerializedProgram) -> tuple[bool, Iterator[Program]]:
