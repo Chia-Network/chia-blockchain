@@ -75,7 +75,7 @@ class DIDRecoveryPuzzle(PuzzleBase, Generic[_T_Puzzle]):
             self.inner_puzzle.program,
             self.recovery_list.ids_hash,
             self.num_of_backup_ids_needed,
-            self.struct_driver(launcher_id=self.self_launcher_id).to_program(),
+            self.struct_driver(launcher_id=self.self_launcher_id).program,
             self.metadata.as_program(),
         )
 

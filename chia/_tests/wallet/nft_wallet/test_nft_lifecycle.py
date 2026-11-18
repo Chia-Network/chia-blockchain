@@ -16,6 +16,7 @@ from chia.util.errors import Err
 from chia.wallet.cat_wallet.cat_utils import CATCorePuzzles, CATPuzzle
 from chia.wallet.conditions import AssertPuzzleAnnouncement, CreateCoin, CreatePuzzleAnnouncement, UnknownCondition
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
+    NFT_METADATA_UPDATER,
     DefaultMetadataUpdater,
     DefaultTransferProgram,
     MetadataLayer,
@@ -26,7 +27,6 @@ from chia.wallet.nft_wallet.nft_puzzle_utils import (
     TransferProgramCondition,
     UpdateMetadataCondition,
 )
-from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER
 from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, ACSSolution, UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.singleton_drivers import SingletonCorePuzzles, SingletonPuzzle, SingletonStruct
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle

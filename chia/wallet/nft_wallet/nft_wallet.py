@@ -31,6 +31,7 @@ from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
     DefaultMetadataUpdater,
     DefaultTransferProgram,
+    MetadataLayer,
     OwnershipLayer,
     TransferProgramCondition,
     UpdateMetadataCondition,
@@ -44,6 +45,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
 )
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.singleton_drivers import SingletonPuzzle
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_HASH, NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -505,7 +507,7 @@ class NFTWallet:
             # eve coin DID can be set to whatever so we keep it empty
             # WARNING: wallets should always ignore DID value for eve coins as they can be set
             #          to any DID without approval
-            inner_puzzle: Program = OwnershipLayer(
+            inner_puzzle: OwnershipLayer[UnknownPuzzle, DefaultTransferProgram] | UnknownPuzzle = OwnershipLayer(
                 current_owner=None,
                 inner_puzzle=UnknownPuzzle(known_program=p2_inner_puzzle),
                 transfer_program=DefaultTransferProgram(
@@ -515,22 +517,23 @@ class NFTWallet:
                     else p2_inner_puzzle.get_tree_hash(),
                     royalty_basis_points=int(percentage),
                 ),
-            ).program
+            )
             self.log.debug("Got back ownership inner puzzle: %s", inner_puzzle)
         else:
             self.log.debug("Creating standard NFT")
-            inner_puzzle = p2_inner_puzzle
+            inner_puzzle = UnknownPuzzle(known_program=p2_inner_puzzle)
 
         # singleton eve puzzle
-        eve_fullpuz = nft_puzzle_utils.create_full_puzzle(
-            launcher_coin.name(),
-            metadata,
-            DefaultMetadataUpdater().tree_hash,
-            inner_puzzle,
+        eve_fullpuz = SingletonPuzzle(
+            launcher_id=launcher_coin.name(),
+            inner_puzzle=MetadataLayer(
+                metadata=metadata,
+                metadata_updater=DefaultMetadataUpdater(),
+                inner_puzzle=inner_puzzle,
+            ),
         )
-        eve_fullpuz_hash = eve_fullpuz.get_tree_hash()
         # launcher announcement
-        announcement_message = Program.to([eve_fullpuz_hash, amount, []]).get_tree_hash()
+        announcement_message = Program.to([eve_fullpuz.tree_hash, amount, []]).get_tree_hash()
 
         self.log.debug(
             "Creating transaction for launcher: %s and other coins: %s (%s)", origin, coins, announcement_message
@@ -548,13 +551,13 @@ class NFTWallet:
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
             ),
         )
-        genesis_launcher_solution = Program.to([eve_fullpuz_hash, amount, []])
+        genesis_launcher_solution = Program.to([eve_fullpuz.tree_hash, amount, []])
 
         # launcher spend to generate the singleton
         launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = WalletSpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
 
-        eve_coin = Coin(launcher_coin.name(), eve_fullpuz_hash, uint64(amount))
+        eve_coin = Coin(launcher_coin.name(), eve_fullpuz.tree_hash, uint64(amount))
 
         async with action_scope.use() as interface:
             interface.side_effects.extra_spends.append(launcher_sb)
@@ -568,7 +571,7 @@ class NFTWallet:
             nft_id=launcher_coin.name(),
             coin=eve_coin,
             lineage_proof=LineageProof(parent_name=launcher_coin.parent_coin_info, amount=uint64(launcher_coin.amount)),
-            full_puzzle=eve_fullpuz,
+            full_puzzle=eve_fullpuz.program,
             mint_height=uint32(0),
             minter_did=bytes32(did_id) if did_id is not None and did_id != b"" else None,
         )
