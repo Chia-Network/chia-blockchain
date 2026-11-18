@@ -5,6 +5,20 @@ from dataclasses import dataclass, field, replace
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, Self, TypeVar, cast
 
+from chia_puzzles_py.programs import (
+    NFT_INTERMEDIATE_LAUNCHER,
+    NFT_METADATA_UPDATER_DEFAULT,
+    NFT_METADATA_UPDATER_DEFAULT_HASH,
+    NFT_OWNERSHIP_TRANSFER_PROGRAM_ONE_WAY_CLAIM_WITH_ROYALTIES,
+    NFT_STATE_LAYER,
+    NFT_STATE_LAYER_HASH,
+)
+from chia_puzzles_py.programs import (
+    NFT_OWNERSHIP_LAYER as NFT_OWNERSHIP_LAYER_BYTES,
+)
+from chia_puzzles_py.programs import (
+    NFT_OWNERSHIP_LAYER_HASH as NFT_OWNERSHIP_LAYER_HASH_BYTES,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 from clvm_tools.binutils import disassemble
@@ -15,16 +29,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import Condition
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
-from chia.wallet.nft_wallet.nft_puzzles import (
-    NFT_METADATA_UPDATER,
-    NFT_METADATA_UPDATER_HASH,
-    NFT_OWNERSHIP_LAYER,
-    NFT_OWNERSHIP_LAYER_HASH,
-    NFT_STATE_LAYER_MOD,
-    NFT_STATE_LAYER_MOD_HASH,
-    NFT_TRANSFER_PROGRAM_DEFAULT,
-)
-from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.puzzle_drivers import Puzzle, PuzzleBase, Solution, UnknownPuzzle, UnknownSolution
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
@@ -36,13 +40,24 @@ from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_has
 
 log = logging.getLogger(__name__)
 
+NFT_STATE_LAYER_MOD = Program.from_bytes(NFT_STATE_LAYER)
+NFT_STATE_LAYER_MOD_HASH = bytes32(NFT_STATE_LAYER_HASH)
 NFT_STATE_LAYER_MOD_HASH_HASH = Program.to(NFT_STATE_LAYER_MOD_HASH).get_tree_hash()
 HASH_OF_STATE_LAYER_QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(NFT_STATE_LAYER_MOD_HASH)
+NFT_METADATA_UPDATER = Program.from_bytes(NFT_METADATA_UPDATER_DEFAULT)
+NFT_METADATA_UPDATER_HASH = bytes32(NFT_METADATA_UPDATER_DEFAULT_HASH)
+NFT_OWNERSHIP_LAYER = Program.from_bytes(NFT_OWNERSHIP_LAYER_BYTES)
+NFT_OWNERSHIP_LAYER_HASH = bytes32(NFT_OWNERSHIP_LAYER_HASH_BYTES)
 NFT_OWNERSHIP_LAYER_HASH_HASH = Program.to(NFT_OWNERSHIP_LAYER_HASH).get_tree_hash()
 HASH_OF_OWNERSHIP_LAYER_QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(NFT_OWNERSHIP_LAYER_HASH)
+NFT_TRANSFER_PROGRAM_DEFAULT = Program.from_bytes(NFT_OWNERSHIP_TRANSFER_PROGRAM_ONE_WAY_CLAIM_WITH_ROYALTIES)
 HASH_OF_TRANSFER_PROGRAM_QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(
     NFT_TRANSFER_PROGRAM_DEFAULT.get_tree_hash()
 )
+INTERMEDIATE_LAUNCHER_MOD = Program.from_bytes(NFT_INTERMEDIATE_LAUNCHER)
+
+# Imported after NFT constants so uncurry_nft can safely import those constants.
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT  # ruff: ignore[module-import-not-at-top-of-file]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -71,7 +86,7 @@ class UpdateMetadataCondition(Condition):
     meta_uri: str | None = None
     license_uri: str | None = None
     other_update: tuple[str, str] | None = None
-    metadata_updater: Puzzle = field(default_factory=DefaultMetadataUpdater)
+    metadata_updater: Puzzle = DefaultMetadataUpdater()
 
     data_key: ClassVar[Literal[b"u"]] = b"u"
     meta_key: ClassVar[Literal[b"mu"]] = b"mu"
@@ -231,9 +246,6 @@ _T_MetadataUpdater = TypeVar("_T_MetadataUpdater", bound=Puzzle)
 
 @dataclass(frozen=True, kw_only=True)
 class MetadataLayer(PuzzleBase, Generic[_T_Puzzle, _T_MetadataUpdater]):
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("MetadataLayer[_T_Puzzle, _T_MetadataUpdater]", None)
-
     inner_puzzle: _T_Puzzle
     metadata: Program
     metadata_updater: _T_MetadataUpdater
@@ -277,9 +289,6 @@ _T_InnerSolution = TypeVar("_T_InnerSolution", bound=Solution)
 
 @dataclass(frozen=True)
 class MetadataLayerSolution(Generic[_T_InnerSolution]):
-    if TYPE_CHECKING:
-        _solution_protocol_check: ClassVar[Solution] = cast("MetadataLayerSolution[_T_InnerSolution]", None)
-
     inner_solution: _T_InnerSolution
 
     @property
@@ -312,12 +321,12 @@ class TransferProgramCondition(Condition):
         )
 
     @classmethod
-    def from_program(cls, program: Program) -> Self:
+    def from_program(cls, program: Program) -> TransferProgramCondition:
         _, launcher_id, trade_prices_list, inner_puzzle_hash = program.as_iter()
-        return cls(
+        return TransferProgramCondition(
             # Conditions are serialized as [price, puzzle_hash]
             trade_prices_list={
-                bytes32(tp_tuple.at("rf").as_atom()): tp_tuple.at("f").as_int()
+                bytes32(tp_tuple.at("rf").as_atom()): tp_tuple.first().as_int()
                 for tp_tuple in trade_prices_list.as_iter()
             },
             new_owner=bytes32(launcher_id.as_atom()) if launcher_id != Program.NIL else None,
@@ -329,9 +338,6 @@ class TransferProgramCondition(Condition):
 
 @dataclass(frozen=True, kw_only=True)
 class DefaultTransferProgram(PuzzleBase):
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("DefaultTransferProgram", None)
-
     self_launcher_id: bytes32
     royalty_address: bytes32 | None
     royalty_basis_points: int
@@ -373,9 +379,6 @@ _T_TransferProgram = TypeVar("_T_TransferProgram", bound=Puzzle)
 
 @dataclass(frozen=True, kw_only=True)
 class OwnershipLayer(PuzzleBase, Generic[_T_Puzzle, _T_TransferProgram]):
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("OwnershipLayer[_T_Puzzle, _T_TransferProgram]", None)
-
     current_owner: bytes32 | None
     inner_puzzle: _T_Puzzle
     transfer_program: _T_TransferProgram
@@ -412,9 +415,6 @@ class OwnershipLayer(PuzzleBase, Generic[_T_Puzzle, _T_TransferProgram]):
 
 @dataclass(frozen=True)
 class OwnershipLayerSolution(Generic[_T_InnerSolution]):
-    if TYPE_CHECKING:
-        _solution_protocol_check: ClassVar[Solution] = cast("OwnershipLayerSolution[_T_InnerSolution]", None)
-
     inner_solution: _T_InnerSolution
 
     @property

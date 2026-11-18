@@ -15,6 +15,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertPuzzleAnnouncement, CreateCoin, CreatePuzzleAnnouncement, UnknownCondition
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
+    NFT_METADATA_UPDATER,
     DefaultMetadataUpdater,
     DefaultTransferProgram,
     MetadataLayer,
@@ -25,7 +26,6 @@ from chia.wallet.nft_wallet.nft_puzzle_utils import (
     TransferProgramCondition,
     UpdateMetadataCondition,
 )
-from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, NFT_TRANSFER_PROGRAM_DEFAULT
 from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, ACSSolution, UnknownPuzzle, UnknownSolution
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -267,14 +267,14 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         ROYALTY_ADDRESS = bytes32([1] * 32)
         TRADE_PRICE_PERCENTAGE = 5000  # 50%
         # Build with a non-default singleton struct (fake mods), matching the pre-driver test shape.
-        transfer_program_program: Program = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
-            FAKE_SINGLETON_STRUCT,
-            ROYALTY_ADDRESS,
-            TRADE_PRICE_PERCENTAGE,
+        transfer_program = DefaultTransferProgram(
+            self_launcher_id=FAKE_LAUNCHER_ID,
+            royalty_address=ROYALTY_ADDRESS,
+            royalty_basis_points=TRADE_PRICE_PERCENTAGE,
         )
         ownership_puzzle = OwnershipLayer(
             current_owner=None,
-            transfer_program=UnknownPuzzle(known_program=transfer_program_program),
+            transfer_program=transfer_program,
             inner_puzzle=ACSPuzzle(),
         )
         await sim.farm_block(ownership_puzzle.tree_hash)
@@ -380,7 +380,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         # Finally, make sure we can just clear the DID label off
         new_ownership_puzzle = OwnershipLayer(
             current_owner=FAKE_LAUNCHER_ID,
-            transfer_program=UnknownPuzzle(known_program=transfer_program_program),
+            transfer_program=transfer_program,
             inner_puzzle=ACSPuzzle(),
         )
         await sim.farm_block(new_ownership_puzzle.tree_hash)

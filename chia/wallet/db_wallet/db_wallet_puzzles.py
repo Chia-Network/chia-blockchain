@@ -10,8 +10,7 @@ from chia_rs.sized_ints import uint64
 from chia.types.blockchain_format.program import INFINITE_COST, Program, run_with_cost, uncurry
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.wallet.nft_wallet.nft_puzzle_utils import MetadataLayer
-from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, NFT_STATE_LAYER_MOD_HASH
+from chia.wallet.nft_wallet.nft_puzzle_utils import NFT_STATE_LAYER_MOD, NFT_STATE_LAYER_MOD_HASH, MetadataLayer
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
