@@ -15,7 +15,7 @@ permissions:
 jobs:
   dependency-review:
     if: github.repository_owner == 'Chia-Network' && !github.event.repository.private
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
