@@ -99,7 +99,7 @@ class SingletonPuzzles:
 @dataclass(kw_only=True, frozen=True)
 class SingletonStruct:
     launcher_id: bytes32
-    singleton_puzzles: SingletonPuzzles = SingletonPuzzles()
+    singleton_puzzles: ClassVar[SingletonPuzzles] = SingletonPuzzles()
 
     def to_program(self) -> Program:
         return Program.to(
@@ -136,7 +136,6 @@ class PlotNFTPuzzle:
     user_config: UserConfig
     exiting: bool
     pool_config: PoolConfig | None = None
-    singleton_puzzles: ClassVar[SingletonPuzzles] = SingletonPuzzles()
 
     def __post_init__(self) -> None:
         if self.pool_config is None and self.exiting:
@@ -144,7 +143,7 @@ class PlotNFTPuzzle:
 
     @property
     def singleton_struct(self) -> SingletonStruct:
-        return SingletonStruct(launcher_id=self.launcher_id, singleton_puzzles=self.singleton_puzzles)
+        return SingletonStruct(launcher_id=self.launcher_id)
 
     @property
     def pooling(self) -> bool:
@@ -364,7 +363,7 @@ class PlotNFT(PlotNFTPuzzle):
         remark: Remark | None = None,
     ) -> tuple[tuple[AssertCoinAnnouncement, AssertCoinAnnouncement], list[CoinSpend], Self]:
         origin_coin = origin_coins[0]
-        launcher_coin = Coin(origin_coin.name(), cls.singleton_puzzles.singleton_launcher_hash, uint64(1))
+        launcher_coin = Coin(origin_coin.name(), SingletonStruct.singleton_puzzles.singleton_launcher_hash, uint64(1))
         launcher_id = launcher_coin.name()
 
         plotnft_puzzle = PlotNFTPuzzle(
@@ -388,9 +387,9 @@ class PlotNFT(PlotNFTPuzzle):
         full_rev_singleton_puzzle = puzzle_for_singleton(
             launcher_id,
             rev_puzzle,
-            singleton_mod=cls.singleton_puzzles.singleton_mod,
-            launcher_hash=cls.singleton_puzzles.singleton_launcher_hash,
-            singleton_mod_hash=cls.singleton_puzzles.singleton_mod_hash,
+            singleton_mod=SingletonStruct.singleton_puzzles.singleton_mod,
+            launcher_hash=SingletonStruct.singleton_puzzles.singleton_launcher_hash,
+            singleton_mod_hash=SingletonStruct.singleton_puzzles.singleton_mod_hash,
         )
         rev_coin = Coin(launcher_id, full_rev_singleton_puzzle.get_tree_hash(), uint64(1))
         rev_coin_id = rev_coin.name()
@@ -402,7 +401,7 @@ class PlotNFT(PlotNFTPuzzle):
         )
         launcher_spend = make_spend(
             launcher_coin,
-            cls.singleton_puzzles.singleton_launcher,
+            SingletonStruct.singleton_puzzles.singleton_launcher,
             launcher_solution,
         )
         rev_spend = make_spend(
@@ -453,9 +452,9 @@ class PlotNFT(PlotNFTPuzzle):
             singleton = pre_uncurry
 
         # examine the singleton level info
-        if singleton.mod != cls.singleton_puzzles.singleton_mod or singleton.curried_args is None:
+        if singleton.mod != SingletonStruct.singleton_puzzles.singleton_mod or singleton.curried_args is None:
             raise GetNextPlotNFTError("Invalid singleton puzzle for next PlotNFT")
-        if singleton.curried_args[0].at("rr") != cls.singleton_puzzles.singleton_launcher_hash:
+        if singleton.curried_args[0].at("rr") != SingletonStruct.singleton_puzzles.singleton_launcher_hash:
             raise GetNextPlotNFTError("Invalid singleton launcher for next PlotNFT")
 
         launcher_id = bytes32(singleton.curried_args[0].at("rf").as_atom())

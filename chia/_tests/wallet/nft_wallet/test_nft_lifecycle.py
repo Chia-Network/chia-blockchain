@@ -9,6 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
+from chia.pools.plotnft_drivers import SingletonPuzzles, SingletonStruct
 from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -253,15 +254,26 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
 
 
 @pytest.mark.anyio
-async def test_default_transfer_program(cost_logger: CostLogger) -> None:
+async def test_default_transfer_program(cost_logger: CostLogger, monkeypatch: pytest.MonkeyPatch) -> None:
     async with sim_and_client() as (sim, sim_client):
         # Now make the ownership coin
         FAKE_SINGLETON_MOD = Program.to([2, 5, 11])  # (a 5 11) | (mod (_ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
         FAKE_CAT_MOD = Program.to([2, 11, 23])  # (a 11 23) or (mod (_ _ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
         FAKE_LAUNCHER_ID = bytes32.zeros
         FAKE_TAIL = bytes32([2] * 32)
-        FAKE_SINGLETON_STRUCT = Program.to((FAKE_SINGLETON_MOD.get_tree_hash(), (FAKE_LAUNCHER_ID, FAKE_LAUNCHER_ID)))
-        FAKE_SINGLETON = FAKE_SINGLETON_MOD.curry(FAKE_SINGLETON_STRUCT, ACS)
+        # Match the pre-driver test shape: (FAKE_MOD_HASH, (launcher_id, launcher_id)).
+        monkeypatch.setattr(
+            SingletonStruct,
+            "singleton_puzzles",
+            SingletonPuzzles(
+                singleton_mod=FAKE_SINGLETON_MOD,
+                singleton_mod_hash_pre_computed=None,
+            ),
+        )
+        FAKE_SINGLETON = FAKE_SINGLETON_MOD.curry(
+            SingletonStruct(launcher_id=FAKE_LAUNCHER_ID).to_program(),
+            ACS,
+        )
         FAKE_CAT = FAKE_CAT_MOD.curry(FAKE_CAT_MOD.get_tree_hash(), FAKE_TAIL, ACS)
 
         ROYALTY_ADDRESS = bytes32([1] * 32)
@@ -464,20 +476,53 @@ def test_nft_metadata_ownership_driver_edge_cases() -> None:
     with pytest.raises(ValueError, match="Unsupported metadata key"):
         metadata.prepend_value(key=cast(Any, b"bad"), value="x")
 
+    # update_from_condition covers each UpdateMetadataCondition field
+    assert metadata.update_from_condition(condition=UpdateMetadataCondition(data_uri="d")).data_uris == [
+        "d",
+        "https://example.com",
+    ]
+    assert metadata.update_from_condition(condition=UpdateMetadataCondition(meta_uri="m")).meta_uris == ["m"]
+    assert metadata.update_from_condition(condition=UpdateMetadataCondition(license_uri="l")).license_uris == ["l"]
+    assert metadata.update_from_condition(
+        condition=UpdateMetadataCondition(other_update=("custom", "uri"))
+    ).other_metadata == {b"custom": "uri"}
+
     # other_update path in to_program
     assert UpdateMetadataCondition(other_update=("custom", "uri")).to_program() is not None
 
-    # Atom and list forms of unrecognized metadata keys
+    # Full metadata round-trip: meta/license hashes, non-zero editions (atom path), and URI lists
+    full_metadata = NFTMetadata(
+        data_uris=["https://a"],
+        data_hash=b"\x02" * 32,
+        meta_uris=["https://meta"],
+        meta_hash=b"\x03" * 32,
+        license_uris=["https://lic"],
+        license_hash=b"\x04" * 32,
+        edition_number=2,
+        edition_total=10,
+        other_metadata={b"custom-atom": b"value"},
+    )
+    assert NFTMetadata.from_program(full_metadata.program) == full_metadata
+
+    # Atom and list forms of unrecognized metadata keys; empty-list edition fields decode as 0
     with_other = NFTMetadata.from_program(
         Program.to(
             [
                 (b"u", ["https://a"]),
                 (b"h", b"\x02" * 32),
+                (b"mu", ["https://meta"]),
+                (b"lu", ["https://lic"]),
+                (b"sn", []),
+                (b"st", []),
                 (b"custom-atom", b"value"),
                 (b"custom-list", [b"a", b"b"]),
             ]
         )
     )
+    assert with_other.meta_uris == ["https://meta"]
+    assert with_other.license_uris == ["https://lic"]
+    assert with_other.edition_number == 0
+    assert with_other.edition_total == 0
     assert with_other.other_metadata[b"custom-atom"] == b"value"
     assert with_other.other_metadata[b"custom-list"] == ["a", "b"]
 
@@ -486,8 +531,22 @@ def test_nft_metadata_ownership_driver_edge_cases() -> None:
     assert OwnershipLayerSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
     assert OwnershipLayerSolution.match(unknown_solution=UnknownSolution(program=Program.to([1, 2]))) is None
 
+    metadata_sol = MetadataLayerSolution(inner_solution=ACSSolution(conditions=[]))
+    matched_metadata_sol = MetadataLayerSolution.match(unknown_solution=UnknownSolution(program=metadata_sol.program))
+    assert matched_metadata_sol is not None
+    assert matched_metadata_sol.inner_solution.program == metadata_sol.inner_solution.program
+
+    ownership_sol = OwnershipLayerSolution(inner_solution=ACSSolution(conditions=[]))
+    matched_ownership_sol = OwnershipLayerSolution.match(
+        unknown_solution=UnknownSolution(program=ownership_sol.program)
+    )
+    assert matched_ownership_sol is not None
+    assert matched_ownership_sol.inner_solution.program == ownership_sol.inner_solution.program
+
     assert DefaultTransferProgram.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
     assert DefaultMetadataUpdater.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
+    assert MetadataLayer.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
+    assert OwnershipLayer.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
 
     matched_updater = DefaultMetadataUpdater.match(
         unknown_puzzle=UnknownPuzzle(known_program=DefaultMetadataUpdater().program)
