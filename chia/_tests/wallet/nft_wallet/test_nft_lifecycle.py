@@ -14,12 +14,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.wallet.cat_wallet.cat_utils import CATCorePuzzles, CATPuzzle
-from chia.wallet.conditions import (
-    AssertPuzzleAnnouncement,
-    CreateCoin,
-    CreatePuzzleAnnouncement,
-    UnknownCondition,
-)
+from chia.wallet.conditions import AssertPuzzleAnnouncement, CreateCoin, CreatePuzzleAnnouncement, UnknownCondition
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
@@ -37,11 +32,7 @@ from chia.wallet.nft_wallet.nft_puzzle_utils import (
     UpdateMetadataCondition,
 )
 from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, ACSSolution, UnknownPuzzle, UnknownSolution
-from chia.wallet.puzzles.singleton_drivers import (
-    SingletonCorePuzzles,
-    SingletonPuzzle,
-    SingletonStruct,
-)
+from chia.wallet.puzzles.singleton_drivers import SingletonCorePuzzles, SingletonPuzzle, SingletonStruct
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 ACS = Program.to(1)
@@ -295,6 +286,7 @@ async def test_default_transfer_program(cost_logger: CostLogger, monkeypatch: py
 
         ROYALTY_ADDRESS = bytes32([1] * 32)
         TRADE_PRICE_PERCENTAGE = 5000  # 50%
+        # Build with a non-default singleton struct (fake mods), matching the pre-driver test shape.
         transfer_program = DefaultTransferProgram(
             self_launcher_id=FAKE_SINGLETON.launcher_id,
             royalty_address=ROYALTY_ADDRESS,
@@ -352,7 +344,10 @@ async def test_default_transfer_program(cost_logger: CostLogger, monkeypatch: py
                     conditions=[
                         CreateCoin(puzzle_hash=ACSPuzzle().tree_hash, amount=uint64(1)),
                         TransferProgramCondition(
-                            trade_prices_list={ACSPuzzle().tree_hash: 100, FAKE_CAT.tree_hash: 100},
+                            trade_prices_list={
+                                ACS_PH: 100,
+                                FAKE_CAT.tree_hash: 100,
+                            },
                             new_owner=FAKE_SINGLETON,
                         ),
                     ]

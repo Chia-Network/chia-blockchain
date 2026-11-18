@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field, replace
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, Self, TypeVar, cast
@@ -29,7 +30,6 @@ from chia.wallet.conditions import Condition, CreateCoin, parse_conditions_non_c
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.puzzles.puzzle_drivers import (
-    OuterPuzzle,
     Puzzle,
     PuzzleBase,
     SmartCoin,
@@ -45,6 +45,8 @@ from chia.wallet.puzzles.singleton_drivers import (
 )
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
+
+log = logging.getLogger(__name__)
 
 NFT_STATE_LAYER_MOD = Program.from_bytes(NFT_STATE_LAYER)
 NFT_STATE_LAYER_MOD_HASH = bytes32(NFT_STATE_LAYER_HASH)
@@ -249,11 +251,6 @@ _T_MetadataUpdater = TypeVar("_T_MetadataUpdater", bound=Puzzle)
 
 @dataclass(frozen=True, kw_only=True)
 class MetadataLayer(PuzzleBase, Generic[_T_Puzzle, _T_MetadataUpdater]):
-    if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
-            "MetadataLayer[_T_Puzzle, _T_MetadataUpdater]", None
-        )
-
     inner_puzzle: _T_Puzzle
     metadata: Program
     metadata_updater: _T_MetadataUpdater
@@ -336,6 +333,7 @@ class TransferProgramCondition(Condition):
     def from_program(cls, program: Program) -> TransferProgramCondition:
         _, launcher_id, trade_prices_list, inner_puzzle_hash = program.as_iter()
         return TransferProgramCondition(
+            # Conditions are serialized as [price, puzzle_hash]
             trade_prices_list={
                 bytes32(tp_tuple.at("rf").as_atom()): tp_tuple.first().as_int()
                 for tp_tuple in trade_prices_list.as_iter()
@@ -351,9 +349,6 @@ class TransferProgramCondition(Condition):
 
 @dataclass(frozen=True, kw_only=True)
 class DefaultTransferProgram(PuzzleBase):
-    if TYPE_CHECKING:
-        _inner_puzzle_protocol_check: ClassVar[Puzzle] = cast("DefaultTransferProgram", None)
-
     self_launcher_id: bytes32
     royalty_address: bytes32 | None
     royalty_basis_points: int
@@ -395,11 +390,6 @@ _T_TransferProgram = TypeVar("_T_TransferProgram", bound=Puzzle)
 
 @dataclass(frozen=True, kw_only=True)
 class OwnershipLayer(PuzzleBase, Generic[_T_Puzzle, _T_TransferProgram]):
-    if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
-            "OwnershipLayer[_T_Puzzle, _T_TransferProgram]", None
-        )
-
     current_owner: bytes32 | None
     inner_puzzle: _T_Puzzle
     transfer_program: _T_TransferProgram
