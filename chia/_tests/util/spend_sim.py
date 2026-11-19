@@ -170,7 +170,7 @@ class SpendSim:
 
             async with MempoolManager.managed(
                 self.coin_store.get_coin_records,
-                self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                self.hint_store.get_unspent_lineage_info_for_puzzle_hash,
                 defaults,
                 InlineExecutor(),
                 validation_timeout=10,
@@ -367,7 +367,7 @@ class SimClient:
             kwargs["start_height"] = start_height
         if end_height is not None:
             kwargs["end_height"] = end_height
-        return await self.service.coin_store.get_coin_records_by_names(**kwargs)
+        return await self.service.hint_store.get_coin_records_by_names(**kwargs)
 
     async def get_coin_records_by_parent_ids(
         self,
@@ -381,7 +381,7 @@ class SimClient:
             kwargs["start_height"] = start_height
         if end_height is not None:
             kwargs["end_height"] = end_height
-        return await self.service.coin_store.get_coin_records_by_parent_ids(**kwargs)
+        return await self.service.hint_store.get_coin_records_by_parent_ids(**kwargs)
 
     async def get_coin_records_by_puzzle_hash(
         self,
@@ -395,7 +395,7 @@ class SimClient:
             kwargs["start_height"] = start_height
         if end_height is not None:
             kwargs["end_height"] = end_height
-        return await self.service.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
+        return await self.service.hint_store.get_coin_records_by_puzzle_hash(**kwargs)
 
     async def get_coin_records_by_puzzle_hashes(
         self,
@@ -409,7 +409,7 @@ class SimClient:
             kwargs["start_height"] = start_height
         if end_height is not None:
             kwargs["end_height"] = end_height
-        return await self.service.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
+        return await self.service.hint_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
     async def get_block_record_by_height(self, height: uint32) -> SimBlockRecord:
         return next(filter(lambda block: block.height == height, self.service.block_records))
@@ -495,6 +495,6 @@ class SimClient:
         if include_spent_coins:
             kwargs["include_spent_coins"] = include_spent_coins
 
-        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records = await self.service.hint_store.get_coin_records_by_names(**kwargs)
 
         return coin_records
