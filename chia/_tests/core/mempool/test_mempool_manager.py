@@ -52,7 +52,6 @@ from chia.full_node.mempool_manager import (
     compute_assert_height,
     is_atom_canonical,
     is_clvm_canonical,
-    optional_max,
     optional_min,
 )
 from chia.protocols import wallet_protocol
@@ -1036,13 +1035,6 @@ def test_optional_min() -> None:
     assert optional_min(uint32(123), uint32(234)) == uint32(123)
 
 
-def test_optional_max() -> None:
-    assert optional_max(uint32(100), None) == uint32(100)
-    assert optional_max(None, uint32(100)) == uint32(100)
-    assert optional_max(None, None) is None
-    assert optional_max(uint32(123), uint32(234)) == uint32(234)
-
-
 def mk_coin_spend(coin: Coin, solution: str | None = None) -> CoinSpend:
     return make_spend(
         coin,
@@ -1232,11 +1224,11 @@ coins = make_test_coins()
         ([mk_item(coins[0:1], assert_height=1000)], mk_item(coins[0:1], fee=10000000, assert_height=2000), False),
         # the same assert height is OK
         ([mk_item(coins[0:1], assert_height=1000)], mk_item(coins[0:1], fee=10000000, assert_height=1000), True),
-        # The new spend just have to match the most restrictive condition
+        # Different time lock conditions prevent replacement
         (
             [mk_item(coins[0:1], assert_height=200), mk_item(coins[1:2], assert_height=400)],
             mk_item(coins[0:2], fee=10000000, assert_height=400),
-            True,
+            False,
         ),
         # ASSERT_BEFORE_HEIGHT
         # the assert before height time lock condition was removed in the new item
@@ -1252,11 +1244,11 @@ coins = make_test_coins()
             mk_item(coins[0:1], fee=10000000, assert_before_height=2000),
             False,
         ),
-        # The new spend just have to match the most restrictive condition
+        # Different time lock conditions prevent replacement
         (
             [mk_item(coins[0:1], assert_before_height=200), mk_item(coins[1:2], assert_before_height=400)],
             mk_item(coins[0:2], fee=10000000, assert_before_height=200),
-            True,
+            False,
         ),
         # ASSERT_BEFORE_SECONDS
         # the assert before height time lock condition was removed in the new item
@@ -1278,11 +1270,11 @@ coins = make_test_coins()
             mk_item(coins[0:1], fee=10000000, assert_before_seconds=1000),
             True,
         ),
-        # The new spend just have to match the most restrictive condition
+        # Different time lock conditions prevent replacement
         (
             [mk_item(coins[0:1], assert_before_seconds=200), mk_item(coins[1:2], assert_before_seconds=400)],
             mk_item(coins[0:2], fee=10000000, assert_before_seconds=200),
-            True,
+            False,
         ),
         # MIXED CONDITIONS
         # we can't replace an assert_before_seconds with assert_before_height
@@ -1307,6 +1299,28 @@ coins = make_test_coins()
 )
 def test_can_replace(existing_items: list[MempoolItem], new_item: MempoolItem, expected: bool) -> None:
     assert can_replace(existing_items, new_item) == expected
+
+
+@pytest.mark.parametrize("lock_name", ["assert_height", "assert_before_height", "assert_before_seconds"])
+@pytest.mark.parametrize("other_lock", [None, 200, 400])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_can_replace_individual_timelocks(lock_name: str, other_lock: int | None, reverse: bool) -> None:
+    # Check replacement compatibility for multiple existing items.
+    def item_with_lock(coins: list[Coin], lock: int | None, fee: int = 0) -> MempoolItem:
+        return mk_item(
+            coins,
+            fee=fee,
+            assert_height=lock if lock_name == "assert_height" else None,
+            assert_before_height=lock if lock_name == "assert_before_height" else None,
+            assert_before_seconds=lock if lock_name == "assert_before_seconds" else None,
+        )
+
+    replacement_lock = 400 if lock_name == "assert_height" else 200
+    first_item = item_with_lock(coins[0:1], replacement_lock)
+    second_item = item_with_lock(coins[1:2], other_lock)
+    replacement = item_with_lock(coins[0:2], replacement_lock, fee=MEMPOOL_MIN_FEE_INCREASE)
+    existing_items = [second_item, first_item] if reverse else [first_item, second_item]
+    assert can_replace(existing_items, replacement) == (other_lock == replacement_lock)
 
 
 @pytest.mark.anyio
