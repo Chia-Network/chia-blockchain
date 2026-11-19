@@ -64,6 +64,7 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.explorer_store_protocol import ExplorerStoreProtocol
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
@@ -316,8 +317,8 @@ class FullNode:
                                 pass
 
             self._block_store = await BlockStore.create(self.db_wrapper)
-            self._hint_store = await HintStore.create(self.db_wrapper)
             self._coin_store = await CoinStore.create(self.db_wrapper, block_store=self._block_store)
+            self._hint_store = await HintStore.create(self._coin_store)
             self.log.info("Initializing blockchain from disk")
             start_time = time.monotonic()
             single_threaded = self.config.get("single_threaded", False)
@@ -351,7 +352,7 @@ class FullNode:
 
             async with MempoolManager.managed(
                 get_coin_records=self.coin_store.get_coin_records,
-                get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                get_unspent_lineage_info_for_puzzle_hash=self.hint_store.get_unspent_lineage_info_for_puzzle_hash,
                 consensus_constants=self.constants,
                 pool=self.pool,
                 validation_timeout=self.config.get("block_creation_timeout", 2.0),
@@ -524,7 +525,7 @@ class FullNode:
         return self._db_wrapper
 
     @property
-    def hint_store(self) -> HintStore:
+    def hint_store(self) -> ExplorerStoreProtocol:
         assert self._hint_store is not None
         return self._hint_store
 

@@ -548,7 +548,7 @@ async def test_coin_state_batches(
     async with DBConnection(db_version) as db_wrapper:
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(db_wrapper)
+        hint_store = await HintStore.create(coin_store)
 
         await add_coin_records_to_db(coin_store, random_coin_records.items)
         await hint_store.add_hints(random_coin_records.hints)
@@ -642,7 +642,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
 
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
-        await HintStore.create(db_wrapper)
+        await HintStore.create(coin_store)
 
         await add_coin_records_to_db(coin_store, coin_records)
 
@@ -684,7 +684,7 @@ async def test_batch_no_puzzle_hashes(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
-        await HintStore.create(db_wrapper)
+        await HintStore.create(coin_store)
 
         coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([])
         assert coin_states == []
@@ -696,7 +696,7 @@ async def test_duplicate_by_hint(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(db_wrapper)
+        hint_store = await HintStore.create(coin_store)
 
         cr = CoinRecord(
             Coin(std_hash(b"Parent Coin Id"), std_hash(b"Puzzle Hash"), uint64(100)),

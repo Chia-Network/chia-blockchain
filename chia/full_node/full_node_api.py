@@ -1929,7 +1929,7 @@ class FullNodeAPI:
         # before we send the response
 
         # Send all coins with requested puzzle hash that have been created after the specified height
-        states: set[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
+        states: set[CoinState] = await self.full_node.hint_store.get_coin_states_by_puzzle_hashes(
             include_spent_coins=True, puzzle_hashes=puzzle_hashes, min_height=request.min_height, max_items=max_items
         )
         max_items -= len(states)
@@ -1940,7 +1940,7 @@ class FullNodeAPI:
 
         hint_states: list[CoinState] = []
         if len(hint_coin_ids) > 0:
-            hint_states = await self.full_node.coin_store.get_coin_states_by_ids(
+            hint_states = await self.full_node.hint_store.get_coin_states_by_ids(
                 include_spent_coins=True,
                 coin_ids=hint_coin_ids,
                 min_height=request.min_height,
@@ -1987,7 +1987,7 @@ class FullNodeAPI:
             coin_ids = coin_ids[:max_subscriptions]
         self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, coin_ids, max_subscriptions)
 
-        states: list[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
+        states: list[CoinState] = await self.full_node.hint_store.get_coin_states_by_ids(
             include_spent_coins=True, coin_ids=set(coin_ids), min_height=request.min_height, max_items=max_items
         )
 
@@ -1997,7 +1997,7 @@ class FullNodeAPI:
 
     @metadata.request()
     async def request_children(self, request: wallet_protocol.RequestChildren) -> Message | None:
-        coin_records: list[CoinRecord] = await self.full_node.coin_store.get_coin_records_by_parent_ids(
+        coin_records: list[CoinRecord] = await self.full_node.hint_store.get_coin_records_by_parent_ids(
             True, [request.coin_name]
         )
         states = [record.coin_state for record in coin_records]
@@ -2123,7 +2123,7 @@ class FullNodeAPI:
 
         min_height = uint32((request.previous_height + 1) if request.previous_height is not None else 0)
 
-        (coin_states, next_min_height) = await self.full_node.coin_store.batch_coin_states_by_puzzle_hashes(
+        (coin_states, next_min_height) = await self.full_node.hint_store.batch_coin_states_by_puzzle_hashes(
             puzzle_hashes,
             min_height=min_height,
             include_spent=request.filters.include_spent,
@@ -2204,7 +2204,7 @@ class FullNodeAPI:
 
         min_height = uint32(request.previous_height + 1 if request.previous_height is not None else 0)
 
-        coin_states = await self.full_node.coin_store.get_coin_states_by_ids(
+        coin_states = await self.full_node.hint_store.get_coin_states_by_ids(
             True, coin_ids, min_height=min_height, max_items=max_items
         )
 

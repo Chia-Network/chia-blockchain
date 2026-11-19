@@ -707,7 +707,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
+        coin_records = await self.service.hint_store.get_coin_records_by_puzzle_hash(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -729,7 +729,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
+        coin_records = await self.service.hint_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -770,7 +770,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records = await self.service.hint_store.get_coin_records_by_names(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -792,7 +792,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.coin_store.get_coin_records_by_parent_ids(**kwargs)
+        coin_records = await self.service.hint_store.get_coin_records_by_parent_ids(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -821,7 +821,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records = await self.service.hint_store.get_coin_records_by_names(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
