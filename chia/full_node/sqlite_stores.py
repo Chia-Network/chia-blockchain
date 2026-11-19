@@ -75,7 +75,7 @@ def sqlite_node_stores(config: dict[str, Any], root_path: Path) -> OpenNodeStore
 
             block_store = await BlockStore.create(db_wrapper)
             coin_store = await CoinStore.create(db_wrapper, block_store=block_store)
-            hint_store = await HintStore.create(coin_store)
+            hint_store = await HintStore.create(db_wrapper)
             height_map = await BlockHeightMap.create(db_path.parent, db_wrapper, config.get("selected_network"))
             yield NodeStores(block_store, coin_store, hint_store, height_map)
 
