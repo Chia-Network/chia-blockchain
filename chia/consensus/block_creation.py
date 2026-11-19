@@ -236,6 +236,7 @@ def create_foliage(
             generator_hash = compute_generator_root(
                 new_block_gen.program,
                 get_flags_for_height_and_constants(pre_sp_tx_height, constants),
+                constants,
             )
 
         generator_refs_hash = bytes32([1] * 32)

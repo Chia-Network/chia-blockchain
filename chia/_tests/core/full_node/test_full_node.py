@@ -2119,7 +2119,9 @@ async def test_unfinished_block_with_replaced_generator(
         tr = block.transactions_info
         assert tr is not None
         transactions_info = TransactionsInfo(
-            tree_hash_2026(replaced_generator) if use_v1 else std_hash(replaced_generator),
+            tree_hash_2026(replaced_generator, bt.constants.MAX_BLOCK_COST_CLVM, bt.constants.COST_PER_BYTE)
+            if use_v1
+            else std_hash(replaced_generator),
             tr.generator_refs_root,
             tr.aggregated_signature,
             tr.fees,
