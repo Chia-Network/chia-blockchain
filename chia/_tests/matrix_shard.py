@@ -24,9 +24,13 @@ class TestFile:
 class Piece:
     """One shard's slice of a test file.
 
-    ``part_count == 1`` is the whole file. Otherwise the file is split into
+    ``part_count == 1`` is the whole file, or the whole selected set when
+    ``selector`` is set. Otherwise the file or selector is split into
     ``part_count`` contiguous collection-order chunks and this is ``part_index``
     (0-based).
+
+    ``selector`` is either a test function name (``test_parser``) or a comma
+    separated remainder selector (``~test_parser,~test_header_block``).
     """
 
     filename: str
@@ -34,10 +38,27 @@ class Piece:
     repo_path: str
     part_index: int
     part_count: int
+    selector: str | None = None
 
     @property
     def whole(self) -> bool:
         return self.part_count == 1
+
+
+@dataclass(frozen=True)
+class ShardEntry:
+    filename: str
+    selector: str | None
+    part_index: int | None
+    part_count: int | None
+
+
+@dataclass(frozen=True)
+class ShardSpec:
+    path: str
+    selector: str | None
+    part_index: int
+    part_count: int
 
 
 def shard_bounds(n_items: int, part_count: int, part_index: int) -> tuple[int, int]:
@@ -63,27 +84,52 @@ def _whole(test_file: TestFile) -> Piece:
     return test_file.whole()
 
 
-def _piece(test_file: TestFile, part_index: int, part_count: int) -> Piece:
+def _piece(test_file: TestFile, part_index: int, part_count: int, selector: str | None = None) -> Piece:
     return Piece(
         filename=test_file.filename,
         module=test_file.module,
         repo_path=test_file.repo_path,
         part_index=part_index,
         part_count=part_count,
+        selector=selector,
     )
 
 
-def parse_shard_entry(entry: str) -> tuple[str, int | None, int | None]:
-    """``test_foo.py`` is the whole file. ``test_foo.py=0/2`` is one slice."""
-    if "=" not in entry:
-        return entry, None, None
-    filename, fraction = entry.split("=", 1)
-    index_text, count_text = fraction.split("/", 1)
-    return filename, int(index_text), int(count_text)
+def parse_shard_entry(entry: str) -> ShardEntry:
+    """``test_foo.py`` is the whole file. ``test_foo.py=0/2`` is one slice.
+
+    ``test_foo.py::test_name`` selects one test function and
+    ``test_foo.py::test_name=0/2`` slices that function's cases. A selector
+    beginning with ``~`` is a remainder selector.
+    """
+    if "=" in entry:
+        left, fraction = entry.split("=", 1)
+        index_text, count_text = fraction.split("/", 1)
+        part_index: int | None = int(index_text)
+        part_count: int | None = int(count_text)
+    else:
+        left = entry
+        part_index = None
+        part_count = None
+    if "::" in left:
+        filename, selector = left.split("::", 1)
+    else:
+        filename, selector = left, None
+    return ShardEntry(filename, selector, part_index, part_count)
+
+
+def _function_names(selector: str) -> tuple[str, ...]:
+    if selector.startswith("~"):
+        return tuple(part[1:] for part in selector.split(",") if part.startswith("~"))
+    return (selector,)
 
 
 def plan_explicit(files: Sequence[TestFile], shard_lists: Sequence[Sequence[str]]) -> list[list[Piece]]:
     """Place named files on the listed shards. Anything unnamed joins the last shard.
+
+    A file named only by function selectors also gets a remainder piece on the
+    last shard. That piece runs every test in the file whose function was not
+    named, so function selectors never drop coverage.
 
     The last shard is the catch-all, so a new test file is still run and does
     not become its own setup-only job.
@@ -94,32 +140,72 @@ def plan_explicit(files: Sequence[TestFile], shard_lists: Sequence[Sequence[str]
     by_name = {test_file.filename: test_file for test_file in files}
     mentioned: set[str] = set()
     whole_files: set[str] = set()
-    parts_by_file: dict[str, list[tuple[int, int]]] = {}
+    file_parts: dict[str, list[tuple[int, int]]] = {}
+    function_wholes: set[tuple[str, str]] = set()
+    function_parts: dict[tuple[str, str], list[tuple[int, int]]] = {}
+    function_order: dict[str, list[str]] = {}
     shards: list[list[Piece]] = []
     for shard in shard_lists:
         pieces: list[Piece] = []
         for entry in shard:
-            filename, part_index, part_count = parse_shard_entry(entry)
+            parsed = parse_shard_entry(entry)
+            filename = parsed.filename
+            selector = parsed.selector
             test_file = by_name.get(filename)
             if test_file is None:
                 msg = f"matrix_shard_files names missing file {filename}"
                 raise ValueError(msg)
-            if part_index is None or part_count is None:
-                if filename in mentioned:
-                    msg = f"{filename} is listed more than once"
+            if selector is None:
+                if filename in whole_files or filename in function_wholes or filename in function_parts:
+                    msg = f"{filename} mixes whole-file and function selectors"
+                    raise ValueError(msg)
+                if parsed.part_index is None or parsed.part_count is None:
+                    if filename in mentioned:
+                        msg = f"{filename} is listed more than once"
+                        raise ValueError(msg)
+                    mentioned.add(filename)
+                    whole_files.add(filename)
+                    pieces.append(_whole(test_file))
+                    continue
+                if filename in whole_files:
+                    msg = f"{filename} is both a whole file and a split slice"
                     raise ValueError(msg)
                 mentioned.add(filename)
-                whole_files.add(filename)
-                pieces.append(_whole(test_file))
+                file_parts.setdefault(filename, []).append((parsed.part_index, parsed.part_count))
+                pieces.append(_piece(test_file, parsed.part_index, parsed.part_count))
                 continue
-            if filename in whole_files:
-                msg = f"{filename} is both a whole file and a split slice"
+            if filename in whole_files or filename in file_parts:
+                msg = f"{filename} mixes whole-file and function selectors"
                 raise ValueError(msg)
             mentioned.add(filename)
-            parts_by_file.setdefault(filename, []).append((part_index, part_count))
-            pieces.append(_piece(test_file, part_index, part_count))
+            key = (filename, selector)
+            if selector.startswith("~"):
+                if parsed.part_index is not None or parsed.part_count is not None:
+                    msg = f"{filename}::{selector} cannot be sliced"
+                    raise ValueError(msg)
+                if key in function_wholes:
+                    msg = f"{filename}::{selector} is listed more than once"
+                    raise ValueError(msg)
+                function_wholes.add(key)
+                pieces.append(_piece(test_file, 0, 1, selector))
+                continue
+            selectors = function_order.setdefault(filename, [])
+            if selector not in selectors:
+                selectors.append(selector)
+            if parsed.part_index is None or parsed.part_count is None:
+                if key in function_wholes or key in function_parts:
+                    msg = f"{filename}::{selector} is listed more than once"
+                    raise ValueError(msg)
+                function_wholes.add(key)
+                pieces.append(_piece(test_file, 0, 1, selector))
+                continue
+            if key in function_wholes:
+                msg = f"{filename}::{selector} is both a whole selector and a split slice"
+                raise ValueError(msg)
+            function_parts.setdefault(key, []).append((parsed.part_index, parsed.part_count))
+            pieces.append(_piece(test_file, parsed.part_index, parsed.part_count, selector))
         shards.append(pieces)
-    for filename, parts in parts_by_file.items():
+    for filename, parts in file_parts.items():
         counts = {part_count for _, part_count in parts}
         if len(counts) != 1:
             msg = f"{filename} uses more than one part count"
@@ -129,6 +215,22 @@ def plan_explicit(files: Sequence[TestFile], shard_lists: Sequence[Sequence[str]
         if indexes != list(range(part_count)):
             msg = f"{filename} slices {indexes} are not 0..{part_count - 1} exactly once"
             raise ValueError(msg)
+    for (filename, selector), parts in function_parts.items():
+        counts = {part_count for _, part_count in parts}
+        if len(counts) != 1:
+            msg = f"{filename}::{selector} uses more than one part count"
+            raise ValueError(msg)
+        part_count = counts.pop()
+        indexes = sorted(part_index for part_index, _ in parts)
+        if indexes != list(range(part_count)):
+            msg = f"{filename}::{selector} slices {indexes} are not 0..{part_count - 1} exactly once"
+            raise ValueError(msg)
+    remainder_shard = shards[-1]
+    for filename, selectors in function_order.items():
+        if any(fn == filename and sel.startswith("~") for fn, sel in function_wholes):
+            continue
+        remainder_selector = ",".join(f"~{selector}" for selector in dict.fromkeys(selectors))
+        remainder_shard.append(_piece(by_name[filename], 0, 1, remainder_selector))
     catch_all = [_whole(test_file) for test_file in files if test_file.filename not in mentioned]
     shards[-1].extend(catch_all)
     if any(len(planned) == 0 for planned in shards):
@@ -148,7 +250,12 @@ def render_test_files(pieces: Sequence[Piece]) -> str:
         if piece.module not in seen:
             modules.append(piece.module)
             seen.add(piece.module)
-        if not piece.whole:
+        if piece.selector is not None:
+            spec = f"{piece.repo_path}::{piece.selector}"
+            if not piece.whole:
+                spec += f"={piece.part_index}/{piece.part_count}"
+            specs.append(spec)
+        elif not piece.whole:
             specs.append(f"{piece.repo_path}={piece.part_index}/{piece.part_count}")
     pyargs = "--pyargs " + " ".join(modules)
     if len(specs) == 0:
@@ -159,18 +266,29 @@ def render_test_files(pieces: Sequence[Piece]) -> str:
     return f"-p chia._tests.matrix_shard {filters} {pyargs}"
 
 
-def parse_matrix_shard_spec(spec: str) -> tuple[str, int, int]:
-    path, fraction = spec.split("=", 1)
-    index_text, count_text = fraction.split("/", 1)
-    return path, int(index_text), int(count_text)
+def parse_matrix_shard_spec(spec: str) -> ShardSpec:
+    if "=" in spec:
+        left, fraction = spec.split("=", 1)
+        index_text, count_text = fraction.split("/", 1)
+        part_index = int(index_text)
+        part_count = int(count_text)
+    else:
+        left = spec
+        part_index = 0
+        part_count = 1
+    if "::" in left:
+        path, selector = left.split("::", 1)
+    else:
+        path, selector = left, None
+    return ShardSpec(path, selector, part_index, part_count)
 
 
-def pieces_from_test_files(test_files: str) -> list[tuple[str, int, int]]:
-    """Return ``(repo_path, part_index, part_count)`` for every file in a row.
+def pieces_from_test_files(test_files: str) -> list[ShardSpec]:
+    """Return one spec for every file (or file selector) in a row.
 
     A ``--pyargs`` module with no ``--matrix-shard`` spec is the whole file.
     """
-    specs: list[tuple[str, int, int]] = []
+    specs: list[ShardSpec] = []
     modules: list[str] = []
     arguments = test_files.split()
     index = 0
@@ -191,23 +309,26 @@ def pieces_from_test_files(test_files: str) -> list[tuple[str, int, int]]:
             continue
         msg = f"unrecognized test_files argument {argument!r} in {test_files!r}"
         raise ValueError(msg)
-    covered: list[tuple[str, int, int]] = []
+    covered: list[ShardSpec] = []
     for module in modules:
         repo_path = module.replace(".", "/") + ".py"
-        matched = [spec for spec in specs if spec[0] == repo_path]
-        specs = [spec for spec in specs if spec[0] != repo_path]
+        matched = [spec for spec in specs if spec.path == repo_path]
+        specs = [spec for spec in specs if spec.path != repo_path]
         if len(matched) == 0:
-            covered.append((repo_path, 0, 1))
+            covered.append(ShardSpec(repo_path, None, 0, 1))
         else:
             covered.extend(matched)
     if len(specs) > 0:
-        msg = f"--matrix-shard paths missing from --pyargs: {sorted({spec[0] for spec in specs})}"
+        msg = f"--matrix-shard paths missing from --pyargs: {sorted({spec.path for spec in specs})}"
         raise ValueError(msg)
     return covered
 
 
 def assert_file_partition(expected: Iterable[str], test_file_rows: Iterable[str], copies: int = 1) -> None:
     """Every expected test file is covered by a complete, non-overlapping part set.
+
+    A file may be covered by named function selectors plus one remainder
+    selector. That is a complete partition, not a duplicated whole file.
 
     ``copies`` is the matrix ``--duplicates`` count: each part is scheduled that
     many times on purpose, and no more.
@@ -216,42 +337,115 @@ def assert_file_partition(expected: Iterable[str], test_file_rows: Iterable[str]
         msg = f"copies must be positive, got {copies}"
         raise ValueError(msg)
     expected_set = set(expected)
-    seen: dict[str, list[tuple[int, int]]] = {}
+    seen: dict[str, list[ShardSpec]] = {}
     for test_files in test_file_rows:
-        for repo_path, part_index, part_count in pieces_from_test_files(test_files):
-            seen.setdefault(repo_path, []).append((part_index, part_count))
+        for spec in pieces_from_test_files(test_files):
+            seen.setdefault(spec.path, []).append(spec)
     missing = expected_set - set(seen)
     extra = set(seen) - expected_set
     if len(missing) > 0 or len(extra) > 0:
         msg = f"shard file set mismatch, missing={sorted(missing)} extra={sorted(extra)}"
         raise AssertionError(msg)
-    for repo_path, parts in sorted(seen.items()):
-        counts = {part_count for _, part_count in parts}
-        if len(counts) != 1:
-            msg = f"{repo_path} mixed part counts {sorted(counts)}"
+    for repo_path, specs in sorted(seen.items()):
+        selectors = {spec.selector for spec in specs}
+        if selectors == {None}:
+            counts = {spec.part_count for spec in specs}
+            if len(counts) != 1:
+                msg = f"{repo_path} mixed part counts {sorted(counts)}"
+                raise AssertionError(msg)
+            part_count = counts.pop()
+            indexes = sorted(spec.part_index for spec in specs)
+            expected_indexes = [part_index for part_index in range(part_count) for _ in range(copies)]
+            if indexes != expected_indexes:
+                msg = f"{repo_path} parts {indexes} are not 0..{part_count - 1} repeated {copies} time(s)"
+                raise AssertionError(msg)
+            continue
+        if None in selectors:
+            msg = f"{repo_path} mixes whole-file and function selectors"
             raise AssertionError(msg)
-        part_count = counts.pop()
-        indexes = sorted(part_index for part_index, _ in parts)
-        expected_indexes = [part_index for part_index in range(part_count) for _ in range(copies)]
-        if indexes != expected_indexes:
-            msg = f"{repo_path} parts {indexes} are not 0..{part_count - 1} repeated {copies} time(s)"
+        by_selector: dict[str, list[ShardSpec]] = {}
+        for spec in specs:
+            assert spec.selector is not None
+            by_selector.setdefault(spec.selector, []).append(spec)
+        positive_names: set[str] = set()
+        remainder_selectors: list[str] = []
+        for selector, selector_specs in by_selector.items():
+            counts = {spec.part_count for spec in selector_specs}
+            if len(counts) != 1:
+                msg = f"{repo_path}::{selector} mixed part counts {sorted(counts)}"
+                raise AssertionError(msg)
+            part_count = counts.pop()
+            indexes = sorted(spec.part_index for spec in selector_specs)
+            expected_indexes = [part_index for part_index in range(part_count) for _ in range(copies)]
+            if indexes != expected_indexes:
+                msg = f"{repo_path}::{selector} parts {indexes} are not 0..{part_count - 1} repeated {copies} time(s)"
+                raise AssertionError(msg)
+            if selector.startswith("~"):
+                if part_count != 1:
+                    msg = f"{repo_path} remainder selector cannot be sliced"
+                    raise AssertionError(msg)
+                remainder_selectors.append(selector)
+            else:
+                positive_names.add(selector)
+        if len(remainder_selectors) == 0:
+            msg = f"{repo_path} function selectors have no remainder"
+            raise AssertionError(msg)
+        if len(remainder_selectors) > 1:
+            msg = f"{repo_path} has more than one remainder selector"
+            raise AssertionError(msg)
+        remainder_names = set(_function_names(remainder_selectors[0]))
+        if not positive_names.issubset(remainder_names):
+            msg = f"{repo_path} remainder does not exclude named functions {sorted(positive_names - remainder_names)}"
             raise AssertionError(msg)
 
 
-def nodeid_matches(nodeid: str, spec_path: str, file_path: str = "") -> bool:
+def _normalized(path: str) -> str:
+    return path.replace("\\", "/")
+
+
+def _nodeid_file_matches(nodeid: str, spec_path: str, file_path: str = "") -> bool:
+    normalized_nodeid = _normalized(nodeid)
+    normalized_spec = _normalized(spec_path)
+    if normalized_nodeid == normalized_spec or normalized_nodeid.startswith(normalized_spec + "::"):
+        return True
+    marker = "/" + normalized_spec
+    if normalized_nodeid.endswith(marker) or (marker + "::") in normalized_nodeid:
+        return True
+    normalized_file = _normalized(file_path)
+    return normalized_file.endswith(("/" + normalized_spec, normalized_spec))
+
+
+def _nodeid_function(nodeid: str) -> str | None:
+    if "::" not in nodeid:
+        return None
+    remainder = nodeid.split("::", 1)[1]
+    head = remainder.split("[", 1)[0]
+    return head.split("::")[-1]
+
+
+def nodeid_matches(nodeid: str, spec_path: str, file_path: str = "", selector: str | None = None) -> bool:
     """Match a source nodeid, an installed nodeid, or the file path.
 
     CI nodeids look like ``.venv/lib/python3.12/site-packages/chia/_tests/...py::test``.
     ``--pyargs`` outside the root can also report ``::test_0`` while ``item.path``
-    still ends with the spec.
+    still ends with the spec. A selector matches the test function name, with or
+    without a parametrized ``[id]`` suffix. A remainder selector excludes names.
     """
-    if nodeid == spec_path or nodeid.startswith(spec_path + "::"):
+    if not _nodeid_file_matches(nodeid, spec_path, file_path):
+        return False
+    if selector is None:
         return True
-    marker = "/" + spec_path
-    if nodeid.endswith(marker) or (marker + "::") in nodeid:
-        return True
-    normalized = file_path.replace("\\", "/")
-    return normalized.endswith(("/" + spec_path, spec_path))
+    function = _nodeid_function(nodeid)
+    if selector.startswith("~"):
+        return function not in _function_names(selector)
+    return function == selector
+
+
+def _spec_text(spec: ShardSpec) -> str:
+    text = f"{spec.path}::{spec.selector}" if spec.selector is not None else spec.path
+    if spec.part_count != 1:
+        text += f"={spec.part_index}/{spec.part_count}"
+    return text
 
 
 def filter_nodeids(
@@ -259,38 +453,50 @@ def filter_nodeids(
     specs: Sequence[str],
     file_paths: Sequence[str] | None = None,
 ) -> list[str]:
-    """Keep every item whose file is whole, plus one contiguous slice of each split file.
+    """Keep every item whose file is whole, plus one slice of each split file or selector.
 
-    A spec that matches nothing raises. That is the installed-id failure mode:
-    a prefix check would otherwise drop every item or, if unmatched ids were
-    kept, run the whole file on every shard.
+    A positive selector that matches nothing raises. That is the installed-id
+    failure mode: a prefix check would otherwise drop every item or, if
+    unmatched ids were kept, run the whole file on every shard. A remainder
+    selector may be empty when every test in the file was named.
     """
     if len(specs) == 0:
         return list(nodeids)
     parsed = [parse_matrix_shard_spec(spec) for spec in specs]
-    paths = list(dict.fromkeys(path for path, _, _ in parsed))
+    paths = list(dict.fromkeys(spec.path for spec in parsed))
     locations = list(file_paths) if file_paths is not None else [""] * len(nodeids)
-    grouped: dict[str, list[str]] = {path: [] for path in paths}
+    grouped: dict[str, list[tuple[str, str]]] = {path: [] for path in paths}
     rest: list[str] = []
     for nodeid, file_path in zip(nodeids, locations, strict=True):
         matched = False
         for path in paths:
-            if nodeid_matches(nodeid, path, file_path):
-                grouped[path].append(nodeid)
+            if _nodeid_file_matches(nodeid, path, file_path):
+                grouped[path].append((nodeid, file_path))
                 matched = True
                 break
         if not matched:
             rest.append(nodeid)
     keep: set[str] = set(rest)
-    for path, part_index, part_count in parsed:
-        group = grouped[path]
+    for spec in parsed:
+        group = grouped[spec.path]
         if len(group) == 0:
-            msg = f"--matrix-shard {path}={part_index}/{part_count} matched no collected tests"
+            msg = f"--matrix-shard {_spec_text(spec)} matched no collected tests"
             raise ValueError(msg)
-        start, end = shard_bounds(len(group), part_count, part_index)
-        chosen = group[start:end]
+        if spec.selector is None:
+            selected = [nodeid for nodeid, _ in group]
+        else:
+            selected = [
+                nodeid for nodeid, file_path in group if nodeid_matches(nodeid, spec.path, file_path, spec.selector)
+            ]
+            if not spec.selector.startswith("~") and len(selected) == 0:
+                msg = f"--matrix-shard {_spec_text(spec)} matched no collected tests"
+                raise ValueError(msg)
+        start, end = shard_bounds(len(selected), spec.part_count, spec.part_index)
+        chosen = selected[start:end]
         if len(chosen) == 0:
-            msg = f"--matrix-shard {path}={part_index}/{part_count} selected no tests"
+            if spec.selector is not None and spec.selector.startswith("~"):
+                continue
+            msg = f"--matrix-shard {_spec_text(spec)} selected no tests"
             raise ValueError(msg)
         keep.update(chosen)
     if len(keep) == 0:

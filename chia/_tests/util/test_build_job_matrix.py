@@ -82,9 +82,9 @@ def test_shard_and_pack_partition() -> None:
 
     names = [entry["name"] for entry in matrix]
     assert len(names) == len(set(names))
-    assert "util 1/2" in names
-    assert "util 2/2" in names
-    assert "util 3/3" not in names
+    assert "util 1/3" in names
+    assert "util 2/3" in names
+    assert "util 3/3" in names
     assert "core.full_node 1/3" in names
     assert "wallet.sync 1/2" in names
     assert "wallet.sync 2/2" in names
@@ -179,6 +179,48 @@ def test_explicit_shards_put_unlisted_files_on_the_last_shard() -> None:
     assert shards[1][0].part_index == 1
 
 
+def test_explicit_function_shards_add_remainder_to_last_shard() -> None:
+    from chia._tests.matrix_shard import TestFile, plan_explicit
+
+    files = [
+        TestFile("slow.py", "pkg.slow", "pkg/slow.py"),
+        TestFile("other.py", "pkg.other", "pkg/other.py"),
+        TestFile("new.py", "pkg.new", "pkg/new.py"),
+    ]
+    shards = plan_explicit(
+        files,
+        [
+            ["slow.py::test_parser"],
+            ["slow.py::test_header_block"],
+            ["other.py"],
+        ],
+    )
+    assert [piece.selector for piece in shards[0]] == ["test_parser"]
+    assert [piece.selector for piece in shards[1]] == ["test_header_block"]
+    assert {piece.filename for piece in shards[2]} == {"slow.py", "other.py", "new.py"}
+    remainder = next(piece for piece in shards[2] if piece.filename == "slow.py")
+    assert remainder.selector == "~test_parser,~test_header_block"
+    assert remainder.whole
+    assert all(piece.filename != "slow.py" or piece.selector is not None for piece in shards[2])
+
+
+def test_explicit_function_shards_reject_duplicates_and_mixed_entries() -> None:
+    from chia._tests.matrix_shard import TestFile, plan_explicit
+
+    files = [TestFile("slow.py", "pkg.slow", "pkg/slow.py")]
+    for shard_lists in (
+        [["slow.py::test_parser"], ["slow.py::test_parser"]],
+        [["slow.py::test_parser"], ["slow.py"]],
+        [["slow.py::test_parser=0/2"], ["slow.py::test_parser=0/2"]],
+    ):
+        try:
+            plan_explicit(files, shard_lists)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"invalid function shards were accepted: {shard_lists}")
+
+
 def test_only_packed_directory_stays_unpacked() -> None:
     matrix = json.loads(run(args=["--per", "directory", "--only", "clvm"]))
     assert [entry["name"] for entry in matrix] == ["clvm"]
@@ -199,6 +241,108 @@ def test_installed_nodeids_split_and_a_miss_raises() -> None:
         assert "matched no collected tests" in str(exc)
     else:
         raise AssertionError("missing shard file did not fail")
+
+
+def test_filter_nodeids_function_selectors_and_remainder() -> None:
+    from chia._tests.matrix_shard import filter_nodeids
+
+    prefix = ".venv/Lib/site-packages/"
+    path = "chia/_tests/util/test_full_block_utils.py"
+    nodeids = [
+        f"{prefix}{path}::test_fast_0",
+        f"{prefix}{path}::test_fast_1",
+        f"{prefix}{path}::test_parser[0]",
+        f"{prefix}{path}::test_parser[1]",
+        f"{prefix}{path}::test_header_block[0]",
+        f"{prefix}{path}::test_header_block[1]",
+    ]
+    parser = filter_nodeids(nodeids, [f"{path}::test_parser"])
+    header = filter_nodeids(nodeids, [f"{path}::test_header_block"])
+    remainder = filter_nodeids(nodeids, [f"{path}::~test_parser,~test_header_block"])
+    assert parser == nodeids[2:4]
+    assert header == nodeids[4:6]
+    assert remainder == nodeids[0:2]
+    combined = parser + header + remainder
+    assert sorted(combined) == sorted(nodeids)
+    assert len(set(combined)) == len(combined)
+
+    bare = ["::test_fast", "::test_parser[0]", "::test_header_block[0]"]
+    windows_path = "C:\\work\\" + path.replace("/", "\\")
+    windows_paths = [windows_path] * len(bare)
+    assert filter_nodeids(bare, [f"{path}::test_parser"], windows_paths) == ["::test_parser[0]"]
+    assert filter_nodeids(bare, [f"{path}::~test_parser,~test_header_block"], windows_paths) == ["::test_fast"]
+
+    try:
+        filter_nodeids(nodeids, [f"{path}::test_missing"])
+    except ValueError as exc:
+        assert "matched no collected tests" in str(exc)
+    else:
+        raise AssertionError("missing function did not fail")
+
+
+def test_matrix_shard_plugin_pyargs_function_selectors(tmp_path: pathlib.Path) -> None:
+    import os
+    import sys
+
+    package_root = tmp_path / "site-packages"
+    test_dir = package_root / "pkg"
+    test_dir.mkdir(parents=True)
+    (test_dir / "__init__.py").write_text("")
+    (test_dir / "test_split.py").write_text(
+        "import pytest\n\n"
+        "@pytest.mark.parametrize('value', [0, 1])\n"
+        "def test_parser(value):\n    assert True\n\n"
+        "@pytest.mark.parametrize('value', [0, 1])\n"
+        "def test_header_block(value):\n    assert True\n\n"
+        "def test_fast_0():\n    assert True\n\n"
+        "def test_fast_1():\n    assert True\n"
+    )
+    work = tmp_path / "work"
+    work.mkdir()
+    repo_root = build_job_matrix_path.parents[2]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([str(package_root), str(repo_root), env.get("PYTHONPATH", "")])
+    specs = [
+        "pkg/test_split.py::test_parser",
+        "pkg/test_split.py::test_header_block",
+        "pkg/test_split.py::~test_parser,~test_header_block",
+    ]
+    collected: list[set[str]] = []
+    for spec in specs:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-p",
+                "chia._tests.matrix_shard",
+                "--matrix-shard",
+                spec,
+                "--pyargs",
+                "pkg.test_split",
+                "--collect-only",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                "-o",
+                "addopts=",
+            ],
+            check=False,
+            cwd=work,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode == 0, completed.stdout + completed.stderr
+        collected.append({line.strip().split("::", 1)[1] for line in completed.stdout.splitlines() if "::" in line})
+    all_nodeids = {"test_fast_0", "test_fast_1"}
+    all_nodeids |= {f"test_parser[{value}]" for value in (0, 1)}
+    all_nodeids |= {f"test_header_block[{value}]" for value in (0, 1)}
+    assert collected[0] == {f"test_parser[{value}]" for value in (0, 1)}
+    assert collected[1] == {f"test_header_block[{value}]" for value in (0, 1)}
+    assert collected[2] == {f"test_fast_{value}" for value in (0, 1)}
+    assert set().union(*collected) == all_nodeids
+    assert sum(len(group) for group in collected) == len(all_nodeids)
 
 
 def test_matrix_shard_plugin_pyargs_outside_source_tree(tmp_path: pathlib.Path) -> None:
