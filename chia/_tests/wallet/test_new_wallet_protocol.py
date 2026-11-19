@@ -15,9 +15,9 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.connection_utils import add_dummy_connection, add_dummy_connection_wsc
 from chia._tests.util.coin_store import add_coin_records_to_db
-from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveReason
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.outbound_message import Message, NodeType, make_msg
@@ -227,13 +227,13 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
     await simulator.farm_blocks_to_puzzlehash(1)
 
     # This is a safe limit for this test that will fit within the current maximum in `RequestPuzzleState`.
-    simulator.full_node.config["max_subscribe_items"] = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
+    simulator.full_node.config["max_subscribe_items"] = HintStore.MAX_PUZZLE_HASH_BATCH_SIZE
 
     max_subs = simulator.max_subscriptions(peer)
     puzzle_hashes = [std_hash(i.to_bytes(4, byteorder="big", signed=False)) for i in range(max_subs + 100)]
 
     # Add puzzle subscriptions to the limit
-    first_batch = puzzle_hashes[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE]
+    first_batch = puzzle_hashes[: HintStore.MAX_PUZZLE_HASH_BATCH_SIZE]
     first_batch_set = set(first_batch)
 
     resp = await simulator.request_puzzle_state(
@@ -252,7 +252,7 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
     # Try to add the remaining subscriptions
     resp = await simulator.request_puzzle_state(
         wallet_protocol.RequestPuzzleState(
-            puzzle_hashes[CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE :],
+            puzzle_hashes[HintStore.MAX_PUZZLE_HASH_BATCH_SIZE :],
             None,
             genesis_challenge,
             wallet_protocol.CoinStateFilters(False, False, False, uint64(0)),
@@ -648,8 +648,8 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
             assert coin_record.confirmed_block_index <= 10
 
         # Exercise the Python-object guard by lowering MAX_PUZZLE_HASH_BATCH_SIZE.
-        saved = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
-        CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = 2
+        saved = HintStore.MAX_PUZZLE_HASH_BATCH_SIZE
+        HintStore.MAX_PUZZLE_HASH_BATCH_SIZE = 2
         oversized_phs = [bytes32(i.to_bytes(32, "big")) for i in range(5)]
         resp = await simulator.request_puzzle_state(
             wallet_protocol.RequestPuzzleState(
@@ -657,7 +657,7 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
             ),
             peer,
         )
-        CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = saved
+        HintStore.MAX_PUZZLE_HASH_BATCH_SIZE = saved
         assert resp is not None
 
 
@@ -676,7 +676,7 @@ async def sync_puzzle_hashes(
     initial_header_hash: bytes32,
     filters: wallet_protocol.CoinStateFilters,
     subscribe_when_finished: bool = False,
-    max_hashes_in_request: int = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE,
+    max_hashes_in_request: int = HintStore.MAX_PUZZLE_HASH_BATCH_SIZE,
     simulator: FullNodeSimulator,
     peer: WSChiaConnection,
 ) -> AsyncGenerator[PuzzleStateData, None]:

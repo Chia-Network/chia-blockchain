@@ -65,7 +65,7 @@ async def test_basics() -> None:
 async def test_fee_increase() -> None:
     async with DBConnection(db_version=2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        hint_store = await HintStore.create(db_wrapper)
         async with MempoolManager.managed(
             coin_store.get_coin_records,
             hint_store.get_unspent_lineage_info_for_puzzle_hash,
