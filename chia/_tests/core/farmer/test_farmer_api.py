@@ -217,7 +217,7 @@ async def test_signage_point_send_deadline(
             peer_node_id=std_hash(version.encode()),
             send_message=AsyncMock(),
         )
-        for version in ["0.0.36", "0.0.38"]
+        for version in ["0.0.36", "0.0.39"]
     ]
     farmer.server = Mock(spec=ChiaServer)
     farmer.server.all_connections = {peer.peer_node_id: peer for peer in harvesters}
