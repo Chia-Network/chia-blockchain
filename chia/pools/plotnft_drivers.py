@@ -113,7 +113,6 @@ class PlotNFTInnerPuzzle(PuzzleBase):
     self_launcher_id: bytes32 | None = None
     genesis_challenge: bytes32 | None = None
     pool_config: PoolConfig | None = None
-    struct_driver: ClassVar[type[SingletonStruct]] = SingletonStruct
 
     def __post_init__(self) -> None:
         if self.pool_config is not None and (
@@ -131,7 +130,7 @@ class PlotNFTInnerPuzzle(PuzzleBase):
 
     @property
     def singleton_struct(self) -> SingletonStruct:
-        return self.struct_driver(launcher_id=self.launcher_id)
+        return SingletonStruct(launcher_id=self.launcher_id)
 
     @property
     def pooling(self) -> bool:
@@ -162,7 +161,7 @@ class PlotNFTInnerPuzzle(PuzzleBase):
         assert self.genesis_challenge is not None
         return CLAIM_POOL_REWARDS_DELEGATED_PUZZLE.curry(
             self.genesis_challenge[:16],
-            self.struct_driver.singleton_puzzles.singleton_mod_hash,
+            SingletonStruct.singleton_puzzles.singleton_mod_hash,
             self.singleton_struct.struct_hash,
             P2SingletonPuzzle(singleton_id=self.launcher_id).tree_hash,
             self.forward_pool_reward_dpuz.get_tree_hash(),
@@ -392,7 +391,7 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
         remark: Remark | None = None,
     ) -> PlotNFTLaunchResult:
         origin_coin = origin_coins[0]
-        launcher_coin = Coin(origin_coin.name(), cls.struct_driver.singleton_puzzles.singleton_launcher_hash, uint64(1))
+        launcher_coin = Coin(origin_coin.name(), SingletonStruct.singleton_puzzles.singleton_launcher_hash, uint64(1))
         launcher_id = launcher_coin.name()
 
         plotnft_inner_puzzle = PlotNFTInnerPuzzle(
@@ -469,9 +468,9 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
             singleton = pre_uncurry
 
         # examine the singleton level info
-        if singleton.mod != cls.struct_driver.singleton_puzzles.singleton_mod or singleton.curried_args is None:
+        if singleton.mod != SingletonStruct.singleton_puzzles.singleton_mod or singleton.curried_args is None:
             raise GetNextPlotNFTError("Invalid singleton mod for next PlotNFT")
-        if singleton.curried_args[0].at("rr") != cls.struct_driver.singleton_puzzles.singleton_launcher_hash:
+        if singleton.curried_args[0].at("rr") != SingletonStruct.singleton_puzzles.singleton_launcher_hash:
             raise GetNextPlotNFTError("Invalid singleton launcher for next PlotNFT")
 
         launcher_id = bytes32(singleton.curried_args[0].at("rf").as_atom())

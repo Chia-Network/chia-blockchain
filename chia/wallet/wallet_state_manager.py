@@ -1016,7 +1016,7 @@ class WalletStateManager:
             return await VCWallet.identify(self, vc), vc
 
         # Check if the coin is a PlotNFT
-        if uncurried.mod == PlotNFT.singleton_puzzles.singleton_mod:
+        if uncurried.mod == SingletonStruct.singleton_puzzles.singleton_mod:
             plotnft_result = await PlotNFT2Wallet.identify(
                 self, uncurried, coin_spend, coin_state.created_height, sync_scope
             )

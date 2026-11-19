@@ -143,4 +143,5 @@ else
     echo "No venv created yet, please run install.sh."
   fi
 fi
+
 echo "To estimate a timelord on this CPU try './vdf_bench square_asm 400000' for an ips estimate."

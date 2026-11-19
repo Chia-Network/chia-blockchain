@@ -403,7 +403,7 @@ async def test_plotnft_pooling_claim(
         )
 
 
-def test_plotnft_errors() -> None:
+def test_plotnft_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(
         ValueError, match=re.escape("Cannot initialize a PlotNFTPuzzle with an empty pool config and exiting=True")
     ):
@@ -515,18 +515,21 @@ def test_plotnft_errors() -> None:
         )
 
     with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton launcher for next PlotNFT")):
-
-        class BadLauncherStruct(SingletonStruct):
-            singleton_puzzles = SingletonCorePuzzles(
-                singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
+        with monkeypatch.context() as m:
+            m.setattr(
+                SingletonStruct,
+                "singleton_puzzles",
+                SingletonCorePuzzles(
+                    singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
+                ),
             )
-
+            puzzle = Program.to(SingletonStruct.singleton_puzzles.singleton_mod).curry(
+                SingletonStruct(launcher_id=bytes32.zeros).to_program()
+            )
         PlotNFT.get_next_from_coin_spend(
             coin_spend=make_spend(
                 default_coin,
-                Program.to(PlotNFT.struct_driver.singleton_puzzles.singleton_mod).curry(
-                    BadLauncherStruct(launcher_id=bytes32.zeros).program
-                ),
+                puzzle,
                 NilSolution().program,
             ),
             genesis_challenge=bytes32.zeros,
@@ -534,7 +537,7 @@ def test_plotnft_errors() -> None:
 
     def wrap_inner_puz(inner_puz: Program) -> UnknownPuzzle:
         return UnknownPuzzle(
-            known_program=PlotNFT.struct_driver.singleton_puzzles.singleton_mod.curry(
+            known_program=SingletonStruct.singleton_puzzles.singleton_mod.curry(
                 SingletonStruct(launcher_id=bytes32.zeros).program, inner_puz
             )
         )
