@@ -1264,7 +1264,7 @@ async def test_new_transaction_and_mempool(
     for i in range(1, len(puzzle_hashes), group_size):
         phs_to_use = [puzzle_hashes[i + j] for j in range(group_size) if (i + j) < len(puzzle_hashes)]
         coin_records = [
-            (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
+            (await full_node_1.full_node.hint_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
             for puzzle_hash in phs_to_use
         ]
 
@@ -4896,7 +4896,7 @@ async def test_wallet_request_transaction(one_node: SimulatorsAndWalletsServices
     wallet_tool = WalletTool(full_node_api.full_node.constants)
     ph = wallet_tool.get_new_puzzlehash()
     await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=ph, guarantee_transaction_blocks=True)
-    coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+    coin_records = await full_node_api.full_node.hint_store.get_coin_records_by_puzzle_hash(False, ph)
     sb = wallet_tool.generate_signed_transaction(uint64(100), ph, coin_records[0].coin)
     sb_name = sb.name()
     status, err = await full_node_api.full_node.add_transaction(sb, sb_name, test=True)
