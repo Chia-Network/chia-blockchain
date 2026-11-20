@@ -20,7 +20,7 @@ from chia.plotting.prover import PlotVersion, V1Prover, V2Prover, V2Quality
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.harvester_protocol import PartialProofsData, Plot, Plot3, PlotSyncResponse
+from chia.protocols.harvester_protocol import PartialProofsData, Plot, Plot2, PlotSyncResponse
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
@@ -572,37 +572,37 @@ class HarvesterAPI:
     @metadata.request(peer_required=True)
     async def request_plots(self, _: harvester_protocol.RequestPlots, peer: WSChiaConnection) -> Message:
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
-        if harvester_protocol.supports_new_plot_serialization(peer.protocol_version):
-            plots_response3: list[Plot3] = []
+        if harvester_protocol.supports_plot_groups(peer.protocol_version):
+            plots_response2: list[Plot2] = []
             for plot in plots:
-                plots_response3.append(
-                    Plot3(
-                        plot["filename"],
-                        plot["size"],
-                        plot["plot_id"],
-                        plot["pool_public_key"],
-                        plot["pool_contract_puzzle_hash"],
-                        plot["plot_public_key"],
-                        plot["file_size"],
-                        plot["time_modified"],
-                        plot["compression_level"],
-                        plot["plot_index"],
-                        plot["meta_group"],
-                        plot["group_size"],
+                plots_response2.append(
+                    Plot2(
+                        filename=plot["filename"],
+                        size=plot["size"],
+                        plot_id=plot["plot_id"],
+                        pool_public_key=plot["pool_public_key"],
+                        pool_contract_puzzle_hash=plot["pool_contract_puzzle_hash"],
+                        plot_public_key=plot["plot_public_key"],
+                        file_size=plot["file_size"],
+                        time_modified=plot["time_modified"],
+                        compression_level=plot["compression_level"],
+                        meta_group=plot["meta_group"],
+                        group_plot_id=plot["group_plot_id"],
+                        strength=plot["strength"],
+                        group_size=plot["group_size"],
                     )
                 )
-            if harvester_protocol.supports_plot_groups(peer.protocol_version):
-                response3 = harvester_protocol.RespondPlots3(
-                    plots_response3, failed_to_open_filenames, no_key_filenames
-                )
-                return make_msg(ProtocolMessageTypes.respond_plots3, response3)
-            response2 = harvester_protocol.RespondPlots2(
-                [plot.to_plot2() for plot in plots_response3], failed_to_open_filenames, no_key_filenames
-            )
+            response2 = harvester_protocol.RespondPlots2(plots_response2, failed_to_open_filenames, no_key_filenames)
             return make_msg(ProtocolMessageTypes.respond_plots2, response2)
+
+        if not harvester_protocol.supports_legacy_plot_serialization(peer.protocol_version):
+            raise ValueError(f"Unsupported farmer protocol version: {peer.protocol_version}")
 
         plots_response: list[Plot] = []
         for plot in plots:
+            # The 0.0.37 Plot schema cannot describe V2 plot groups.
+            if plot["strength"] is not None:
+                continue
             plots_response.append(
                 Plot(
                     plot["filename"],

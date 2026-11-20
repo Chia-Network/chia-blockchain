@@ -54,7 +54,9 @@ class WalletSigner:
 
     async def sum_hint_for_pubkey(self, pk: bytes) -> SumHint | None:
         pk_parsed: G1Element = G1Element.from_bytes(pk)
-        dr = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash_for_synthetic_public_key(pk_parsed))
+        dr = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+            puzzle_hash_for_synthetic_public_key(pk_parsed)
+        )
         if dr is None:
             return None
         return SumHint(

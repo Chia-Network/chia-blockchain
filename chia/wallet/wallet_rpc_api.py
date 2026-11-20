@@ -90,6 +90,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMet
 from chia.wallet.wallet_coin_store import CoinRecordOrder, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
+from chia.wallet.wallet_puzzle_store import PuzzleHashWindowTarget
 from chia.wallet.wallet_request_types import (
     Addition,
     AddKey,
@@ -1656,14 +1657,13 @@ class WalletRpcApi:
             coin_records: list[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
                 **kwargs
             )
+            missing_coins = [coin_id for coin_id in request.names if coin_id not in [cr.name for cr in coin_records]]
+            if len(missing_coins) > 0:
+                if not request.allow_missing:
+                    raise ValueError(f"Coin ID's: {['0x' + coin_id.hex() for coin_id in missing_coins]} not found.")
+                log.warning(f"Coin IDs not found yet: {['0x' + coin_id.hex() for coin_id in missing_coins]}")
 
-            missed_coins: list[str] = [
-                "0x" + c_id.hex() for c_id in request.names if c_id not in [cr.name for cr in coin_records]
-            ]
-            if missed_coins:
-                raise ValueError(f"Coin ID's: {missed_coins} not found.")
-
-        return GetCoinRecordsByNamesResponse(coin_records=coin_records)
+        return GetCoinRecordsByNamesResponse(coin_records=coin_records, missing_coins=missing_coins)
 
     async def get_puzzle_and_solution(self, request: GetPuzzleAndSolution) -> GetPuzzleAndSolutionResponse:
         coin_record = await self.service.wallet_state_manager.coin_store.get_coin_record(request.coin_name)
@@ -1711,7 +1711,7 @@ class WalletRpcApi:
         # to preserve the current last used index, so we call create_more_puzzle_hashes with
         # mark_existing_as_used=False
         result = await self.service.wallet_state_manager.create_more_puzzle_hashes(
-            from_zero=False, mark_existing_as_used=False, up_to_index=request.index, num_additional_phs=0
+            target=PuzzleHashWindowTarget(total_generated=request.index, unused_after_maximum_used=0),
         )
         await result.commit(self.service.wallet_state_manager)
 

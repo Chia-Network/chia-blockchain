@@ -26,7 +26,7 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools import pool_config
-from chia.pools.plotnft_drivers import PlotNFT
+from chia.pools.plotnft_drivers import PlotNFT, SingletonStruct
 from chia.pools.pool_puzzles import get_most_recent_singleton_coin_from_coin_spend, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols.outbound_message import NodeType
@@ -68,12 +68,7 @@ from chia.wallet.derive_keys import (
 )
 from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, did_recovery_is_nil
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet.did_wallet_puzzles import (
-    DID_INNERPUZ_MOD,
-    did_program_to_metadata,
-    match_did_puzzle,
-    metadata_to_program,
-)
+from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, DIDMetadata, DIDRecoveryPuzzle
 from chia.wallet.fungibility_manager import FungibilityManager
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet import nft_puzzle_utils
@@ -89,6 +84,8 @@ from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import match_singleton_puzzle
+from chia.wallet.puzzles.standard_puzzle_drivers import StandardPuzzle
 from chia.wallet.remote_wallet.remote_coin_store import RemoteCoinStore
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
@@ -137,7 +134,7 @@ from chia.wallet.wallet_protocol import (
     MaxSendQuantityWallet,
     WalletProtocol,
 )
-from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
+from chia.wallet.wallet_puzzle_store import PuzzleHashWindow, PuzzleHashWindowTarget, WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_signer import WalletSigner
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -406,7 +403,7 @@ class WalletStateManager:
         return master_pk_to_wallet_pk_unhardened(self.root_pubkey, index)
 
     async def get_private_key(self, puzzle_hash: bytes32) -> PrivateKey:
-        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
         if record is None:
             raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
         if record.hardened:
@@ -414,7 +411,7 @@ class WalletStateManager:
         return master_sk_to_wallet_sk_unhardened(self.get_master_private_key(), record.index)
 
     async def get_public_key(self, puzzle_hash: bytes32) -> bytes:
-        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
         if record is None:
             raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
         if isinstance(record._pubkey, bytes):
@@ -460,10 +457,7 @@ class WalletStateManager:
 
     async def create_more_puzzle_hashes(
         self,
-        from_zero: bool = False,
-        mark_existing_as_used: bool = True,
-        up_to_index: uint32 | None = None,
-        num_additional_phs: int | None = None,
+        target: PuzzleHashWindowTarget = PuzzleHashWindowTarget(),
         previous_result: CreateMorePuzzleHashesResult | None = None,
         _commit_previous_result: bool = True,
     ) -> CreateMorePuzzleHashesResult:
@@ -474,67 +468,77 @@ class WalletStateManager:
         try:
             async with self.puzzle_hash_db_writer():
                 if previous_result is not None:
-                    if previous_result.mark_existing_as_used is not mark_existing_as_used:
-                        raise ValueError(
-                            "Called `create_more_puzzle_hashes` with a previous result and different configuration"
-                        )
                     if _commit_previous_result:
                         await previous_result.commit(self)
                 targets = list(self.wallets.keys())
                 self.log.debug("Target wallets to generate puzzle hashes for: %r", targets)
-                unused: uint32 | None = (
-                    up_to_index if up_to_index is not None else await self.puzzle_store.get_unused_derivation_path()
-                )
-                if unused is None:
-                    # This handles the case where the database has entries but they have all been used
-                    unused = await self.puzzle_store.get_last_derivation_path()
-                    self.log.debug("Tried finding unused: %s", unused)
-                    if unused is None:
-                        # This handles the case where the database is empty
-                        unused = uint32(0)
-                    else:
-                        # The first unused will be the one after the last used one we got above
-                        unused = uint32(unused + 1)
-
-                self.log.debug(f"Requested to generate puzzle hashes to at least index {unused}")
                 start_t = time.time()
-                to_generate = num_additional_phs if num_additional_phs is not None else self.initial_num_public_keys
-
-                # iterate all wallets that need derived keys and establish the start
-                # index for all of them
-                start_index_by_wallet: dict[uint32, int] = {}
-                last_index = unused + to_generate
+                windows: dict[uint32, PuzzleHashWindow | None] = {}
                 for wallet_id in targets:
                     target_wallet = self.wallets[wallet_id]
                     if not target_wallet.require_derivation_paths():
                         self.log.debug("Skipping wallet %s as no derivation paths required", wallet_id)
                         continue
-                    if from_zero:
-                        start_index_by_wallet[wallet_id] = 0
-                        continue
+                    windows[wallet_id] = await self.puzzle_store.get_window_statistics(wallet_id)
+                cushion = (
+                    target.unused_after_maximum_used
+                    if target.unused_after_maximum_used is not None
+                    else self.initial_num_public_keys
+                )
+                # Keep wallets aligned to the shared used frontier + cushion, but never shorter than
+                # the highest index already generated on any wallet (e.g. after extend_derivation_index).
+                used_indexes = [
+                    window.maximum_used_index
+                    for window in windows.values()
+                    if window is not None and window.maximum_used_index is not None
+                ]
+                generated_indexes = [
+                    window.maximum_generated_index
+                    for window in windows.values()
+                    if window is not None and window.maximum_generated_index is not None
+                ]
+                generate_to = (
+                    target.total_generated
+                    if target.total_generated is not None
+                    else (max(used_indexes) if used_indexes else 0)
+                )
+                last_index = max(
+                    generate_to + cushion,
+                    max(generated_indexes) if generated_indexes else 0,
+                )
+
+                indexes_by_wallet: dict[uint32, list[int]] = {}
+                for wallet_id, current_window in windows.items():
+                    self.log.debug(
+                        f"Requested to generate puzzle hashes to at least index {generate_to} "
+                        f"for wallet_id: {wallet_id}"
+                    )
+                    indexes_by_wallet[wallet_id] = []
+                    if current_window is not None:
+                        indexes_by_wallet[wallet_id].extend(current_window.gaps)
                     last: uint32 | None = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
                     if last is not None:
                         if last >= last_index:
                             self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {last_index}")
                             continue
-                        start_index_by_wallet[wallet_id] = last
+                        start_index = last + 1
                     else:
-                        start_index_by_wallet[wallet_id] = 0
+                        start_index = 0
+                    indexes_by_wallet[wallet_id].extend(range(start_index, last_index + 1))
 
-                if len(start_index_by_wallet) == 0:
+                if not any(indexes_by_wallet.values()):
                     raise PurposefulAbort(
                         CreateMorePuzzleHashesResult(
                             derivation_paths=[] if previous_result is None else previous_result.derivation_paths,
-                            mark_existing_as_used=mark_existing_as_used,
-                            unused=unused,
+                            unused=generate_to,
                             new_unhardened_keys=False,
                             last_index=last_index,
                         )
                     )
 
-                lowest_start_index = min(start_index_by_wallet.values())
+                all_indexes = {idx for idxs in indexes_by_wallet.values() for idx in idxs}
 
-                # now derive the keysfrom lowest_start_index to last_index
+                # now derive the keys from lowest_start_index to last_index
                 # these maps derivation index to public key
                 hardened_keys: dict[int, G1Element] = {}
                 unhardened_keys: dict[int, G1Element] = {}
@@ -542,67 +546,53 @@ class WalletStateManager:
                 if self.private_key is not None:
                     # Hardened
                     intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
-                    for index in range(lowest_start_index, last_index + 1):
+                    for index in all_indexes:
                         hardened_keys[index] = _derive_path(intermediate_sk, [index]).get_g1()
 
                 # Unhardened
                 intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.root_pubkey)
-                for index in range(lowest_start_index, last_index + 1):
+                for index in all_indexes:
                     unhardened_keys[index] = _derive_pk_unhardened(intermediate_pk_un, [index])
 
                 derivation_paths: list[DerivationRecord] = (
                     [] if previous_result is None else previous_result.derivation_paths
                 )
-                for wallet_id, start_index in start_index_by_wallet.items():
+                for wallet_id, indexes in indexes_by_wallet.items():
                     target_wallet = self.wallets[wallet_id]
                     assert target_wallet.type() != WalletType.POOLING_WALLET
-                    assert start_index < last_index
+                    if indexes == []:
+                        continue
 
                     creating_msg = (
-                        f"Creating puzzle hashes from {start_index} to {last_index} for wallet_id: {wallet_id}"
+                        f"Creating puzzle hashes from {min(indexes)} to {max(indexes)} for wallet_id: {wallet_id}"
                     )
                     self.log.info(f"Start: {creating_msg}")
-                    for index in range(start_index, last_index + 1):
-                        pubkey: G1Element | None = hardened_keys.get(index)
-                        if pubkey is not None:
-                            # Hardened
-                            puzzlehash: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
-                            self.log.debug(
-                                f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}"
-                            )
-                            derivation_paths.append(
-                                DerivationRecord(
-                                    uint32(index),
-                                    puzzlehash,
-                                    pubkey,
-                                    target_wallet.type(),
-                                    uint32(target_wallet.id()),
-                                    True,
+                    for index in indexes:
+                        for pubkey, hardened in zip(
+                            [hardened_keys.get(index), unhardened_keys.get(index)], [True, False]
+                        ):
+                            if pubkey is not None:
+                                # Hardened
+                                puzzlehash: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
+                                self.log.debug(
+                                    f"{'un' if not hardened else ''}hardened puzzle at index {index} "
+                                    f"wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}"
                                 )
-                            )
-                        # Unhardened
-                        pubkey = unhardened_keys.get(index)
-                        assert pubkey is not None
-                        puzzlehash_unhardened: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
-                        self.log.debug(
-                            f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
-                        )
-                        derivation_paths.append(
-                            DerivationRecord(
-                                uint32(index),
-                                puzzlehash_unhardened,
-                                pubkey,
-                                target_wallet.type(),
-                                uint32(target_wallet.id()),
-                                False,
-                            )
-                        )
+                                derivation_paths.append(
+                                    DerivationRecord(
+                                        uint32(index),
+                                        puzzlehash,
+                                        pubkey,
+                                        target_wallet.type(),
+                                        uint32(target_wallet.id()),
+                                        hardened,
+                                    )
+                                )
                     self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
                 raise PurposefulAbort(
                     CreateMorePuzzleHashesResult(
                         derivation_paths=derivation_paths,
-                        mark_existing_as_used=mark_existing_as_used,
-                        unused=unused,
+                        unused=generate_to,
                         new_unhardened_keys=(len(hardened_keys) > 0),
                         last_index=last_index,
                     )
@@ -680,16 +670,19 @@ class WalletStateManager:
                     raise ValueError(f"Missing derivation '{unused}' for wallet id '{wallet_id}' (hardened={hardened})")
 
                 # Set this key to used so we never use it again
-                await self.puzzle_store.set_used_up_to(record.index)
+                await self.puzzle_store.mark_used(record.index)
 
                 # Create more puzzle hashes / keys
                 create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes(
                     previous_result=create_more_puzzle_hashes_result,
-                    up_to_index=record.index,
                     _commit_previous_result=False,
                 )
                 await create_more_puzzle_hashes_result.commit(self)
-                raise PurposefulAbort(GetUnusedDerivationRecordResult(record, create_more_puzzle_hashes_result))
+                used_indices = [] if previous_result is None else list(previous_result.used_indices)
+                used_indices.append(record.index)
+                raise PurposefulAbort(
+                    GetUnusedDerivationRecordResult(record, create_more_puzzle_hashes_result, used_indices)
+                )
         except PurposefulAbort as e:
             return cast(GetUnusedDerivationRecordResult, e.obj)
 
@@ -984,27 +977,26 @@ class WalletStateManager:
             return await NFTWallet.identify(self, nft_data, sync_scope), nft_data
 
         # Check if the coin is a DID
-        did_curried_args = (
-            match_did_puzzle(uncurried.mod, Program.to(uncurried.curried_args))
-            if uncurried.mod is not None and uncurried.curried_args is not None
-            else None
-        )
-        if did_curried_args is not None and coin_state.coin.amount % 2 == 1:
-            assert uncurried.curried_args is not None
-            p2_puzzle, recovery_list_hash, num_verification, _, metadata = did_curried_args
-            did_data: DIDCoinData = DIDCoinData(
-                p2_puzzle,
-                bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
-                uint16(num_verification.as_int()),
-                uncurried.curried_args[0],
-                metadata,
-                get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
-                parent_coin_state,
-            )
-            return (
-                await DIDWallet.identify(self, sync_scope, did_data, parent_coin_state, coin_state, coin_spend, peer),
-                did_data,
-            )
+        is_match, curried_args = match_singleton_puzzle(uncurried)
+        if is_match:
+            singleton_struct, inner_puzzle = curried_args
+            did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
+            if did_match is not None and coin_state.coin.amount % 2 == 1:
+                did_data: DIDCoinData = DIDCoinData(
+                    did_match.inner_puzzle.program,
+                    did_match.recovery_list.ids_hash,
+                    uint16(did_match.num_of_backup_ids_needed),
+                    SingletonStruct(launcher_id=bytes32(singleton_struct.at("rf").as_atom())).to_program(),
+                    did_match.metadata.as_program(),
+                    did_match.program,
+                    parent_coin_state,
+                )
+                return (
+                    await DIDWallet.identify(
+                        self, sync_scope, did_data, parent_coin_state, coin_state, coin_spend, peer
+                    ),
+                    did_data,
+                )
 
         # Check if the coin is clawback
         clawback_coin_data = match_clawback_puzzle(uncurried, coin_spend.puzzle_reveal, coin_spend.solution)
@@ -1110,14 +1102,12 @@ class WalletStateManager:
             assert len(did_coin) == 1 and did_coin[0].spent_height is not None
             did_spend = await fetch_coin_spend_for_coin_state(did_coin[0], peer)
             uncurried = UnknownPuzzle(known_program=did_spend.puzzle_reveal)
-            did_curried_args = (
-                match_did_puzzle(uncurried.mod, Program.to(uncurried.curried_args))
-                if uncurried.mod is not None and uncurried.curried_args is not None
-                else None
-            )
-            if did_curried_args is not None:
-                assert uncurried.curried_args is not None
-                minter_did = bytes32(uncurried.curried_args[0].at("rf").as_atom())
+            is_match, curried_args = match_singleton_puzzle(uncurried)
+            if is_match:
+                singleton_struct, inner_puzzle = curried_args
+                did_curried_args = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
+                if did_curried_args is not None:
+                    minter_did = bytes32(singleton_struct.at("rf").as_atom())
         return minter_did
 
     async def _add_coin_state(
@@ -1213,9 +1203,8 @@ class WalletStateManager:
             derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
         if derivation_index is not None:
             ph_to_index_cache.put(coin_state.coin.puzzle_hash, derivation_index)
-            if derivation_index > used_up_to:
-                await self.puzzle_store.set_used_up_to(derivation_index)
-                used_up_to = derivation_index
+            await self.puzzle_store.mark_used(derivation_index)
+            used_up_to = derivation_index
 
         if coin_state.created_height is None:
             # A CoinState with created_height=None means this coin was
@@ -2328,20 +2317,16 @@ class WalletStateManager:
         peer = self.wallet_node.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, latest)
         uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
-        curried_args = (
-            match_did_puzzle(uncurried.mod, Program.to(uncurried.curried_args))
-            if uncurried.mod is not None and uncurried.curried_args is not None
-            else None
-        )
-        if curried_args is None:
+        is_match, curried_args = match_singleton_puzzle(uncurried)
+        if not is_match:
+            raise ValueError("The coin is not a singleton.")
+        singleton_struct, inner_puzzle = curried_args
+        did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
+        if did_match is None:
             raise ValueError("The coin is not a DID.")
-        p2_puzzle, recovery_list_hash, num_verification, _, metadata = curried_args
-        recovery_list_hash_bytes = recovery_list_hash.as_atom()
-        assert uncurried.curried_args is not None
-        launcher_id = bytes32(uncurried.curried_args[0].at("rf").as_atom())
-        uncurried_p2 = UnknownPuzzle(known_program=p2_puzzle)
-        assert uncurried_p2.curried_args is not None
-        (public_key,) = uncurried_p2.curried_args
+        uncurried_p2 = StandardPuzzle.match(unknown_puzzle=did_match.inner_puzzle)
+        if uncurried_p2 is None:
+            raise ValueError("Do not recognize DID custody")
         memos = compute_memos(WalletSpendBundle([coin_spend], G2Element()))
         hints = []
         coin_memos = memos.get(coin_state.coin.name())
@@ -2350,13 +2335,13 @@ class WalletStateManager:
                 hints.append(memo)
 
         return ManualDIDSearchResults(
-            launcher_id=launcher_id,
+            launcher_id=bytes32(singleton_struct.at("rf").as_atom()),
             latest_coin=coin_state.coin.name(),
-            p2_puzzle_hash=p2_puzzle.get_tree_hash(),
-            public_key=G1Element.from_bytes(public_key.as_atom()),
-            recovery_list_hash=bytes32(recovery_list_hash_bytes) if recovery_list_hash_bytes != b"" else None,
-            num_verification=uint16(num_verification.as_int()),
-            metadata=did_program_to_metadata(metadata),
+            p2_puzzle_hash=uncurried_p2.tree_hash,
+            public_key=uncurried_p2.synthetic_public_key,
+            recovery_list_hash=did_match.recovery_list.ids_hash,
+            num_verification=uint16(did_match.num_of_backup_ids_needed),
+            metadata=did_match.metadata,
             full_puzzle=Program.from_serialized(coin_spend.puzzle_reveal),
             solution=Program.from_serialized(coin_spend.solution),
             hints=hints,
@@ -2428,22 +2413,19 @@ class WalletStateManager:
         peer = self.wallet_node.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
         uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
-        assert uncurried.curried_args is not None
-        singleton_struct = uncurried.curried_args[0]
-        curried_args = (
-            match_did_puzzle(uncurried.mod, Program.to(uncurried.curried_args)) if uncurried.mod is not None else None
-        )
-        if curried_args is None:
+        is_match, curried_args = match_singleton_puzzle(uncurried)
+        if not is_match:
             raise ValueError("The coin is not a DID.")
-        p2_puzzle, recovery_list_hash, num_verification, _, metadata = curried_args
-        num_verification_int: uint16 | None = uint16(num_verification.as_int())
-        assert num_verification_int is not None
+        singleton_struct, inner_puzzle = curried_args
+        did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
+        if did_match is None:
+            raise ValueError("The coin is not a DID.")
         did_data: DIDCoinData = DIDCoinData(
-            p2_puzzle,
-            bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
-            num_verification_int,
+            did_match.inner_puzzle.program,
+            did_match.recovery_list.ids_hash,
+            uint16(did_match.num_of_backup_ids_needed),
             singleton_struct,
-            metadata,
+            did_match.metadata.as_program(),
             get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
             coin_state,
         )
@@ -2459,7 +2441,9 @@ class WalletStateManager:
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
         if derivation_record is None:
             # This is an invalid DID, check if we are owner
-            derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle.get_tree_hash())
+            derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+                did_match.inner_puzzle.tree_hash
+            )
 
         launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         if derivation_record is None:
@@ -2467,11 +2451,15 @@ class WalletStateManager:
         else:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             did_puzzle = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+                our_inner_puzzle,
+                did_match.recovery_list.ids_hash,
+                did_match.num_of_backup_ids_needed,
+                singleton_struct,
+                did_match.metadata.as_program(),
             )
             full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, NIL_TREEHASH, uint64(0), singleton_struct, metadata
+                our_inner_puzzle, NIL_TREEHASH, uint64(0), singleton_struct, did_match.metadata.as_program()
             )
             # Check if we have the DID wallet
             did_wallet: DIDWallet | None = None
@@ -2483,6 +2471,9 @@ class WalletStateManager:
                         break
 
             full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launcher_id)
+            num_verification = did_match.num_of_backup_ids_needed
+            recovery_list_hash = did_match.recovery_list.ids_hash
+            metadata = did_match.metadata
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 # It's unclear whether this path is ever reached, and there is no coverage in the DID wallet tests
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
@@ -2497,14 +2488,23 @@ class WalletStateManager:
                     did_puzzle = did_wallet.did_info.current_inner
                 else:
                     # Try override
-                    if override_recovery_list_hash is not None:
-                        recovery_list_hash = Program.from_bytes(override_recovery_list_hash)
-                    if override_num_verification is not None:
-                        num_verification_int = override_num_verification
-                    if override_metadata is not None:
-                        metadata = metadata_to_program(override_metadata)
+                    num_verification = (
+                        uint64(override_num_verification)
+                        if override_num_verification is not None
+                        else did_match.num_of_backup_ids_needed
+                    )
+                    recovery_list_hash = (
+                        override_recovery_list_hash
+                        if override_recovery_list_hash is not None
+                        else did_match.recovery_list.ids_hash
+                    )
+                    metadata = DIDMetadata(override_metadata) if override_metadata is not None else did_match.metadata
                     did_puzzle = DID_INNERPUZ_MOD.curry(
-                        our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+                        our_inner_puzzle,
+                        recovery_list_hash,
+                        num_verification,
+                        singleton_struct,
+                        metadata.as_program(),
                     )
                     full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
                     matched = True
@@ -2518,7 +2518,11 @@ class WalletStateManager:
                         while derivation_record is not None:
                             our_inner_puzzle = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
                             did_puzzle = DID_INNERPUZ_MOD.curry(
-                                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+                                our_inner_puzzle,
+                                recovery_list_hash,
+                                num_verification,
+                                singleton_struct,
+                                metadata.as_program(),
                             )
                             full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
                             if full_puzzle.get_tree_hash() == coin_state.coin.puzzle_hash:
@@ -2546,7 +2550,7 @@ class WalletStateManager:
                     self.main_wallet,
                     launcher_coin.coin,
                     did_puzzle,
-                    coin_spend,
+                    Program.from_serialized(coin_spend.solution),
                     f"DID {encode_puzzle_hash(launcher_id, AddressType.DID.hrp(self.config))}",
                 )
             else:
@@ -2556,8 +2560,8 @@ class WalletStateManager:
                     full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
                     inner_solution: Program = full_solution.rest().rest().first()
                     recovery_list: list[bytes32] = []
-                    backup_required: int = num_verification.as_int()
-                    if not did_recovery_is_nil(recovery_list_hash):
+                    backup_required: int = num_verification
+                    if not did_recovery_is_nil(Program.to(recovery_list_hash)):
                         try:
                             for did in inner_solution.rest().rest().rest().rest().rest().as_python():
                                 recovery_list.append(did[0])
@@ -2574,7 +2578,7 @@ class WalletStateManager:
                         None,
                         None,
                         False,
-                        json.dumps(did_program_to_metadata(metadata)),
+                        json.dumps(metadata),
                     )
                     await did_wallet.save_info(did_info)
                     await self.update_wallet_puzzle_hashes(did_wallet.wallet_info.id)

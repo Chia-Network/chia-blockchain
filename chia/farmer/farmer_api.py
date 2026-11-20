@@ -23,7 +23,6 @@ from chia.protocols.harvester_protocol import (
     PlotSyncPathList,
     PlotSyncPlotList,
     PlotSyncPlotList2,
-    PlotSyncPlotList3,
     PlotSyncStart,
     PoolDifficulty,
     SignatureRequestSourceData,
@@ -663,6 +662,11 @@ class FarmerAPI:
 
     @metadata.request()
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint) -> None:
+        # Reserve one SP interval for lookups and the proof/signature exchange before
+        # the earliest infusion point. This bounds local queue time, not chain validity.
+        constants = self.farmer.constants
+        sp_interval_seconds = constants.SUB_SLOT_TIME_TARGET / constants.NUM_SPS_SUB_SLOT
+        expires_at = time.monotonic() + max(0, constants.NUM_SP_INTERVALS_EXTRA - 1) * sp_interval_seconds
         if new_signage_point.challenge_chain_sp not in self.farmer.sps:
             self.farmer.sps[new_signage_point.challenge_chain_sp] = []
         if new_signage_point in self.farmer.sps[new_signage_point.challenge_chain_sp]:
@@ -732,13 +736,13 @@ class FarmerAPI:
                 return conn.protocol_version <= Version("0.0.36")
 
             def new_harvesters(conn: WSChiaConnection) -> bool:
-                return conn.protocol_version >= Version("0.0.38")
+                return conn.protocol_version >= Version("0.0.39")
 
             msg1 = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message1)
-            await self.farmer.server.send_to_all_if([msg1], NodeType.HARVESTER, old_harvesters)
+            await self.farmer.server.send_to_all_if([msg1], NodeType.HARVESTER, old_harvesters, expires_at=expires_at)
 
             msg2 = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message2)
-            await self.farmer.server.send_to_all_if([msg2], NodeType.HARVESTER, new_harvesters)
+            await self.farmer.server.send_to_all_if([msg2], NodeType.HARVESTER, new_harvesters, expires_at=expires_at)
         except Exception as exception:
             # Remove here, as we want to reprocess the SP should it be sent again
             self.farmer.sps[new_signage_point.challenge_chain_sp].remove(new_signage_point)
@@ -840,10 +844,6 @@ class FarmerAPI:
         self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
 
     @metadata.request(peer_required=True)
-    async def respond_plots3(self, _: harvester_protocol.RespondPlots3, peer: WSChiaConnection) -> None:
-        self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
-
-    @metadata.request(peer_required=True)
     async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started(message)
 
@@ -854,10 +854,6 @@ class FarmerAPI:
     @metadata.request(peer_required=True)
     async def plot_sync_loaded2(self, message: PlotSyncPlotList2, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded2(message)
-
-    @metadata.request(peer_required=True)
-    async def plot_sync_loaded3(self, message: PlotSyncPlotList3, peer: WSChiaConnection) -> None:
-        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded3(message)
 
     @metadata.request(peer_required=True)
     async def plot_sync_removed(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:

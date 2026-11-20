@@ -1950,9 +1950,9 @@ async def test_new_unfinished_block(
         await full_node_1.full_node.add_end_of_sub_slot(sub_slot, peer)
     await full_node_1.full_node.add_unfinished_block(unf, None)
 
-    _, _, msg = peer.outgoing_queue.get_nowait()
+    _, _, msg, _ = peer.outgoing_queue.get_nowait()
     assert msg.type == ProtocolMessageTypes.new_peak.value
-    _, _, msg = peer.outgoing_queue.get_nowait()
+    _, _, msg, _ = peer.outgoing_queue.get_nowait()
     if peer_version == "0.0.35":
         assert msg.type == ProtocolMessageTypes.new_unfinished_block.value
         assert msg.data == bytes(fnp.NewUnfinishedBlock(unf.partial_hash))
@@ -4856,6 +4856,35 @@ async def test_node_type_message_typechecking(
     type_mismatch = node_type not in {NodeType.WALLET, NodeType.FULL_NODE}
     await time_out_assert(5, lambda: wsc.closed, type_mismatch)
     await time_out_assert(5, lambda: "1.3.3.7" in server.banned_peers, type_mismatch)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_wallet_request_transaction(one_node: SimulatorsAndWalletsServices, self_hostname: str) -> None:
+    """
+    Minimal check that a WALLET-type connection may send `request_transaction`: it gets the mempool
+    spend bundle back and isn't disconnected. The CHIP-0026 flow that leads to this request is
+    covered end to end in `test_new_wallet_protocol.py::test_request_mempool_transaction_after_update`.
+    """
+    [full_node_service], _, _ = one_node
+    full_node_api = full_node_service._api
+    wallet_tool = WalletTool(full_node_api.full_node.constants)
+    ph = wallet_tool.get_new_puzzlehash()
+    await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=ph, guarantee_transaction_blocks=True)
+    coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+    sb = wallet_tool.generate_signed_transaction(uint64(100), ph, coin_records[0].coin)
+    sb_name = sb.name()
+    status, err = await full_node_api.full_node.add_transaction(sb, sb_name, test=True)
+    assert err is None
+    assert status == MempoolInclusionStatus.SUCCESS
+    wsc, peer_id = await add_dummy_connection_wsc(
+        full_node_api.server, self_hostname, 1337, NodeType.WALLET, wait_for_peer_added=False
+    )
+    await time_out_assert(5, lambda: peer_id in full_node_api.server.all_connections)
+    response = await wsc.call_api(FullNodeAPI.request_transaction, fnp.RequestTransaction(sb_name), timeout=5)
+    assert response == fnp.RespondTransaction(sb)
+    assert not wsc.closed
+    assert peer_id in full_node_api.server.all_connections
 
 
 @pytest.mark.parametrize(

@@ -42,7 +42,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash
 from chia.wallet.puzzles.puzzle_drivers import P2Conditions, UnknownPuzzle, UnknownSolution
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.vc_wallet.vc_drivers import create_revocation_layer
+from chia.wallet.vc_wallet.vc_drivers import RevocationLayer
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_node import WalletNode
@@ -74,7 +74,10 @@ async def mint_cat(
     ) as action_scope:
         inner_puzzle_hash = await action_scope.get_puzzle_hash(environment.wallet_state_manager)
         if wallet_type is RCATWallet:
-            wrapped_inner_puzzle_hash = create_revocation_layer(bytes32.zeros, inner_puzzle_hash).get_tree_hash()
+            wrapped_inner_puzzle_hash = RevocationLayer(
+                hidden_puzzle=UnknownPuzzle(known_tree_hash=bytes32.zeros),
+                inner_puzzle=UnknownPuzzle(known_tree_hash=inner_puzzle_hash),
+            ).tree_hash
             extra_args: Any = (bytes32.zeros,)
         else:
             wrapped_inner_puzzle_hash = inner_puzzle_hash
@@ -1122,7 +1125,10 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
         for record in spendable:
             spendable_name_set.add(record.coin.name())
         if wallet_type is RCATWallet:
-            inner_puzzle = create_revocation_layer(bytes32.zeros, cat_2_hash)
+            inner_puzzle = RevocationLayer(
+                hidden_puzzle=UnknownPuzzle(known_tree_hash=bytes32.zeros),
+                inner_puzzle=UnknownPuzzle(known_tree_hash=cat_2_hash),
+            ).program
         else:
             inner_puzzle = cat_2
         puzzle_hash = construct_cat_puzzle(CAT_MOD, cat_wallet.tail_hash, inner_puzzle).get_tree_hash()
@@ -1401,6 +1407,8 @@ async def test_cat_hint(wallet_environments: WalletTestFramework, wallet_type: t
         {
             "num_environments": 1,
             "blocks_needed": [1],
+            # The manual derivation record entry makes this awkward
+            "reuse_puzhash": False,
             "config_overrides": {"automatically_add_unknown_cats": True},
         },
     ],
@@ -1424,7 +1432,10 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
     pubkey_unhardened = master_pk_to_wallet_pk_unhardened(wsm.root_pubkey, uint32(100000000))
     inner_puzhash = puzzle_hash_for_pk(pubkey_unhardened)
     if wallet_type is RCATWallet:
-        inner_puzhash = create_revocation_layer(bytes32.zeros, inner_puzhash).get_tree_hash()
+        inner_puzhash = RevocationLayer(
+            hidden_puzzle=UnknownPuzzle(known_tree_hash=bytes32.zeros),
+            inner_puzzle=UnknownPuzzle(known_tree_hash=inner_puzhash),
+        ).tree_hash
     puzzlehash_unhardened = construct_cat_puzzle(
         CAT_MOD, Program.NIL.get_tree_hash(), inner_puzhash
     ).get_tree_hash_precalc(inner_puzhash)
@@ -1769,14 +1780,10 @@ async def test_cat_puzzle_hashes(wallet_environments: WalletTestFramework, walle
     assert next_derivation_index is not None
     assert current_derivation_index.index < next_derivation_index.index
 
-    # Test a weird edge case where a new puzzle hash needs to get generated
-    # First, we reset the used status of all puzzle hashes by re-adding them
-    for puzhash in await env.wallet_state_manager.puzzle_store.get_all_puzzle_hashes():
-        dr = await env.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzhash)
-        assert dr is not None
-        await env.wallet_state_manager.puzzle_store.add_derivation_paths([dr])
+    # When no derivation is marked used, get_cat_puzzle_hash(new=False) should still allocate one
+    async with env.wallet_state_manager.puzzle_store.db_wrapper.writer() as conn:
+        await conn.execute("UPDATE derivation_paths SET used = 0 WHERE wallet_id = ?", (env.wallet_aliases["cat"],))
 
-    # Then we make sure that even though we asked for a used puzzle hash, it still gives us an unused one
-    unused_count = await env.wallet_state_manager.puzzle_store.get_used_count(uint32(env.wallet_aliases["cat"]))
+    used_count = await env.wallet_state_manager.puzzle_store.get_used_count(uint32(env.wallet_aliases["cat"]))
     await cat_wallet.get_cat_puzzle_hash(new=False)
-    assert unused_count < await env.wallet_state_manager.puzzle_store.get_used_count(uint32(env.wallet_aliases["cat"]))
+    assert used_count < await env.wallet_state_manager.puzzle_store.get_used_count(uint32(env.wallet_aliases["cat"]))

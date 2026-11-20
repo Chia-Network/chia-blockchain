@@ -3,10 +3,11 @@ from __future__ import annotations
 import contextlib
 import time
 from collections.abc import AsyncGenerator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
+from packaging.version import Version
 
 from chia._tests.util.split_managers import SplitAsyncManager, split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
@@ -16,6 +17,7 @@ from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.sender import Sender
 from chia.protocols.harvester_protocol import PlotSyncIdentifier
 from chia.protocols.outbound_message import Message, NodeType
+from chia.protocols.shared_protocol import protocol_version as protocol_versions
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 
 
@@ -24,6 +26,7 @@ class WSChiaConnectionDummy:
     connection_type: NodeType
     peer_node_id: bytes32
     peer_info: PeerInfo = PeerInfo("127.0.0.1", uint16(0))
+    protocol_version: Version = field(default_factory=lambda: Version(protocol_versions[NodeType.FARMER]))
     last_sent_message: Message | None = None
 
     async def send_message(self, message: Message) -> None:

@@ -1620,6 +1620,7 @@ async def test_offer_endpoints(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     env_1 = wallet_environments.environments[0]
     env_2 = wallet_environments.environments[1]
@@ -1706,17 +1707,24 @@ async def test_offer_endpoints(
         ]
     )
 
-    test_crs: list[CoinRecord] = (
-        await env_1.rpc_client.get_coin_records_by_names(
-            GetCoinRecordsByNames(names=[a.name() for a in spend_bundle.additions() if a.amount != 4])
-        )
-    ).coin_records
-    for cr in test_crs:
+    test_crs_response = await env_1.rpc_client.get_coin_records_by_names(
+        GetCoinRecordsByNames(names=[a.name() for a in spend_bundle.additions() if a.amount != 4])
+    )
+    for cr in test_crs_response.coin_records:
         assert cr.coin in spend_bundle.additions()
-    with pytest.raises(ValueError):
-        await env_1.rpc_client.get_coin_records_by_names(
-            GetCoinRecordsByNames(names=[a.name() for a in spend_bundle.additions() if a.amount == 4])
+    assert test_crs_response.missing_coins == []
+    test_names = [a.name() for a in spend_bundle.additions() if a.amount == 4]
+    with pytest.raises(ValueError, match="not found"):
+        await env_1.rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=test_names))
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        missing_response = await env_1.rpc_client.get_coin_records_by_names(
+            GetCoinRecordsByNames(names=test_names, allow_missing=True)
         )
+    assert f"Coin IDs not found yet: {['0x' + name.hex() for name in test_names]}" in caplog.text
+    assert missing_response.coin_records == []
+    assert len(missing_response.missing_coins) == len(test_names)
+    assert set(missing_response.missing_coins) == set(test_names)
     # Create an offer of 5 chia for one CAT
     await env_1.rpc_client.create_offer_for_ids(
         CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, validate_only=True),
@@ -1844,6 +1852,8 @@ async def test_offer_endpoints(
 
     trade_record = (await env_1.rpc_client.get_offer(GetOffer(trade_id=offer.name()))).trade_record
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
+
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_1.node)
 
     offer_file_2 = tmp_path / "second.offer"
     await MakeOfferCMD(
@@ -2130,6 +2140,7 @@ async def test_offer_endpoints(
     await env_1.rpc_client.cancel_offers(
         CancelOffers(secure=True, asset_id=cat_asset_id.hex(), push=True), tx_config=wallet_environments.tx_config
     )
+    await wallet_environments.full_node.wait_for_wallet_synced(env_1.node)
     assert (
         len(
             [
@@ -2159,7 +2170,9 @@ async def test_offer_endpoints(
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_get_coin_records_by_names(wallet_environments: WalletTestFramework) -> None:
+async def test_get_coin_records_by_names(
+    wallet_environments: WalletTestFramework, caplog: pytest.LogCaptureFixture
+) -> None:
     env = wallet_environments.environments[0]
     wallet_node: WalletNode = env.node
     client: WalletRpcClient = env.rpc_client
@@ -2216,10 +2229,25 @@ async def test_get_coin_records_by_names(wallet_environments: WalletTestFramewor
         GetCoinRecordsByNames(names=filter_coin_ids, start_height=min_height, end_height=max_height)
     )
     assert {record.coin for record in rpc_result.coin_records} == filter_coins
-    # 8. Test the failure case
-    with pytest.raises(ValueError, match="not found"):
-        await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False))
-
+    # 8. Missing records raise by default; partial results require opting in.
+    missing_coin_ids = set(coin_ids) - set(coin_ids_unspent)
+    assert missing_coin_ids
+    expected_error = f"Coin ID's: {['0x' + c_id.hex() for c_id in coin_ids if c_id in missing_coin_ids]} not found."
+    for request in (
+        GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False),
+        GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False, allow_missing=False),
+    ):
+        with pytest.raises(ValueError, match=re.escape(expected_error)):
+            await client.get_coin_records_by_names(request)
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        rpc_result = await client.get_coin_records_by_names(
+            GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False, allow_missing=True)
+        )
+    assert "Coin IDs not found yet" in caplog.text
+    assert {record.coin for record in rpc_result.coin_records} == coins_unspent
+    assert len(rpc_result.missing_coins) == len(coin_ids) - len(coin_ids_unspent)
+    assert set(rpc_result.missing_coins) == set(coin_ids) - set(coin_ids_unspent)
     # 9. Sync-status guard: when not fully synced, requests are rejected unless
     # allow_unsynced=True. The simulator's get_sync_status short-circuits to
     # SYNCED so we patch the state manager directly to drive the unsynced path.
@@ -2687,13 +2715,15 @@ async def _check_delete_key(
     # set farmer to first private key
     create_sk = master_sk_to_wallet_sk_unhardened if observer else master_sk_to_wallet_sk
 
-    sk = await wallet_node.get_key_for_fingerprint(farmer_fp, private=True)
-    assert sk is not None
-    farmer_ph = puzzle_hash_for_pk(create_sk(sk, uint32(0)).get_g1())
+    key_info = await wallet_node.get_key_for_fingerprint(farmer_fp, private=True)
+    assert key_info is not None
+    assert key_info.secret_key is not None
+    farmer_ph = puzzle_hash_for_pk(create_sk(key_info.secret_key, uint32(0)).get_g1())
 
-    sk = await wallet_node.get_key_for_fingerprint(pool_fp, private=True)
-    assert sk is not None
-    pool_ph = puzzle_hash_for_pk(create_sk(sk, uint32(0)).get_g1())
+    key_info = await wallet_node.get_key_for_fingerprint(pool_fp, private=True)
+    assert key_info is not None
+    assert key_info.secret_key is not None
+    pool_ph = puzzle_hash_for_pk(create_sk(key_info.secret_key, uint32(0)).get_g1())
 
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
         test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(farmer_ph, "txch")
@@ -2822,6 +2852,7 @@ async def test_key_and_address_endpoints(
     show_config = env.node.config
     if "wallet" not in show_config:
         show_config = {**show_config, "wallet": show_config}
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node)
     await ShowCMD(
         rpc_info=NeedsWalletRPC(
             client_info=WalletClientInfo(

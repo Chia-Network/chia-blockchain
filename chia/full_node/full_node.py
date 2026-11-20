@@ -63,6 +63,7 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.explorer_store_protocol import ExplorerStoreProtocol
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
@@ -105,7 +106,7 @@ from chia.util.inline_executor import InlineExecutor
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
 from chia.util.path import path_from_root
-from chia.util.priority_thread_pool_executor import Executor, PriorityThreadPoolExecutor
+from chia.util.priority_thread_pool_executor import PriorityThreadPoolExecutor
 from chia.util.profiler import enable_profiler, mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.task_pipeline import TaskPipeline
@@ -215,7 +216,7 @@ class FullNode:
     _mempool_manager: MempoolManager | None = None
     _init_weight_proof: asyncio.Task[None] | None = None
     _blockchain: Blockchain | None = None
-    _pool: Executor | None = None
+    _pool: PriorityThreadPoolExecutor | None = None
     _timelord_lock: asyncio.Lock | None = None
     weight_proof_handler: WeightProofHandler | None = None
     # hashes of peaks that failed long sync on chip13 Validation
@@ -317,8 +318,8 @@ class FullNode:
                                 pass
 
             self._block_store = await BlockStore.create(self.db_wrapper)
-            self._hint_store = await HintStore.create(self.db_wrapper)
             self._coin_store = await CoinStore.create(self.db_wrapper, block_store=self._block_store)
+            self._hint_store = await HintStore.create(self._coin_store)
             self.log.info("Initializing blockchain from disk")
             start_time = time.monotonic()
             single_threaded = self.config.get("single_threaded", False)
@@ -352,7 +353,7 @@ class FullNode:
 
             async with MempoolManager.managed(
                 get_coin_records=self.coin_store.get_coin_records,
-                get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                get_unspent_lineage_info_for_puzzle_hash=self.hint_store.get_unspent_lineage_info_for_puzzle_hash,
                 consensus_constants=self.constants,
                 pool=self.pool,
                 validation_timeout=self.config.get("block_creation_timeout", 2.0),
@@ -431,6 +432,10 @@ class FullNode:
                 try:
                     async with contextlib.AsyncExitStack() as aexit_stack:
                         aexit_stack.enter_context(self.pool)
+                        # Exiting the pool waits for all its queued jobs so
+                        # stop any weight proof validation first. The stack
+                        # unwinds in reverse so this runs before that.
+                        aexit_stack.callback(self._cancel_weight_proof_tasks)
                         if self.full_node_peers is not None:
                             await aexit_stack.enter_async_context(self.full_node_peers.manage())
                         yield
@@ -496,7 +501,7 @@ class FullNode:
         return self._blockchain
 
     @property
-    def pool(self) -> Executor:
+    def pool(self) -> PriorityThreadPoolExecutor:
         assert self._pool is not None
         return self._pool
 
@@ -521,7 +526,7 @@ class FullNode:
         return self._db_wrapper
 
     @property
-    def hint_store(self) -> HintStore:
+    def hint_store(self) -> ExplorerStoreProtocol:
         assert self._hint_store is not None
         return self._hint_store
 
@@ -620,11 +625,15 @@ class FullNode:
         self.weight_proof_handler = WeightProofHandler(
             constants=self.constants,
             blockchain=self.blockchain,
-            multiprocessing_context=self.multiprocessing_context,
+            pool=self.pool,
         )
         peak = self.blockchain.get_peak()
         if peak is not None:
             await self.weight_proof_handler.create_sub_epoch_segments()
+
+    def _cancel_weight_proof_tasks(self) -> None:
+        if self.weight_proof_handler is not None:
+            self.weight_proof_handler.cancel_weight_proof_tasks()
 
     def set_server(self, server: ChiaServer) -> None:
         self._server = server

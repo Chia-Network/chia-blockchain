@@ -20,11 +20,9 @@ ProtocolMessageTypeToNodeType: dict[ProtocolMessageTypes, set[NodeType]] = {
     ProtocolMessageTypes.request_plots: {NodeType.FARMER},
     ProtocolMessageTypes.respond_plots: {NodeType.HARVESTER},
     ProtocolMessageTypes.respond_plots2: {NodeType.HARVESTER},
-    ProtocolMessageTypes.respond_plots3: {NodeType.HARVESTER},
     ProtocolMessageTypes.plot_sync_start: {NodeType.HARVESTER},
     ProtocolMessageTypes.plot_sync_loaded: {NodeType.HARVESTER},
     ProtocolMessageTypes.plot_sync_loaded2: {NodeType.HARVESTER},
-    ProtocolMessageTypes.plot_sync_loaded3: {NodeType.HARVESTER},
     ProtocolMessageTypes.plot_sync_removed: {NodeType.HARVESTER},
     ProtocolMessageTypes.plot_sync_invalid: {NodeType.HARVESTER},
     ProtocolMessageTypes.plot_sync_keys_missing: {NodeType.HARVESTER},
@@ -49,7 +47,8 @@ ProtocolMessageTypeToNodeType: dict[ProtocolMessageTypes, set[NodeType]] = {
     # Full node protocol (full_node <-> full_node)
     ProtocolMessageTypes.new_peak: {NodeType.FULL_NODE},
     ProtocolMessageTypes.new_transaction: {NodeType.FULL_NODE},
-    ProtocolMessageTypes.request_transaction: {NodeType.FULL_NODE},
+    # Wallets fetch mempool spend bundles by ID after receiving `mempool_items_added`.
+    ProtocolMessageTypes.request_transaction: {NodeType.WALLET, NodeType.FULL_NODE},
     ProtocolMessageTypes.respond_transaction: {NodeType.FULL_NODE},
     ProtocolMessageTypes.request_proof_of_weight: {NodeType.WALLET, NodeType.FULL_NODE},
     ProtocolMessageTypes.respond_proof_of_weight: {NodeType.FULL_NODE},

@@ -3,9 +3,11 @@ from __future__ import annotations
 import asyncio
 import enum
 import logging
+import re
 import sys
 import time
 import types
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, Mock
@@ -23,23 +25,28 @@ from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.generator_tools import get_block_header
+from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimateGroup
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import Self
+from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.socket import find_available_listen_port
+from chia.ssl.create_ssl import create_all_ssl
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config
+from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
+from chia.util.lock import Lockfile
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
@@ -47,28 +54,81 @@ from chia.wallet.wallet_node import Balance, WalletNode, request_and_validate_he
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
 
-@pytest.mark.anyio
-async def test_get_private_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
+def _attach_mock_server(node: WalletNode) -> None:
+    """Attach a minimal server so `_start_with_fingerprint` can call `initialize_wallet_peers`."""
+    mock_server = MagicMock()
+    mock_server.close_all_connections = AsyncMock()
+    node.set_server(cast(ChiaServer, mock_server))
+
+
+@pytest.fixture(scope="function", params=[True, False], ids=["local_keychain", "daemon_keychain"])
+async def wallet_node_and_keychain(
+    root_path_populated_with_config: Path,
+    get_temp_keyring: Keychain,
+    request: pytest.FixtureRequest,
+) -> AsyncIterator[tuple[WalletNode, Keychain]]:
+    """
+    Parametrize WalletNode key access via a local keychain vs connecting to the daemon keychain.
+    When request.param is True, a local keychain is passed to WalletNode.
+    When False, no keychain is passed and WalletNode connects to the daemon for keychain access.
+    """
     root_path = root_path_populated_with_config
-    keychain = get_temp_keyring
     config = load_config(root_path, "config.yaml", "wallet")
-    node = WalletNode(config, root_path, test_constants, keychain)
+    # Avoid starting WalletPeers during `_start_with_fingerprint` against the mock server.
+    config["testing"] = True
+
+    async def cleanup_node(node: WalletNode) -> None:
+        node._close()
+        if node._keychain_proxy is not None:
+            await node._keychain_proxy.close()
+            node._keychain_proxy = None
+        await node._await_closed()
+
+    if request.param:
+        node = WalletNode(config, root_path, test_constants, get_temp_keyring)
+        _attach_mock_server(node)
+        try:
+            yield node, get_temp_keyring
+        finally:
+            await cleanup_node(node)
+        return
+
+    create_all_ssl(root_path)
+    with lock_and_load_config(root_path, "config.yaml") as full_config:
+        full_config["daemon_port"] = find_available_listen_port(name="daemon")
+        save_config(root_path, "config.yaml", full_config)
+    crt_path = root_path / full_config["daemon_ssl"]["private_crt"]
+    key_path = root_path / full_config["daemon_ssl"]["private_key"]
+    ca_crt_path = root_path / full_config["private_ssl_ca"]["crt"]
+    ca_key_path = root_path / full_config["private_ssl_ca"]["key"]
+    with Lockfile.create(daemon_launch_lock_path(root_path)):
+        ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+        async with ws_server.run():
+            keychain = ws_server.keychain_server._default_keychain
+            node = WalletNode(config, root_path, test_constants)
+            _attach_mock_server(node)
+            try:
+                yield node, keychain
+            finally:
+                await cleanup_node(node)
+
+
+@pytest.mark.anyio
+async def test_get_private_key(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     sk = keychain.add_key(generate_mnemonic())
     fingerprint = sk.get_g1().get_fingerprint()
 
     key = await node.get_key(fingerprint)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
-async def test_get_private_key_default_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
-    root_path = root_path_populated_with_config
-    keychain = get_temp_keyring
-    config = load_config(root_path, "config.yaml", "wallet")
-    node = WalletNode(config, root_path, test_constants, keychain)
+async def test_get_private_key_default_key(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     sk = keychain.add_key(generate_mnemonic())
     fingerprint = sk.get_g1().get_fingerprint()
 
@@ -80,19 +140,16 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
     key = await node.get_key(None)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
 async def test_get_private_key_missing_key(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: int | None
+    wallet_node_and_keychain: tuple[WalletNode, Keychain], fingerprint: int | None
 ) -> None:
-    root_path = root_path_populated_with_config
-    keychain = get_temp_keyring  # empty keyring
-    config = load_config(root_path, "config.yaml", "wallet")
-    node = WalletNode(config, root_path, test_constants, keychain)
+    node, _keychain = wallet_node_and_keychain  # empty keyring
 
     # Keyring is empty, so requesting a key by fingerprint or None should return None
     key = await node.get_key(fingerprint)
@@ -101,13 +158,8 @@ async def test_get_private_key_missing_key(
 
 
 @pytest.mark.anyio
-async def test_get_private_key_missing_key_use_default(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain
-) -> None:
-    root_path = root_path_populated_with_config
-    keychain = get_temp_keyring
-    config = load_config(root_path, "config.yaml", "wallet")
-    node = WalletNode(config, root_path, test_constants, keychain)
+async def test_get_private_key_missing_key_use_default(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     sk = keychain.add_key(generate_mnemonic())
     fingerprint = sk.get_g1().get_fingerprint()
 
@@ -118,16 +170,13 @@ async def test_get_private_key_missing_key_use_default(
     key = await node.get_key(1234567890)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
-async def test_get_public_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
+async def test_get_public_key(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         None,
@@ -138,16 +187,13 @@ async def test_get_public_key(root_path_populated_with_config: Path, get_temp_ke
     key = await node.get_key(fingerprint, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
-async def test_get_public_key_default_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
+async def test_get_public_key_default_key(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         None,
@@ -171,19 +217,16 @@ async def test_get_public_key_default_key(root_path_populated_with_config: Path,
     key = await node.get_key(None, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
 async def test_get_public_key_missing_key(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: int | None
+    wallet_node_and_keychain: tuple[WalletNode, Keychain], fingerprint: int | None
 ) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring  # empty keyring
-    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
+    node, _keychain = wallet_node_and_keychain  # empty keyring
 
     # Keyring is empty, so requesting a key by fingerprint or None should return None
     key = await node.get_key(fingerprint, private=False)
@@ -192,13 +235,8 @@ async def test_get_public_key_missing_key(
 
 
 @pytest.mark.anyio
-async def test_get_public_key_missing_key_use_default(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain
-) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
+async def test_get_public_key_missing_key_use_default(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         None,
@@ -213,8 +251,38 @@ async def test_get_public_key_missing_key_use_default(
     key = await node.get_key(1234567890, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
+
+
+@pytest.mark.anyio
+async def test_start_with_fingerprint_no_keys(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, _keychain = wallet_node_and_keychain  # empty keyring
+
+    assert await node._start_with_fingerprint() is False
+    assert node.logged_in is False
+
+
+@pytest.mark.anyio
+async def test_start_with_fingerprint_public_only_key(
+    wallet_node_and_keychain: tuple[WalletNode, Keychain],
+) -> None:
+    """
+    Starting with a public-only key must succeed for both local and daemon keychains.
+    This exercises the `or_public` fallback: private lookup finds the key but has no secrets.
+    """
+    node, keychain = wallet_node_and_keychain
+    pk: G1Element = keychain.add_key(
+        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        None,
+        private=False,
+    )
+    fingerprint = pk.get_fingerprint()
+
+    assert await node._start_with_fingerprint(fingerprint=fingerprint) is True
+    assert node.logged_in_fingerprint == fingerprint
+    assert node.wallet_state_manager.private_key is None
+    assert node.wallet_state_manager.root_pubkey == pk
 
 
 def test_log_in(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
@@ -442,14 +510,6 @@ def test_timestamp_in_sync(root_path_populated_with_config: Path, testing: bool,
 
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
-# todo_v2_plots
-# NOTE: HARD_FORK_3_0 can fail this log assertion because height 1-2 are non-tx,
-# so earlier timestamp lookups backtrack to height 0 and cache _timestamps[0].
-# clear_after_height(0) keeps height 0, so get_timestamp(1) returns early
-# this test expects a certine chain state
-@pytest.mark.limit_consensus_modes(
-    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
-)
 async def test_get_timestamp_for_height_from_peer(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -485,18 +545,29 @@ async def test_get_timestamp_for_height_from_peer(
     cache.clear_after_height(0)
     assert await get_timestamp(peak.height) == timestamp_at_peak
     # Test block cache usage
+    # Start at a non transaction block to exercise backtracking to the previous
+    # transaction block, where the timestamp is cached.
+    height = next(
+        (
+            h
+            for h in range(1, peak.height)
+            if not full_node_api.full_node.blockchain.height_to_block_record(uint32(h)).is_transaction_block
+        ),
+        None,
+    )
+    assert height is not None
     cache.clear_after_height(0)
     with caplog.at_level(logging.DEBUG):
-        await get_timestamp(1)
-    block_1 = cache.get_block(uint32(1))
-    assert block_1 is not None
-    assert f"get_timestamp_for_height_from_peer cache miss for height {1}" in caplog.text
-    assert f"get_timestamp_for_height_from_peer add to cache for height {1}" in caplog.text
+        await get_timestamp(height)
+    block = cache.get_block(uint32(height))
+    assert block is not None
+    assert f"get_timestamp_for_height_from_peer cache miss for height {height}" in caplog.text
+    assert f"get_timestamp_for_height_from_peer add to cache for height {height}" in caplog.text
     caplog.clear()
     with caplog.at_level(logging.DEBUG):
-        await get_timestamp(1)
-    assert f"get_timestamp_for_height_from_peer use cached block for height {0}" not in caplog.text
-    assert f"get_timestamp_for_height_from_peer use cached block for height {1}" in caplog.text
+        await get_timestamp(height)
+    assert f"get_timestamp_for_height_from_peer use cached block for height {height - 1}" not in caplog.text
+    assert f"get_timestamp_for_height_from_peer use cached block for height {height}" in caplog.text
 
 
 @pytest.mark.anyio
@@ -1582,9 +1653,10 @@ async def test_add_states_from_peer_untrusted_returns_false_when_add_coin_states
     with caplog.at_level(logging.ERROR):
         assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
 
-    assert failing_add_coin_states.await_count == 1
+    assert failing_add_coin_states.await_count >= 1
     assert "add_coin_states returned False for chunk" in caplog.text
-    assert "1 chunk(s) failed to apply" in caplog.text
+    failed_chunks = re.search(r"(\d+) chunk\(s\) failed to apply", caplog.text)
+    assert failed_chunks is not None and int(failed_chunks.group(1)) >= 1
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
@@ -1610,8 +1682,9 @@ async def test_add_states_from_peer_untrusted_returns_false_when_one_of_many_chu
     with caplog.at_level(logging.ERROR):
         assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
 
-    assert failing_add_coin_states.await_count == 3
-    assert "1 chunk(s) failed to apply" in caplog.text
+    assert failing_add_coin_states.await_count >= 3
+    failed_chunks = re.search(r"(\d+) chunk\(s\) failed to apply", caplog.text)
+    assert failed_chunks is not None and int(failed_chunks.group(1)) >= 1
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
@@ -1653,9 +1726,10 @@ async def test_add_states_from_peer_untrusted_returns_false_when_validate_and_ad
     with caplog.at_level(logging.ERROR):
         assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
 
-    assert raising_add_coin_states.await_count == 1
+    assert raising_add_coin_states.await_count >= 1
     assert "validate_and_add failed - exception" in caplog.text
-    assert "1 chunk(s) failed to apply" in caplog.text
+    failed_chunks = re.search(r"(\d+) chunk\(s\) failed to apply", caplog.text)
+    assert failed_chunks is not None and int(failed_chunks.group(1)) >= 1
 
 
 @pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")

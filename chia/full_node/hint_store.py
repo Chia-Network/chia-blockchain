@@ -3,10 +3,16 @@ from __future__ import annotations
 import dataclasses
 import logging
 from collections.abc import Collection
+from typing import TYPE_CHECKING, ClassVar, cast
 
 import typing_extensions
+from chia_rs import CoinRecord, CoinState
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
+from chia.full_node.coin_store import CoinStore
+from chia.full_node.explorer_store_protocol import ExplorerStoreProtocol
+from chia.types.mempool_item import UnspentLineageInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 
@@ -16,14 +22,29 @@ log = logging.getLogger(__name__)
 @typing_extensions.final
 @dataclasses.dataclass
 class HintStore:
-    db_wrapper: DBWrapper2
+    """
+    The SQLite explorer store: hints, plus the explorer coin queries, which
+    it forwards to the SQLite CoinStore whose database it shares. Replacing
+    the coin store's backend means replacing that forwarding here; callers
+    of ExplorerStoreProtocol don't change.
+    """
+
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[ExplorerStoreProtocol] = cast("HintStore", None)
+
+    coin_store: CoinStore
+
+    @property
+    def db_wrapper(self) -> DBWrapper2:
+        return self.coin_store.db_wrapper
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2) -> HintStore:
+    async def create(cls, coin_store: CoinStore) -> HintStore:
+        db_wrapper = coin_store.db_wrapper
         if db_wrapper.db_version != 2:
             raise RuntimeError(f"HintStore does not support database schema v{db_wrapper.db_version}")
 
-        self = HintStore(db_wrapper)
+        self = HintStore(coin_store)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating hint store tables and indexes.")
@@ -115,3 +136,96 @@ class HintStore:
 
         [count] = row
         return int(count)
+
+    async def get_coin_records_by_puzzle_hash(
+        self,
+        include_spent_coins: bool,
+        puzzle_hash: bytes32,
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2**32) - 1),
+    ) -> list[CoinRecord]:
+        return await self.coin_store.get_coin_records_by_puzzle_hash(
+            include_spent_coins, puzzle_hash, start_height, end_height
+        )
+
+    async def get_coin_records_by_puzzle_hashes(
+        self,
+        include_spent_coins: bool,
+        puzzle_hashes: list[bytes32],
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2**32) - 1),
+    ) -> list[CoinRecord]:
+        return await self.coin_store.get_coin_records_by_puzzle_hashes(
+            include_spent_coins, puzzle_hashes, start_height, end_height
+        )
+
+    async def get_coin_records_by_names(
+        self,
+        include_spent_coins: bool,
+        names: list[bytes32],
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2**32) - 1),
+    ) -> list[CoinRecord]:
+        return await self.coin_store.get_coin_records_by_names(include_spent_coins, names, start_height, end_height)
+
+    async def get_coin_states_by_puzzle_hashes(
+        self,
+        include_spent_coins: bool,
+        puzzle_hashes: set[bytes32],
+        min_height: uint32 = uint32(0),
+        *,
+        max_items: int = 50000,
+    ) -> set[CoinState]:
+        return await self.coin_store.get_coin_states_by_puzzle_hashes(
+            include_spent_coins, puzzle_hashes, min_height, max_items=max_items
+        )
+
+    async def get_coin_records_by_parent_ids(
+        self,
+        include_spent_coins: bool,
+        parent_ids: list[bytes32],
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2**32) - 1),
+        *,
+        max_items: int = 50000,
+    ) -> list[CoinRecord]:
+        return await self.coin_store.get_coin_records_by_parent_ids(
+            include_spent_coins, parent_ids, start_height, end_height, max_items=max_items
+        )
+
+    async def get_coin_states_by_ids(
+        self,
+        include_spent_coins: bool,
+        coin_ids: Collection[bytes32],
+        min_height: uint32 = uint32(0),
+        *,
+        max_height: uint32 = uint32.MAXIMUM,
+        max_items: int = 50000,
+    ) -> list[CoinState]:
+        return await self.coin_store.get_coin_states_by_ids(
+            include_spent_coins, coin_ids, min_height, max_height=max_height, max_items=max_items
+        )
+
+    async def batch_coin_states_by_puzzle_hashes(
+        self,
+        puzzle_hashes: list[bytes32],
+        *,
+        min_height: uint32 = uint32(0),
+        include_spent: bool = True,
+        include_unspent: bool = True,
+        include_hinted: bool = True,
+        min_amount: uint64 = uint64(0),
+        max_items: int = 50000,
+    ) -> tuple[list[CoinState], uint32 | None]:
+        return await self.coin_store.batch_coin_states_by_puzzle_hashes(
+            puzzle_hashes,
+            min_height=min_height,
+            include_spent=include_spent,
+            include_unspent=include_unspent,
+            include_hinted=include_hinted,
+            min_amount=min_amount,
+            max_items=max_items,
+        )
+
+    async def get_unspent_lineage_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> UnspentLineageInfo | None:
+        return await self.coin_store.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
