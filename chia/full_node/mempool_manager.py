@@ -1172,10 +1172,6 @@ def optional_min(a: T | None, b: T | None) -> T | None:
     return min((v for v in [a, b] if v is not None), default=None)
 
 
-def optional_max(a: T | None, b: T | None) -> T | None:
-    return max((v for v in [a, b] if v is not None), default=None)
-
-
 def can_replace(conflicting_items: list[MempoolItem], new_item: MempoolItem) -> bool:
     """
     This function implements the mempool replacement rules. Given a Mempool item
@@ -1186,9 +1182,6 @@ def can_replace(conflicting_items: list[MempoolItem], new_item: MempoolItem) -> 
 
     conflicting_fees = 0
     conflicting_cost = 0
-    assert_height: uint32 | None = None
-    assert_before_height: uint32 | None = None
-    assert_before_seconds: uint64 | None = None
     # we don't allow replacing mempool items with new ones that remove
     # eligibility for dedup and fast-forward. Doing so could be abused by
     # denying such spends from operating as intended
@@ -1214,9 +1207,30 @@ def can_replace(conflicting_items: list[MempoolItem], new_item: MempoolItem) -> 
             if bcs.eligible_for_dedup:
                 existing_dedup_spends.add(bytes32(coin_id))
 
-        assert_height = optional_max(assert_height, item.assert_height)
-        assert_before_height = optional_min(assert_before_height, item.assert_before_height)
-        assert_before_seconds = optional_min(assert_before_seconds, item.assert_before_seconds)
+        # Preserve the effective height/time locks of conflicting items
+        if new_item.assert_height != item.assert_height:
+            log.debug(
+                "Rejecting conflicting tx due to changing ASSERT_HEIGHT constraints %s -> %s",
+                item.assert_height,
+                new_item.assert_height,
+            )
+            return False
+
+        if new_item.assert_before_height != item.assert_before_height:
+            log.debug(
+                "Rejecting conflicting tx due to changing ASSERT_BEFORE_HEIGHT constraints %s -> %s",
+                item.assert_before_height,
+                new_item.assert_before_height,
+            )
+            return False
+
+        if new_item.assert_before_seconds != item.assert_before_seconds:
+            log.debug(
+                "Rejecting conflicting tx due to changing ASSERT_BEFORE_SECONDS constraints %s -> %s",
+                item.assert_before_seconds,
+                new_item.assert_before_seconds,
+            )
+            return False
 
     # New item must have higher fee per cost
     conflicting_fees_per_cost = conflicting_fees / conflicting_cost
@@ -1231,31 +1245,6 @@ def can_replace(conflicting_items: list[MempoolItem], new_item: MempoolItem) -> 
     fee_increase = new_item.fee - conflicting_fees
     if fee_increase < MEMPOOL_MIN_FEE_INCREASE:
         log.debug(f"Rejecting conflicting tx due to low fee increase ({fee_increase})")
-        return False
-
-    # New item may not have a different effective height/time lock (time-lock rule)
-    if new_item.assert_height != assert_height:
-        log.debug(
-            "Rejecting conflicting tx due to changing ASSERT_HEIGHT constraints %s -> %s",
-            assert_height,
-            new_item.assert_height,
-        )
-        return False
-
-    if new_item.assert_before_height != assert_before_height:
-        log.debug(
-            "Rejecting conflicting tx due to changing ASSERT_BEFORE_HEIGHT constraints %s -> %s",
-            assert_before_height,
-            new_item.assert_before_height,
-        )
-        return False
-
-    if new_item.assert_before_seconds != assert_before_seconds:
-        log.debug(
-            "Rejecting conflicting tx due to changing ASSERT_BEFORE_SECONDS constraints %s -> %s",
-            assert_before_seconds,
-            new_item.assert_before_seconds,
-        )
         return False
 
     if len(existing_ff_spends) > 0 or len(existing_dedup_spends) > 0:
