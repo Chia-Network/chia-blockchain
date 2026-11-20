@@ -212,6 +212,7 @@ def test_explicit_function_shards_reject_duplicates_and_mixed_entries() -> None:
         [["slow.py::test_parser"], ["slow.py::test_parser"]],
         [["slow.py::test_parser"], ["slow.py"]],
         [["slow.py::test_parser=0/2"], ["slow.py::test_parser=0/2"]],
+        [["slow.py::test_parser"], ["slow.py=0/2"], ["slow.py=1/2"]],
     ):
         try:
             plan_explicit(files, shard_lists)

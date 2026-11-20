@@ -156,7 +156,10 @@ def plan_explicit(files: Sequence[TestFile], shard_lists: Sequence[Sequence[str]
                 msg = f"matrix_shard_files names missing file {filename}"
                 raise ValueError(msg)
             if selector is None:
-                if filename in whole_files or filename in function_wholes or filename in function_parts:
+                has_function_selectors = any(fn == filename for fn, _ in function_wholes) or any(
+                    fn == filename for fn, _ in function_parts
+                )
+                if filename in whole_files or has_function_selectors:
                     msg = f"{filename} mixes whole-file and function selectors"
                     raise ValueError(msg)
                 if parsed.part_index is None or parsed.part_count is None:
