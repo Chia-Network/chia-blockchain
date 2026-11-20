@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+from typing import cast
+from unittest.mock import AsyncMock
+
 import pytest
 from chia_rs import AugSchemeMPL, BlockRecord, FullBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
@@ -14,9 +18,11 @@ from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.blockchain import Blockchain
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
-from chia.full_node.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
+from chia.full_node.full_node import FullNode
+from chia.full_node.full_node_rpc_api import FullNodeRpcApi, get_average_block_time, get_nearest_transaction_block
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.protocols import full_node_protocol
 from chia.protocols.outbound_message import NodeType
@@ -32,6 +38,41 @@ from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("height", "v2_fraction"),
+    [(99, 0), (100, 0), (101, 0.01), (125, 0.25), (150, 0.5), (175, 0.75), (199, 0.99), (200, 1), (201, 1)],
+)
+@pytest.mark.parametrize("v2_filter_reduction", [60, 1000])
+async def test_network_space_transition(height: int, v2_fraction: float, v2_filter_reduction: int) -> None:
+    constants = DEFAULT_CONSTANTS.replace(
+        HARD_FORK_HEIGHT=uint32(50),
+        HARD_FORK2_HEIGHT=uint32(100),
+        EPOCH_BLOCKS=uint32(25),
+        PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(2),
+        PLOT_FILTER_V2_RELATIVE_HEIGHT=[uint32(1000)] * 8 + [uint32(v2_filter_reduction)],
+    )
+    older = SimpleNamespace(height=uint32(1), weight=10, total_iters=1000)
+    newer = SimpleNamespace(height=uint32(height), weight=60, total_iters=3000)
+    hashes = [bytes32([i] * 32) for i in (1, 2)]
+    store = SimpleNamespace(
+        get_block_record=AsyncMock(side_effect=[newer, older]),
+        get_full_block_bytes=AsyncMock(side_effect=AssertionError("Netspace must not read full blocks")),
+    )
+    api = FullNodeRpcApi(cast(FullNode, SimpleNamespace(constants=constants, block_store=store)))
+    result = await api.get_network_space(
+        {"newer_block_header_hash": hashes[1].hex(), "older_block_header_hash": hashes[0].hex()}
+    )
+    scale = (50 / 2000) * constants.DIFFICULTY_CONSTANT_FACTOR
+    # V1 has a 256 filter throughout this range. V2 starts at 512 and
+    # reduces to 256 at its independently configured relative height.
+    v1_space = 0.78 * (50 / 2000) * constants.DIFFICULTY_CONSTANT_FACTOR * 256
+    v2_space = scale * (256 if height >= 100 + v2_filter_reduction else 512)
+    assert result["space"] == int((1 - v2_fraction) * v1_space + v2_fraction * v2_space)
+    assert store.get_block_record.await_count == 2
+    store.get_full_block_bytes.assert_not_awaited()
 
 
 @pytest.mark.anyio
