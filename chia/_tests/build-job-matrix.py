@@ -8,12 +8,27 @@ import types
 from pathlib import Path
 from typing import Any
 
+import matrix_shard  # type: ignore[import-not-found]
 import testconfig
 
 log = logging.getLogger(__name__)
 
 root_path = Path(__file__).parent.absolute()
 project_root_path = root_path.parent.parent
+
+# Not per-directory settings. Kept on testconfig so the matrix script is the
+# only place that decides which directories share a row.
+# Directories whose slowest OS finished in <= 8.5 min on baseline run
+# 43897580454 (2026-11-16). Packed into shared rows so one setup covers about
+# 15-21 min of that OS's job time. parallel / install_timelord must match
+# inside a group; core/services stays alone because parallel is False.
+# Paths are relative to chia/_tests. Kept here so testconfig.py stays a
+# per-directory default map.
+MATRIX_PACKS: list[list[str]] = [
+    ["clvm", "core/ssl", "solver", "tools"],
+    ["core/consensus", "core/consensus/stores", "rpc", "wallet/remote_wallet"],
+    ["cmds/wallet", "db", "wallet/simple_sync"],
+]
 
 
 def skip(path: Path) -> bool:
@@ -48,6 +63,10 @@ def subdirs(per: str) -> list[Path]:
 
 def module_dict(module: types.ModuleType) -> dict[str, Any]:
     return {k: v for k, v in module.__dict__.items() if not k.startswith("_") and k != "annotations"}
+
+
+def directory_defaults() -> dict[str, Any]:
+    return module_dict(testconfig)
 
 
 def dir_config(dir: Path) -> dict[str, Any]:
@@ -87,6 +106,137 @@ def update_config(parent: dict[str, Any], child: dict[str, Any]) -> dict[str, An
     return conf
 
 
+def test_file_ref(path: Path) -> matrix_shard.TestFile:
+    relative = path.relative_to(project_root_path)
+    return matrix_shard.TestFile(
+        filename=path.name,
+        module=".".join(relative.with_suffix("").parts),
+        repo_path=relative.as_posix(),
+    )
+
+
+def tests_import_path(path: Path) -> str:
+    """Job name path relative to ``chia/_tests`` (no ``chia._tests`` prefix, no suffix)."""
+    return ".".join(path.relative_to(root_path).with_suffix("").parts)
+
+
+def parallel_args(parallel: Any) -> dict[str, str]:
+    # bool uses the historical per-OS default. An int is an explicit worker count.
+    process_count = {
+        "macos": {False: 0, True: 4}.get(parallel, parallel),
+        "ubuntu": {False: 0, True: 6}.get(parallel, parallel),
+        "windows": {False: 0, True: 4}.get(parallel, parallel),
+    }
+    return {os: f" -n {count}" for os, count in process_count.items()}
+
+
+def merged_pack_config(members: list[dict[str, Any]]) -> dict[str, Any]:
+    """One row's settings. Parallelism and timelord must already match.
+
+    Timeout is the max so a packed row is never killed sooner than its
+    longest member. Block/plot checkout is on if any member needs it.
+    """
+    merged = dict(members[0])
+    merged["job_timeout"] = max(member["job_timeout"] for member in members)
+    merged["checkout_blocks_and_plots"] = any(member["checkout_blocks_and_plots"] for member in members)
+    return merged
+
+
+def row_for(
+    *,
+    conf: dict[str, Any],
+    pieces: list[matrix_shard.Piece],
+    name: str,
+    module_import_path: str,
+    file_name_index: str,
+    index: int,
+    index_string: str,
+    timeout_multiplier: float,
+) -> dict[str, Any]:
+    enable_pytest_monitor = conf["check_resource_usage"]
+    for_matrix = {
+        "check_resource_usage": conf["check_resource_usage"],
+        "enable_pytest_monitor": "-p monitor" if enable_pytest_monitor else "",
+        "job_timeout": round(conf["job_timeout"] * timeout_multiplier),
+        "pytest_parallel_args": parallel_args(conf["parallel"]),
+        "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
+        "install_timelord": conf["install_timelord"],
+        "test_files": matrix_shard.render_test_files(pieces),
+        "name": name,
+        "index": index,
+        "index_string": index_string,
+        "module_import_path": module_import_path,
+        "file_name_index": file_name_index,
+    }
+    return dict(sorted(for_matrix.items()))
+
+
+@dataclasses.dataclass
+class DirectoryPlan:
+    path: Path
+    relative: str
+    files: list[Path]
+    conf: dict[str, Any]
+
+
+def compatible_pack(members: list[DirectoryPlan]) -> None:
+    first = members[0].conf
+    for member in members[1:]:
+        if member.conf["parallel"] != first["parallel"] or member.conf["install_timelord"] != first["install_timelord"]:
+            msg = "refusing to pack directories with different parallel or install_timelord settings: " + ", ".join(
+                member.relative for member in members
+            )
+            raise Exception(msg)
+        if member.conf["check_resource_usage"] != first["check_resource_usage"]:
+            msg = "refusing to pack directories with different check_resource_usage settings: " + ", ".join(
+                member.relative for member in members
+            )
+            raise Exception(msg)
+        if member.conf.get("matrix_shard_files") or first.get("matrix_shard_files"):
+            msg = "refusing to pack a directory that also sets matrix_shard_files: " + ", ".join(
+                member.relative for member in members
+            )
+            raise Exception(msg)
+
+
+def shard_rows(
+    *,
+    module_import_path: str,
+    pieces_by_shard: list[list[matrix_shard.Piece]],
+    conf: dict[str, Any],
+    duplicates: int,
+    timeout_multiplier: float,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    shard_count = len(pieces_by_shard)
+    width = len(str(duplicates))
+    for shard_number, pieces in enumerate(pieces_by_shard, start=1):
+        shard_name = module_import_path if shard_count == 1 else f"{module_import_path} {shard_number}/{shard_count}"
+        shard_suffix = "" if shard_count == 1 else f"_{shard_number}of{shard_count}"
+        for index in range(duplicates):
+            number = index + 1
+            index_string = f"{number:0{width}d}"
+            if duplicates == 1:
+                name = shard_name
+                file_name_index = shard_suffix
+            else:
+                name = f"{shard_name} #{index_string}"
+                file_name_index = f"{shard_suffix}_{index_string}"
+            rows.append(
+                row_for(
+                    conf=conf,
+                    pieces=pieces,
+                    name=name,
+                    module_import_path=module_import_path,
+                    file_name_index=file_name_index,
+                    index=number,
+                    index_string=index_string,
+                    timeout_multiplier=timeout_multiplier,
+                )
+            )
+    return rows
+
+
 # args
 arg_parser = argparse.ArgumentParser(description="Generate GitHub test matrix configuration")
 arg_parser.add_argument("--per", type=str, choices=["directory", "file"], required=True)
@@ -105,78 +255,109 @@ if len(args.only) == 0:
 else:
     test_paths = [root_path.joinpath(path) for path in args.only]
 
-test_paths_with_index = [(path, index + 1) for path in test_paths for index in range(args.duplicates)]
-
-configuration = []
+configuration: list[dict[str, Any]] = []
 
 specified_defaults: dict[Path, dict[str, Any]] = {}
 pytest_monitor_enabling_paths: list[Path] = []
+defaults = directory_defaults()
+plans: list[DirectoryPlan] = []
 
-for path, index in test_paths_with_index:
+for path in test_paths:
     if path.is_dir():
         test_files = sorted(path.glob("test_*.py"))
-        paths_for_cli_list = [file.relative_to(project_root_path) for file in test_files]
         config_path = path
     else:
-        paths_for_cli_list = [path.relative_to(project_root_path)]
+        test_files = [path]
         config_path = path.parent
 
-    def mung_path(path: Path) -> str:
-        # TODO: shell escaping, but that's per platform...
-        return ".".join(path.with_suffix("").parts)
-
-    paths_for_cli = " ".join(mung_path(path) for path in paths_for_cli_list)
-    paths_for_cli = f"--pyargs {paths_for_cli}"
-
     try:
-        conf = update_config(module_dict(testconfig), dir_config(config_path))
+        conf = update_config(defaults, dir_config(config_path))
     except SpecifiedDefaultsError as e:
         specified_defaults[root_path.joinpath(config_path, "config.py")] = e.overlap
         continue
 
-    # TODO: design a configurable system for this
-    process_count = {
-        "macos": {False: 0, True: 4}.get(conf["parallel"], conf["parallel"]),
-        "ubuntu": {False: 0, True: 6}.get(conf["parallel"], conf["parallel"]),
-        "windows": {False: 0, True: 4}.get(conf["parallel"], conf["parallel"]),
-    }
-    pytest_parallel_args = {os: f" -n {count}" for os, count in process_count.items()}
-
-    enable_pytest_monitor = conf["check_resource_usage"]
-
-    if enable_pytest_monitor:
+    if conf["check_resource_usage"]:
         # NOTE: do not use until the hangs are fixed
         #       https://github.com/CFMTech/pytest-monitor/issues/53
         #       https://github.com/pythonprofilers/memory_profiler/issues/342
-
         pytest_monitor_enabling_paths.append(path)
 
-    max_index_characters = len(str(args.duplicates))
-    index_string = f"{index:0{max_index_characters}d}"
-    module_import_path = ".".join(path.relative_to(root_path).with_suffix("").parts)
-    if args.duplicates == 1:
-        name = module_import_path
-        file_name_index = ""
-    else:
-        name = f"{module_import_path} #{index_string}"
-        file_name_index = f"_{index_string}"
+    plans.append(
+        DirectoryPlan(
+            path=path,
+            relative=path.relative_to(root_path).as_posix(),
+            files=test_files,
+            conf=conf,
+        )
+    )
 
-    for_matrix = {
-        "check_resource_usage": conf["check_resource_usage"],
-        "enable_pytest_monitor": "-p monitor" if enable_pytest_monitor else "",
-        "job_timeout": round(conf["job_timeout"] * args.timeout_multiplier),
-        "pytest_parallel_args": pytest_parallel_args,
-        "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
-        "install_timelord": conf["install_timelord"],
-        "test_files": paths_for_cli,
-        "name": name,
-        "index": index,
-        "index_string": index_string,
-        "module_import_path": module_import_path,
-        "file_name_index": file_name_index,
-    }
-    for_matrix = dict(sorted(for_matrix.items()))
-    configuration.append(for_matrix)
+pack_groups: list[list[str]] = MATRIX_PACKS
+pack_by_member: dict[str, int] = {}
+if args.per == "directory":
+    available = {plan.relative for plan in plans}
+    for group in pack_groups:
+        present = [member for member in group if member in available]
+        missing = [member for member in group if member not in available]
+        if len(present) > 0 and len(missing) > 0:
+            # --only selects a subset on purpose. Leave those directories unpacked.
+            if len(args.only) > 0:
+                continue
+            msg = f"matrix pack group is missing directories: present={present} missing={missing}"
+            raise Exception(msg)
+        if len(present) != len(group) or len(group) == 0:
+            continue
+        members = [plan for plan in plans if plan.relative in set(group)]
+        compatible_pack(members)
+        group_index = len(set(pack_by_member.values()))
+        for member in group:
+            if member in pack_by_member:
+                msg = f"{member} is listed in more than one matrix pack group"
+                raise Exception(msg)
+            pack_by_member[member] = group_index
+
+emitted_packs: set[int] = set()
+expected_repo_paths: list[str] = []
+
+for plan in plans:
+    expected_repo_paths.extend(test_file_ref(path).repo_path for path in plan.files)
+    pack_index = pack_by_member.get(plan.relative)
+    if pack_index is not None:
+        if pack_index in emitted_packs:
+            continue
+        emitted_packs.add(pack_index)
+        members = [candidate for candidate in plans if pack_by_member.get(candidate.relative) == pack_index]
+        members.sort(key=lambda candidate: tests_import_path(candidate.path))
+        module_import_path = "+".join(tests_import_path(member.path) for member in members)
+        pieces = [test_file_ref(path).whole() for member in members for path in member.files]
+        pieces.sort(key=lambda piece: piece.repo_path)
+        conf = merged_pack_config([member.conf for member in members])
+        configuration.extend(
+            shard_rows(
+                module_import_path=module_import_path,
+                pieces_by_shard=[pieces],
+                conf=conf,
+                duplicates=args.duplicates,
+                timeout_multiplier=args.timeout_multiplier,
+            )
+        )
+        continue
+
+    refs = [test_file_ref(path) for path in plan.files]
+    shard_lists = plan.conf.get("matrix_shard_files") if plan.path.is_dir() else None
+    if shard_lists:
+        pieces_by_shard = matrix_shard.plan_explicit(refs, shard_lists)
+    else:
+        pieces_by_shard = [[ref.whole() for ref in refs]]
+    module_import_path = tests_import_path(plan.path)
+    configuration.extend(
+        shard_rows(
+            module_import_path=module_import_path,
+            pieces_by_shard=pieces_by_shard,
+            conf=plan.conf,
+            duplicates=args.duplicates,
+            timeout_multiplier=args.timeout_multiplier,
+        )
+    )
 
 messages: list[str] = []
 
@@ -196,6 +377,13 @@ if len(pytest_monitor_enabling_paths) > 0:
 
 if len(messages) > 0:
     raise Exception("\n".join(messages))
+
+if len(specified_defaults) == 0:
+    matrix_shard.assert_file_partition(
+        expected_repo_paths,
+        [row["test_files"] for row in configuration],
+        copies=args.duplicates,
+    )
 
 configuration_json = json.dumps(configuration)
 

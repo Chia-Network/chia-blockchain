@@ -165,10 +165,14 @@ jobs:
               matrix: windows
             configuration:
               install_timelord: true
+          # Match the directory, not the job name. Shards rename the job
+          # (core.full_node 1/3) and keep module_import_path, so Windows still
+          # skips every core.full_node shard. Subdirectories such as full_sync
+          # have their own module_import_path and still run.
           - os:
               matrix: windows
             configuration:
-              name: core.full_node
+              module_import_path: core.full_node
           # TODO: skipping macos-15-intel timelord cases until fixed
           #       https://github.com/Chia-Network/chiavdf/pull/268
           - os:
