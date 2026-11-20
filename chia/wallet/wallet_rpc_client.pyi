@@ -131,6 +131,13 @@ class WalletRpcClient(RpcClient):
         extra_conditions: tuple[Condition, ...] = ...,
         timelock_info: ConditionValidTimes = ...,
     ) -> wallet_request_types.CreateSignedTransactionsResponse: ...
+    async def create_fee_transaction(
+        self,
+        request: wallet_request_types.CreateFeeTransaction,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = ...,
+        timelock_info: ConditionValidTimes = ...,
+    ) -> wallet_request_types.CreateFeeTransactionResponse: ...
     async def delete_unconfirmed_transactions(
         self,
         request: wallet_request_types.DeleteUnconfirmedTransactions,
