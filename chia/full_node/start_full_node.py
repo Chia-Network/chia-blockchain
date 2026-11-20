@@ -16,6 +16,7 @@ from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
 from chia.full_node.full_node_service import FullNodeService
+from chia.full_node.sqlite_stores import sqlite_node_stores
 from chia.protocols.outbound_message import NodeType
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
@@ -49,6 +50,7 @@ async def create_full_node_service(
         service_config,
         root_path=root_path,
         consensus_constants=consensus_constants,
+        open_stores=sqlite_node_stores(service_config, root_path),
     )
     peer_api = FullNodeAPI(node)
 

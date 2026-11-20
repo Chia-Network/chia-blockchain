@@ -70,6 +70,7 @@ from chia.full_node import full_node as full_node_module
 from chia.full_node.full_node import FullNode, WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI, tx_request_and_timeout
 from chia.full_node.hard_fork_utils import get_flags
+from chia.full_node.sqlite_stores import sqlite_node_stores
 from chia.full_node.sync_store import Peak
 from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
@@ -4759,6 +4760,7 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
         bt.config["full_node"],
         root_path=bt.root_path,
         consensus_constants=bt.constants,
+        open_stores=sqlite_node_stores(bt.config["full_node"], bt.root_path),
     )
 
     config = bt.config["full_node"]
