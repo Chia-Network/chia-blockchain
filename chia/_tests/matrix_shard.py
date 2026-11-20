@@ -30,7 +30,8 @@ class Piece:
     (0-based).
 
     ``selector`` is either a test function name (``test_parser``) or a comma
-    separated remainder selector (``~test_parser,~test_header_block``).
+    separated remainder selector (``~test_parser,~test_header_block``). A
+    remainder selector may also be sliced.
     """
 
     filename: str
@@ -100,7 +101,7 @@ def parse_shard_entry(entry: str) -> ShardEntry:
 
     ``test_foo.py::test_name`` selects one test function and
     ``test_foo.py::test_name=0/2`` slices that function's cases. A selector
-    beginning with ``~`` is a remainder selector.
+    beginning with ``~`` is a remainder selector and may also be sliced.
     """
     if "=" in entry:
         left, fraction = entry.split("=", 1)
@@ -129,7 +130,8 @@ def plan_explicit(files: Sequence[TestFile], shard_lists: Sequence[Sequence[str]
 
     A file named only by function selectors also gets a remainder piece on the
     last shard. That piece runs every test in the file whose function was not
-    named, so function selectors never drop coverage.
+    named, so function selectors never drop coverage. A remainder selector may
+    also be sliced explicitly, in which case no automatic remainder is added.
 
     The last shard is the catch-all, so a new test file is still run and does
     not become its own setup-only job.
@@ -183,14 +185,18 @@ def plan_explicit(files: Sequence[TestFile], shard_lists: Sequence[Sequence[str]
             mentioned.add(filename)
             key = (filename, selector)
             if selector.startswith("~"):
-                if parsed.part_index is not None or parsed.part_count is not None:
-                    msg = f"{filename}::{selector} cannot be sliced"
-                    raise ValueError(msg)
+                if parsed.part_index is None or parsed.part_count is None:
+                    if key in function_wholes or key in function_parts:
+                        msg = f"{filename}::{selector} is listed more than once"
+                        raise ValueError(msg)
+                    function_wholes.add(key)
+                    pieces.append(_piece(test_file, 0, 1, selector))
+                    continue
                 if key in function_wholes:
-                    msg = f"{filename}::{selector} is listed more than once"
+                    msg = f"{filename}::{selector} is both a whole selector and a split slice"
                     raise ValueError(msg)
-                function_wholes.add(key)
-                pieces.append(_piece(test_file, 0, 1, selector))
+                function_parts.setdefault(key, []).append((parsed.part_index, parsed.part_count))
+                pieces.append(_piece(test_file, parsed.part_index, parsed.part_count, selector))
                 continue
             selectors = function_order.setdefault(filename, [])
             if selector not in selectors:
@@ -229,8 +235,27 @@ def plan_explicit(files: Sequence[TestFile], shard_lists: Sequence[Sequence[str]
             msg = f"{filename}::{selector} slices {indexes} are not 0..{part_count - 1} exactly once"
             raise ValueError(msg)
     remainder_shard = shards[-1]
+    remainders: dict[str, set[str]] = {}
+    for filename, selector in [*function_wholes, *function_parts]:
+        if selector.startswith("~"):
+            remainders.setdefault(filename, set()).add(selector)
+    for filename, remainder_set in remainders.items():
+        if len(remainder_set) > 1:
+            msg = f"{filename} uses more than one remainder selector"
+            raise ValueError(msg)
+        remainder_selector = next(iter(remainder_set))
+        excluded = set(_function_names(remainder_selector))
+        positive = set(function_order.get(filename, []))
+        missing = [name for name in positive if name not in excluded]
+        if len(missing) > 0:
+            msg = f"{filename} remainder does not exclude named functions {sorted(missing)}"
+            raise ValueError(msg)
+        unnamed = [name for name in excluded if name not in positive]
+        if len(unnamed) > 0:
+            msg = f"{filename} remainder excludes unnamed functions {sorted(unnamed)}"
+            raise ValueError(msg)
     for filename, selectors in function_order.items():
-        if any(fn == filename and sel.startswith("~") for fn, sel in function_wholes):
+        if filename in remainders:
             continue
         remainder_selector = ",".join(f"~{selector}" for selector in dict.fromkeys(selectors))
         remainder_shard.append(_piece(by_name[filename], 0, 1, remainder_selector))
@@ -384,9 +409,6 @@ def assert_file_partition(expected: Iterable[str], test_file_rows: Iterable[str]
                 msg = f"{repo_path}::{selector} parts {indexes} are not 0..{part_count - 1} repeated {copies} time(s)"
                 raise AssertionError(msg)
             if selector.startswith("~"):
-                if part_count != 1:
-                    msg = f"{repo_path} remainder selector cannot be sliced"
-                    raise AssertionError(msg)
                 remainder_selectors.append(selector)
             else:
                 positive_names.add(selector)
@@ -399,6 +421,10 @@ def assert_file_partition(expected: Iterable[str], test_file_rows: Iterable[str]
         remainder_names = set(_function_names(remainder_selectors[0]))
         if not positive_names.issubset(remainder_names):
             msg = f"{repo_path} remainder does not exclude named functions {sorted(positive_names - remainder_names)}"
+            raise AssertionError(msg)
+        unnamed = sorted(remainder_names - positive_names)
+        if len(unnamed) > 0:
+            msg = f"{repo_path} remainder excludes unnamed functions {unnamed}"
             raise AssertionError(msg)
 
 

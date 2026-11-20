@@ -82,10 +82,14 @@ def test_shard_and_pack_partition() -> None:
 
     names = [entry["name"] for entry in matrix]
     assert len(names) == len(set(names))
-    assert "util 1/3" in names
-    assert "util 2/3" in names
-    assert "util 3/3" in names
-    assert "core.full_node 1/3" in names
+    assert "util 1/4" in names
+    assert "util 2/4" in names
+    assert "util 3/4" in names
+    assert "util 4/4" in names
+    assert "core.full_node 1/4" in names
+    assert "core.full_node 2/4" in names
+    assert "core.full_node 3/4" in names
+    assert "core.full_node 4/4" in names
     assert "wallet.sync 1/2" in names
     assert "wallet.sync 2/2" in names
     assert "clvm+core.ssl+solver+tools" in names
@@ -94,8 +98,10 @@ def test_shard_and_pack_partition() -> None:
 
     by_module = {entry["module_import_path"]: entry for entry in matrix}
     full_node = [entry for entry in matrix if entry["module_import_path"] == "core.full_node"]
-    assert len(full_node) == 3
-    split_rows = [entry for entry in full_node if "test_full_node.py=" in entry["test_files"]]
+    assert len(full_node) == 4
+    split_rows = [
+        entry for entry in full_node if "test_full_node.py::" in entry["test_files"] and "=" in entry["test_files"]
+    ]
     assert len(split_rows) == 2
     assert all("-p chia._tests.matrix_shard" in entry["test_files"] for entry in split_rows)
     assert {entry["job_timeout"] for entry in full_node} == {110}
@@ -121,7 +127,7 @@ def test_shard_and_pack_partition() -> None:
 
     wallet_sync = [entry for entry in matrix if entry["module_import_path"] == "wallet.sync"]
     assert len(wallet_sync) == 2
-    assert all("test_wallet_sync.py=" in entry["test_files"] for entry in wallet_sync)
+    assert all("test_wallet_sync.py::" in entry["test_files"] for entry in wallet_sync)
     assert {entry["job_timeout"] for entry in wallet_sync} == {60}
 
 
@@ -220,6 +226,123 @@ def test_explicit_function_shards_reject_duplicates_and_mixed_entries() -> None:
             pass
         else:
             raise AssertionError(f"invalid function shards were accepted: {shard_lists}")
+
+
+def test_explicit_sliced_remainder_plans_both_parts() -> None:
+    from chia._tests.matrix_shard import TestFile, plan_explicit, render_test_files
+
+    files = [
+        TestFile("slow.py", "pkg.slow", "pkg/slow.py"),
+        TestFile("other.py", "pkg.other", "pkg/other.py"),
+    ]
+    shards = plan_explicit(
+        files,
+        [
+            ["slow.py::test_parser"],
+            ["slow.py::~test_parser=0/2"],
+            ["slow.py::~test_parser=1/2"],
+        ],
+    )
+    assert [piece.selector for piece in shards[0]] == ["test_parser"]
+    assert [(piece.part_index, piece.part_count) for piece in shards[1]] == [(0, 2)]
+    assert [piece.selector for piece in shards[1]] == ["~test_parser"]
+    slow_last = next(piece for piece in shards[2] if piece.filename == "slow.py")
+    assert (slow_last.part_index, slow_last.part_count) == (1, 2)
+    assert slow_last.selector == "~test_parser"
+    slow_pieces = [piece for pieces in shards for piece in pieces if piece.filename == "slow.py"]
+    assert len(slow_pieces) == 3
+    assert [piece.selector for piece in slow_pieces].count("~test_parser") == 2
+    assert "pkg/slow.py::~test_parser=0/2" in render_test_files(shards[1])
+    assert "pkg/slow.py::~test_parser=1/2" in render_test_files(shards[2])
+
+
+def test_assert_file_partition_accepts_sliced_remainder() -> None:
+    from chia._tests.matrix_shard import TestFile, assert_file_partition, plan_explicit, render_test_files
+
+    files = [
+        TestFile("slow.py", "pkg.slow", "pkg/slow.py"),
+        TestFile("other.py", "pkg.other", "pkg/other.py"),
+    ]
+    shards = plan_explicit(
+        files,
+        [
+            ["slow.py::test_parser"],
+            ["slow.py::~test_parser=0/2"],
+            ["slow.py::~test_parser=1/2"],
+        ],
+    )
+    rows = [render_test_files(pieces) for pieces in shards]
+    assert_file_partition(["pkg/slow.py", "pkg/other.py"], rows)
+
+    incomplete = [
+        render_test_files([piece for piece in pieces if not (piece.filename == "slow.py" and piece.part_index == 1)])
+        for pieces in shards
+    ]
+    try:
+        assert_file_partition(["pkg/slow.py", "pkg/other.py"], incomplete)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("incomplete sliced remainder was accepted")
+
+
+def test_explicit_sliced_remainder_rejects_incomplete_or_mismatched_parts() -> None:
+    from chia._tests.matrix_shard import Piece, TestFile, assert_file_partition, plan_explicit, render_test_files
+
+    files = [TestFile("slow.py", "pkg.slow", "pkg/slow.py")]
+    for shard_lists in (
+        [["slow.py::~test_parser=0/2"]],
+        [["slow.py::test_parser"], ["slow.py::~test_header_block=0/2"], ["slow.py::~test_header_block=1/2"]],
+        [["slow.py::~test_parser=0/1"], ["slow.py::~test_header_block=0/1"]],
+        [
+            ["slow.py::test_parser"],
+            ["slow.py::~test_parser,~test_header_block=0/2"],
+            ["slow.py::~test_parser,~test_header_block=1/2"],
+        ],
+    ):
+        try:
+            plan_explicit(files, shard_lists)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"invalid sliced remainder shards were accepted: {shard_lists}")
+
+    over_broad_rows = [
+        render_test_files([Piece("slow.py", "pkg.slow", "pkg/slow.py", 0, 1, "test_parser")]),
+        render_test_files([Piece("slow.py", "pkg.slow", "pkg/slow.py", 0, 2, "~test_parser,~test_header_block")]),
+        render_test_files([Piece("slow.py", "pkg.slow", "pkg/slow.py", 1, 2, "~test_parser,~test_header_block")]),
+    ]
+    try:
+        assert_file_partition(["pkg/slow.py"], over_broad_rows)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("over-broad remainder was accepted")
+
+
+def test_filter_nodeids_sliced_remainder_covers_each_item_once() -> None:
+    from chia._tests.matrix_shard import filter_nodeids
+
+    path = "chia/_tests/util/test_slow.py"
+    nodeids = [
+        f"{path}::test_a",
+        f"{path}::test_b[0]",
+        f"{path}::test_b[1]",
+        f"{path}::test_c[0]",
+        f"{path}::test_d[0]",
+        f"{path}::test_d[1]",
+        f"{path}::test_d[2]",
+    ]
+    specs = [
+        [f"{path}::test_a"],
+        [f"{path}::~test_a=0/2"],
+        [f"{path}::~test_a=1/2"],
+    ]
+    covered: list[str] = []
+    for spec in specs:
+        covered.extend(filter_nodeids(nodeids, spec))
+    assert sorted(covered) == sorted(nodeids)
+    assert len(set(covered)) == len(covered)
 
 
 def test_only_packed_directory_stays_unpacked() -> None:
