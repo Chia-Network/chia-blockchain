@@ -356,7 +356,7 @@ class PlotNFTInnerPuzzle(PuzzleBase):
         potential_mofn_match = MofN.match(unknown_puzzle=member)
         if potential_mofn_match is None:
             return None
-        if potential_mofn_match.m != 2:
+        if potential_mofn_match.n != 2:
             return None
         raise NotImplementedError("Currently unimplemented")
 

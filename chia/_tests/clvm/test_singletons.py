@@ -233,7 +233,11 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
         await push_bundle(sim, sim_client, [singleton_even_spend, await acs_fee_spend(sim_client)])
 
         # Now try a perfectly innocent spend
-        evil_singleton = replace(evil_singleton, inner_puzzle=ACSPuzzle())
+        evil_singleton = replace(
+            evil_singleton,
+            coin=Coin(evil_singleton.coin.parent_coin_info, evil_singleton.coin.puzzle_hash, uint64(2)),
+            inner_puzzle=ACSPuzzle(),
+        )
         evil_spend, _ = evil_singleton.action_spend(
             UnknownSolution(program=Program.to([[ConditionOpcode.CREATE_COIN, ACS_PH, 1]]))
         )
