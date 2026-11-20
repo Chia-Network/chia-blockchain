@@ -13,6 +13,7 @@ from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimation import MempoolItemInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
+from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
 from chia.util.inline_executor import InlineExecutor
 
@@ -63,9 +64,10 @@ async def test_basics() -> None:
 async def test_fee_increase() -> None:
     async with DBConnection(db_version=2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
+        hint_store = await HintStore.create(coin_store)
         async with MempoolManager.managed(
             coin_store.get_coin_records,
-            coin_store.get_unspent_lineage_info_for_puzzle_hash,
+            hint_store.get_unspent_lineage_info_for_puzzle_hash,
             test_constants,
             InlineExecutor(),
             validation_timeout=10,

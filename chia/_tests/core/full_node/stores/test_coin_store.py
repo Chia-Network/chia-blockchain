@@ -380,6 +380,7 @@ async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -
             guarantee_transaction_block=True,
         )
         coin_store = await CoinStore.create(db_wrapper)
+        hint_store = await HintStore.create(coin_store)
         store = await BlockStore.create(db_wrapper)
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
         b: Blockchain = await Blockchain.create(coin_store, store, height_map, bt.constants, InlineExecutor())
@@ -389,8 +390,8 @@ async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -
         assert peak is not None
         assert peak.height == num_blocks - 1
 
-        coins_farmer = await coin_store.get_coin_records_by_puzzle_hash(True, bt.pool_ph)
-        coins_pool = await coin_store.get_coin_records_by_puzzle_hash(True, farmer_ph)
+        coins_farmer = await hint_store.get_coin_records_by_puzzle_hash(True, bt.pool_ph)
+        coins_pool = await hint_store.get_coin_records_by_puzzle_hash(True, farmer_ph)
 
         assert len(coins_farmer) == num_blocks - 2
         assert len(coins_pool) == num_blocks - 2
@@ -422,19 +423,20 @@ async def test_get_coin_states(db_version: int) -> None:
             for i in range(1, 301)
         ]
         coin_store = await CoinStore.create(db_wrapper)
+        hint_store = await HintStore.create(coin_store)
         await add_coin_records_to_db(coin_store, crs)
 
-        assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(0))) == 300
-        assert len(await coin_store.get_coin_states_by_puzzle_hashes(False, {std_hash(b"2")}, uint32(0))) == 0
-        assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(300))) == 151
-        assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(603))) == 0
-        assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"1")}, uint32(0))) == 0
+        assert len(await hint_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(0))) == 300
+        assert len(await hint_store.get_coin_states_by_puzzle_hashes(False, {std_hash(b"2")}, uint32(0))) == 0
+        assert len(await hint_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(300))) == 151
+        assert len(await hint_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(603))) == 0
+        assert len(await hint_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"1")}, uint32(0))) == 0
 
         # test max_items limit
         for limit in [0, 1, 42, 300]:
             assert (
                 len(
-                    await coin_store.get_coin_states_by_puzzle_hashes(
+                    await hint_store.get_coin_states_by_puzzle_hashes(
                         True, {std_hash(b"2")}, uint32(0), max_items=limit
                     )
                 )
@@ -443,42 +445,42 @@ async def test_get_coin_states(db_version: int) -> None:
 
         # if the limit is very high, we should get all of them
         assert (
-            len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(0), max_items=10000))
+            len(await hint_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(0), max_items=10000))
             == 300
         )
 
         coins = {cr.coin.name() for cr in crs}
         bad_coins = {std_hash(cr.coin.name()) for cr in crs}
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(0))) == 600
-        assert len(await coin_store.get_coin_states_by_ids(False, coins, uint32(0))) == 0
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300))) == 302
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(603))) == 0
-        assert len(await coin_store.get_coin_states_by_ids(True, bad_coins, uint32(0))) == 0
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(0))) == 600
+        assert len(await hint_store.get_coin_states_by_ids(False, coins, uint32(0))) == 0
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(300))) == 302
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(603))) == 0
+        assert len(await hint_store.get_coin_states_by_ids(True, bad_coins, uint32(0))) == 0
         # Test max_height
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(603))) == 600
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(602))) == 600
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(599))) == 598
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(400))) == 400
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(301))) == 300
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(300))) == 300
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(299))) == 298
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(0))) == 0
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, max_height=uint32(603))) == 600
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, max_height=uint32(602))) == 600
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, max_height=uint32(599))) == 598
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, max_height=uint32(400))) == 400
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, max_height=uint32(301))) == 300
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, max_height=uint32(300))) == 300
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, max_height=uint32(299))) == 298
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, max_height=uint32(0))) == 0
         # Test min_height + max_height
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(603))) == 302
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(602))) == 302
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(599))) == 300
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(400))) == 102
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(301))) == 2
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(300))) == 2
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(299))) == 0
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(0))) == 0
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(603))) == 302
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(602))) == 302
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(599))) == 300
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(400))) == 102
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(301))) == 2
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(300))) == 2
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(299))) == 0
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(0))) == 0
 
         # test max_items limit
         for limit in [0, 1, 42, 300]:
-            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(0), max_items=limit)) == limit
+            assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(0), max_items=limit)) == limit
 
         # if the limit is very high, we should get all of them
-        assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(0), max_items=10000)) == 600
+        assert len(await hint_store.get_coin_states_by_ids(True, coins, uint32(0), max_items=10000)) == 600
 
 
 @dataclass(frozen=True)
@@ -576,7 +578,7 @@ async def test_coin_state_batches(
 
         while len(remaining_phs) > 0:
             while height is not None:
-                (coin_states, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
+                (coin_states, height) = await hint_store.batch_coin_states_by_puzzle_hashes(
                     remaining_phs[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE],
                     min_height=height,
                     include_spent=include_spent,
@@ -642,12 +644,12 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
 
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
-        await HintStore.create(coin_store)
+        hint_store = await HintStore.create(coin_store)
 
         await add_coin_records_to_db(coin_store, coin_records)
 
         # Make sure all of the coin states are found.
-        (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
+        (all_coin_states, next_height) = await hint_store.batch_coin_states_by_puzzle_hashes([ph])
         all_coin_states.sort(key=lambda cs: cs.coin.amount)
 
         assert next_height is None
@@ -672,7 +674,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
             ],
         )
 
-        (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
+        (all_coin_states, next_height) = await hint_store.batch_coin_states_by_puzzle_hashes([ph])
 
         # Make sure that the extra coin records are not included in the results.
         assert next_height == (12 if cut_off_middle else 50)
@@ -684,9 +686,9 @@ async def test_batch_no_puzzle_hashes(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
-        await HintStore.create(coin_store)
+        hint_store = await HintStore.create(coin_store)
 
-        coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([])
+        coin_states, height = await hint_store.batch_coin_states_by_puzzle_hashes([])
         assert coin_states == []
         assert height is None
 
@@ -709,7 +711,7 @@ async def test_duplicate_by_hint(db_version: int) -> None:
         await add_coin_records_to_db(coin_store, [cr])
         await hint_store.add_hints([(cr.coin.name(), cr.coin.puzzle_hash)])
 
-        coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([cr.coin.puzzle_hash])
+        coin_states, height = await hint_store.batch_coin_states_by_puzzle_hashes([cr.coin.puzzle_hash])
 
         assert coin_states == [cr.coin_state]
         assert height is None
@@ -859,6 +861,7 @@ async def test_get_unspent_lineage_info_for_puzzle_hash(case: UnspentLineageInfo
     async with DBConnection(2) as db_wrapper:
         # Prepare the coin store with the test case's data
         coin_store = await CoinStore.create(db_wrapper)
+        hint_store = await HintStore.create(coin_store)
         async with db_wrapper.writer() as writer:
             for item in make_test_data(case.items):
                 await writer.execute(
@@ -868,7 +871,7 @@ async def test_get_unspent_lineage_info_for_puzzle_hash(case: UnspentLineageInfo
                     item,
                 )
         # Run the test case
-        result = await coin_store.get_unspent_lineage_info_for_puzzle_hash(bytes32(TEST_PUZZLEHASH))
+        result = await hint_store.get_unspent_lineage_info_for_puzzle_hash(bytes32(TEST_PUZZLEHASH))
         if case.expected_success:
             assert result == UnspentLineageInfo(
                 coin_id=bytes32(TEST_COIN_ID),
@@ -911,6 +914,7 @@ async def test_get_coin_records_by_parent_ids_max_items() -> None:
     parent_id = parent_coin.name()
     async with DBConnection(2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
+        hint_store = await HintStore.create(coin_store)
         parent_coin_record = CoinRecord(
             coin=parent_coin,
             confirmed_block_index=uint32(0),
@@ -930,14 +934,14 @@ async def test_get_coin_records_by_parent_ids_max_items() -> None:
         ]
         await add_coin_records_to_db(coin_store, [parent_coin_record, *records])
 
-        all_results = await coin_store.get_coin_records_by_parent_ids(True, [parent_id])
+        all_results = await hint_store.get_coin_records_by_parent_ids(True, [parent_id])
         assert len(all_results) == 200
 
         for limit in [0, 1, 50, 200]:
-            results = await coin_store.get_coin_records_by_parent_ids(True, [parent_id], max_items=limit)
+            results = await hint_store.get_coin_records_by_parent_ids(True, [parent_id], max_items=limit)
             assert len(results) == limit
 
-        results = await coin_store.get_coin_records_by_parent_ids(True, [parent_id], max_items=10000)
+        results = await hint_store.get_coin_records_by_parent_ids(True, [parent_id], max_items=10000)
         assert len(results) == 200
 
 
@@ -977,7 +981,8 @@ async def test_get_coin_records_by_parent_ids_max_items_across_batches(
             async with db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute("CREATE INDEX coin_parent_index ON coin_record(coin_parent)")
             coin_store = await CoinStore.create(db_wrapper)
-        results = await coin_store.get_coin_records_by_parent_ids(True, parent_ids, max_items=7)
+        hint_store = await HintStore.create(coin_store)
+        results = await hint_store.get_coin_records_by_parent_ids(True, parent_ids, max_items=7)
         assert len(results) == 7
 
 
@@ -987,6 +992,7 @@ async def test_get_coin_records_by_parent_ids_respects_spent_filter_under_limit(
     parent_id = parent_coin.name()
     async with DBConnection(2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
+        hint_store = await HintStore.create(coin_store)
         parent_record = CoinRecord(
             coin=parent_coin,
             confirmed_block_index=uint32(0),
@@ -1006,11 +1012,11 @@ async def test_get_coin_records_by_parent_ids_respects_spent_filter_under_limit(
         ]
         await add_coin_records_to_db(coin_store, [parent_record, *records])
 
-        unspent_only = await coin_store.get_coin_records_by_parent_ids(False, [parent_id], max_items=3)
+        unspent_only = await hint_store.get_coin_records_by_parent_ids(False, [parent_id], max_items=3)
         assert len(unspent_only) == 3
         assert all(record.spent_block_index == 0 for record in unspent_only)
 
-        unspent_only_full = await coin_store.get_coin_records_by_parent_ids(False, [parent_id], max_items=10000)
+        unspent_only_full = await hint_store.get_coin_records_by_parent_ids(False, [parent_id], max_items=10000)
         assert len(unspent_only_full) == 5
 
 
@@ -1176,7 +1182,8 @@ async def test_get_coin_records_by_parent_ids(with_coin_parent_index: bool) -> N
                 await conn.execute("CREATE INDEX coin_parent_index ON coin_record(coin_parent)")
             # Reopen to trigger index detection
             coin_store = await CoinStore.create(db_wrapper)
-        records = await coin_store.get_coin_records_by_parent_ids(
+        hint_store = await HintStore.create(coin_store)
+        records = await hint_store.get_coin_records_by_parent_ids(
             include_spent_coins=True,
             parent_ids=[parent_coin_id, reward_coin.parent_coin_info],
             start_height=uint32(10),
