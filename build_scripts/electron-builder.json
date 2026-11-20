@@ -24,6 +24,7 @@
     }
   },
   "nsis": {
+    "differentialPackage": false,
     "artifactName": "ChiaSetup-${env.CHIA_INSTALLER_VERSION}.exe",
     "oneClick": false,
     "deleteAppDataOnUninstall": true,
