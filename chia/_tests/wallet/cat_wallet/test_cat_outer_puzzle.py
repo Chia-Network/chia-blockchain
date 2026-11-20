@@ -8,10 +8,35 @@ from clvm_tools.binutils import disassemble
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
-from chia.wallet.cat_wallet.cat_utils import CATPuzzle
+from chia.wallet.cat_wallet.cat_utils import (
+    CAT_MOD,
+    CATCorePuzzles,
+    CATPuzzle,
+    construct_cat_puzzle,
+    get_innerpuzzle_from_puzzle,
+)
 from chia.wallet.outer_puzzles import construct_puzzle, get_inner_puzzle, get_inner_solution, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
+
+
+def test_cat_core_puzzles_computed_hashes() -> None:
+    puzzles = CATCorePuzzles(cat_mod_hash_pre_computed=None, hash_of_quoted_mod_hash_pre_computed=None)
+    assert puzzles.cat_mod_hash == CAT_MOD.get_tree_hash()
+    assert puzzles.hash_of_quoted_mod_hash == calculate_hash_of_quoted_mod_hash(puzzles.cat_mod_hash)
+
+
+def test_legacy_cat_helpers() -> None:
+    ACS = Program.to(1)
+    tail = bytes32.zeros
+    mod_hash = CAT_MOD.get_tree_hash()
+    cat_puzzle = construct_cat_puzzle(CAT_MOD, tail, ACS)
+    assert cat_puzzle == CAT_MOD.curry(mod_hash, tail, ACS)
+    assert construct_cat_puzzle(CAT_MOD, tail, ACS, mod_hash) == cat_puzzle
+    assert get_innerpuzzle_from_puzzle(cat_puzzle) == ACS
+    with pytest.raises(ValueError, match="Not a CAT puzzle"):
+        get_innerpuzzle_from_puzzle(ACS)
 
 
 def test_cat_outer_puzzle() -> None:
