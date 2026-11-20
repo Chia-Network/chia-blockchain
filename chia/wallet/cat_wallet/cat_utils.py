@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Iterator
 from functools import cached_property
 from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar, cast
 
@@ -243,32 +242,3 @@ def unsigned_spend_bundle_for_spendable_cats(
         coin_spends.append(coin_spend)
 
     return WalletSpendBundle(coin_spends, G2Element())
-
-
-def match_cat_puzzle(puzzle: UnknownPuzzle) -> Iterator[Program] | None:
-    """Legacy helper kept for callers not yet migrated to CATPuzzle.match."""
-    matched = CATPuzzle.match(unknown_puzzle=puzzle)
-    if matched is None:
-        return None
-    return iter(
-        (Program.to(matched.cat_puzzles.cat_mod_hash), Program.to(matched.tail_hash), matched.inner_puzzle.program)
-    )
-
-
-def construct_cat_puzzle(
-    mod_code: Program,
-    limitations_program_hash: bytes32,
-    inner_puzzle_or_hash: Program | bytes32,
-    mod_code_hash: bytes32 | None = None,
-) -> Program:
-    """Legacy helper kept for callers not yet migrated to CATPuzzle."""
-    if mod_code_hash is None:
-        mod_code_hash = mod_code.get_tree_hash()
-    return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle_or_hash)
-
-
-def get_innerpuzzle_from_puzzle(puzzle: Program) -> Program:
-    matched = CATPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=puzzle))
-    if matched is None:
-        raise ValueError("Not a CAT puzzle")
-    return matched.inner_puzzle.program
