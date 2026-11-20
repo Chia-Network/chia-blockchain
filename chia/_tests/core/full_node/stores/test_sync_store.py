@@ -192,6 +192,29 @@ async def test_peer_peak_change_removes_old_peak_membership() -> None:
 
 
 @pytest.mark.anyio
+async def test_peer_peak_change_preserves_target_peak_membership() -> None:
+    """A peer that advances past the sync target must still be treated as holding that peak.
+
+    NewPeak during weight-proof validation used to discard the peer from
+    peak_to_peer[target], so long sync logged "no peers with header_hash" and
+    aborted the first batch even though the peer still had the target block.
+    """
+    store = SyncStore()
+    peer_id = std_hash(b"peer")
+    hash_a = std_hash(b"block_a")
+    hash_b = std_hash(b"block_b")
+
+    store.peer_has_block(hash_a, peer_id, uint128(100), uint32(10), True)
+    store.target_peak = Peak(hash_a, uint32(10), uint128(100))
+
+    store.peer_has_block(hash_b, peer_id, uint128(200), uint32(20), True)
+
+    assert peer_id in store.get_peers_that_have_peak([hash_a])
+    assert peer_id in store.get_peers_that_have_peak([hash_b])
+    assert store.peer_to_peak[peer_id].header_hash == hash_b
+
+
+@pytest.mark.anyio
 async def test_peer_peak_change_same_hash_preserves_membership() -> None:
     """Re-advertising the same peak hash does not remove the peer from its membership set."""
     store = SyncStore()
