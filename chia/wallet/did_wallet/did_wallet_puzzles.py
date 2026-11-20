@@ -8,9 +8,9 @@ from chia_puzzles_py.programs import DID_INNERPUZ, DID_INNERPUZ_HASH
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.pools.plotnft_drivers import SingletonStruct
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.puzzle_drivers import Puzzle, PuzzleBase, UnknownPuzzle
+from chia.wallet.puzzles.singleton_drivers import SingletonStruct
 from chia.wallet.util.curry_and_treehash import (
     calculate_hash_of_quoted_mod_hash,
     curry_and_treehash,
@@ -75,7 +75,7 @@ class DIDRecoveryPuzzle(PuzzleBase, Generic[_T_Puzzle]):
             self.inner_puzzle.program,
             self.recovery_list.ids_hash,
             self.num_of_backup_ids_needed,
-            self.struct_driver(launcher_id=self.self_launcher_id).to_program(),
+            self.struct_driver(launcher_id=self.self_launcher_id).program,
             self.metadata.as_program(),
         )
 
@@ -86,7 +86,7 @@ class DIDRecoveryPuzzle(PuzzleBase, Generic[_T_Puzzle]):
             self.inner_puzzle.tree_hash,
             self.recovery_list.pre_hashed,
             Program.to(self.num_of_backup_ids_needed).get_tree_hash(),
-            self.struct_driver(launcher_id=self.self_launcher_id).struct_hash(),
+            self.struct_driver(launcher_id=self.self_launcher_id).struct_hash,
             self.metadata.tree_hash,
         )
 
