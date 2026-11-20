@@ -165,7 +165,7 @@ class SpendSim:
 
         async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
             self.coin_store = await CoinStore.create(self.db_wrapper)
-            self.hint_store = await HintStore.create(self.coin_store)
+            self.hint_store = await HintStore.create(self.db_wrapper)
             self.defaults = defaults
 
             async with MempoolManager.managed(

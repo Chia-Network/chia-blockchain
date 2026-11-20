@@ -49,11 +49,11 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
 )
 from chia.consensus.signage_point import SignagePoint
-from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
 from chia.full_node.full_node_store import SignagePointAddResult
 from chia.full_node.hard_fork_utils import get_flags
+from chia.full_node.hint_store import HintStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
@@ -2079,7 +2079,7 @@ class FullNodeAPI:
     @metadata.request(
         peer_required=True,
         reply_types=[ProtocolMessageTypes.respond_puzzle_state],
-        list_limits=lambda self, peer: {"puzzle_hashes": CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE},
+        list_limits=lambda self, peer: {"puzzle_hashes": HintStore.MAX_PUZZLE_HASH_BATCH_SIZE},
     )
     async def request_puzzle_state(
         self, request: wallet_protocol.RequestPuzzleState, peer: WSChiaConnection
@@ -2089,8 +2089,8 @@ class FullNodeAPI:
         subs = self.full_node.subscriptions
 
         puzzle_hashes = request.puzzle_hashes
-        if len(puzzle_hashes) > CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE:
-            puzzle_hashes = puzzle_hashes[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE]
+        if len(puzzle_hashes) > HintStore.MAX_PUZZLE_HASH_BATCH_SIZE:
+            puzzle_hashes = puzzle_hashes[: HintStore.MAX_PUZZLE_HASH_BATCH_SIZE]
         puzzle_hashes = list(dict.fromkeys(puzzle_hashes))
 
         previous_header_hash = (
