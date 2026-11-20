@@ -4569,15 +4569,15 @@ files = [
 
 [[package]]
 name = "types-aiofiles"
-version = "25.1.0.20260518"
+version = "25.1.0.20261107"
 description = "Typing stubs for aiofiles"
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "extra == \"dev\""
 files = [
-    {file = "types_aiofiles-25.1.0.20260518-py3-none-any.whl", hash = "sha256:f776bdfb4bec17f743d9ef042e61edf03bdcc7821fc08556fba9b63d873fdea9"},
-    {file = "types_aiofiles-25.1.0.20260518.tar.gz", hash = "sha256:c0c95eb78755d4fa7b397d4f0332c632714dd7cd0d17f49b96e31d4d7a8d8c76"},
+    {file = "types_aiofiles-25.1.0.20261107-py3-none-any.whl", hash = "sha256:1401114ecf3764eb1c0f6bb175e9ceb8d1741311394dee384d8642f5b3be9b46"},
+    {file = "types_aiofiles-25.1.0.20261107.tar.gz", hash = "sha256:c34fd0f3a73ea630e383f5b5a6d3cc309494cfedade22f7b0e83e02fc5f487f1"},
 ]
 
 [[package]]
@@ -5223,4 +5223,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11, <4"
-content-hash = "d76f56fb61ac5cc0c919d5d4482be8727bc8b30ec5a26cc9bf35d09ab01cde32"
+content-hash = "036013f5a03f4daa4117e015171bab9fcb2a61d62b52028a40156666eb09f146"
