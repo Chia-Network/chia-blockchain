@@ -19,7 +19,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
 from chia.util.byte_types import hexstr_to_bytes
-from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CATPuzzle
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 
 
@@ -69,17 +69,17 @@ def run_generator(
     ]
     cat_list: list[CAT] = []
     for spend in spends:
-        puzzle = Program.from_serialized(spend.puzzle_reveal)
-        solution = Program.from_serialized(spend.solution)
-        args = match_cat_puzzle(UnknownPuzzle(known_program=puzzle))
+        matched_cat = CATPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=spend.puzzle_reveal))
 
-        if args is None:
+        if matched_cat is None:
             continue
 
-        _, asset_id, _ = args
+        asset_id = matched_cat.tail_hash
         memo = ""
 
-        _, puzzle_result = puzzle.run_with_cost(max_cost, solution, flags)
+        _, puzzle_result = Program.from_serialized(spend.puzzle_reveal).run_with_cost(
+            max_cost, Program.from_serialized(spend.solution), flags
+        )
 
         conds: dict[ConditionOpcode, list[ConditionWithArgs]] = {}
 
@@ -119,7 +119,7 @@ def run_generator(
         puzzle_hash = coin.puzzle_hash
         cat_list.append(
             CAT(
-                asset_id=bytes(asset_id).hex()[2:],
+                asset_id=bytes(asset_id).hex(),
                 memo=memo,
                 npc=NPC(coin.name(), puzzle_hash, [(op, cond) for op, cond in conds.items()]),
             )
