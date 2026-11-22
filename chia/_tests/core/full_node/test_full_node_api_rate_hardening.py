@@ -398,3 +398,62 @@ async def test_request_removals_merkle_proof_with_unknown_coin() -> None:
     found = dict(response.coins)
     assert found[coin_name] == coin
     assert found[unknown_name] is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("coin_names", [None, []], ids=["coin_names_none", "coin_names_empty"])
+@pytest.mark.parametrize(
+    "num_removals, expected_type",
+    [
+        (MAX_COINS_MAP_SIZE, ProtocolMessageTypes.respond_removals),
+        (MAX_COINS_MAP_SIZE + 1, ProtocolMessageTypes.reject_removals_request),
+    ],
+    ids=["at_limit", "over_limit"],
+)
+async def test_request_removals_unfiltered_respects_coins_map_limit(
+    coin_names: list[bytes32] | None, num_removals: int, expected_type: ProtocolMessageTypes
+) -> None:
+    """An unfiltered request_removals is bounded by MAX_COINS_MAP_SIZE,
+    matching the unfiltered request_additions behavior."""
+    header_hash = bytes32(b"\x0c" * 32)
+    height = uint32(5)
+    block = _make_block_ns(height, header_hash)
+
+    class _FakeCoinRecord:
+        def __init__(self, c: Coin) -> None:
+            self.coin = c
+
+    records: list[object] = [
+        _FakeCoinRecord(Coin(bytes32(i.to_bytes(32, "big")), bytes32(b"\x02" * 32), uint64(1000)))
+        for i in range(num_removals)
+    ]
+
+    class _BlockStore:
+        async def get_full_block(self, _hash: bytes32) -> object:
+            return block
+
+    class _CoinStore:
+        async def get_coins_removed_at_height(self, _height: uint32) -> list[object]:
+            return records
+
+    api = FullNodeAPI(
+        _make_full_node_ns(  # type: ignore[arg-type]
+            blockchain=_StableBlockchain(header_hash),
+            block_store=_BlockStore(),
+            coin_store=_CoinStore(),
+        )
+    )
+    request = wallet_protocol.RequestRemovals(height, header_hash, coin_names)
+
+    message = await api.request_removals(request)
+
+    assert message is not None
+    assert message.type == expected_type.value
+    if expected_type == ProtocolMessageTypes.respond_removals:
+        response = wallet_protocol.RespondRemovals.from_bytes(message.data)
+        assert len(response.coins) == num_removals
+        assert response.proofs is None
+    else:
+        reject = wallet_protocol.RejectRemovalsRequest.from_bytes(message.data)
+        assert reject.height == height
+        assert reject.header_hash == header_hash

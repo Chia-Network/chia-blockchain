@@ -1607,6 +1607,9 @@ class FullNodeAPI:
                         proofs = []
                     response = wallet_protocol.RespondRemovals(block.height, block.header_hash, [], proofs)
                 elif request.coin_names is None or len(request.coin_names) == 0:
+                    if len(all_removals_dict) > MAX_COINS_MAP_SIZE:
+                        reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
+                        return make_msg(ProtocolMessageTypes.reject_removals_request, reject)
                     for removed_name, removed_coin in all_removals_dict.items():
                         coins_map.append((removed_name, removed_coin))
                     response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, None)
