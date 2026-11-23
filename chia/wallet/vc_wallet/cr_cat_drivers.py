@@ -38,7 +38,6 @@ from chia.wallet.conditions import (
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.puzzles.puzzle_drivers import (
     ACSSolution,
-    NilSolution,
     OuterPuzzle,
     P2Conditions,
     Puzzle,
@@ -279,7 +278,7 @@ class CredentialRestrictionLayerSolution(Generic[_T_InnerSolution, _T_ProofCheck
         return CredentialRestrictionLayerSolution(
             proof_of_inclusions=proof_of_inclusions,
             proof_checker_solution=UnknownSolution(program=proof_checker_solution),
-            provider_id=bytes32(provider_id.as_atom()),
+            provider_id=bytes32(provider_id.as_atom()) if provider_id != Program.NIL else None,
             vc_launcher_id=bytes32(vc_launcher_id.as_atom()) if vc_launcher_id != Program.NIL else None,
             vc_inner_puzhash=bytes32(vc_inner_puzhash.as_atom()) if vc_inner_puzhash != Program.NIL else None,
             my_coin_id=bytes32(my_coin_id.as_atom()) if my_coin_id != Program.NIL else None,
@@ -366,7 +365,7 @@ class CRCAT(
         eve_innerpuz = P2Conditions(
             conditions=[
                 replace(payment, puzzle_hash=new_cr_layer.tree_hash),
-                TAILCondition(puzzle=tail, solution=NilSolution()),
+                TAILCondition(puzzle=tail, solution=tail_solution),
                 CreateCoinAnnouncement(msg=b""),
                 Remark(rest=Program.to([payment.puzzle_hash, authorized_providers, proofs_checker.program])),
             ]
