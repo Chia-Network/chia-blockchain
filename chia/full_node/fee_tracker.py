@@ -344,7 +344,7 @@ class FeeStat:  # TxConfirmStats
 
         if found_answer and tx_sum != 0:
             tx_sum /= 2
-            for i in range(min_bucket, max_bucket):
+            for i in range(min_bucket, max_bucket + 1):
                 if self.tx_ct_avg[i] < tx_sum:
                     tx_sum -= self.tx_ct_avg[i]
                 else:
