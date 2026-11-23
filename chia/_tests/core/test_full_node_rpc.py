@@ -524,6 +524,11 @@ async def test_signage_points(
         assert "eos" not in res
         assert res["signage_point"] == sp
         assert not res["reverted"]
+        assert res["signage_point_index"] == uint8(4)
+        expected_sp_filter = full_node_api_1.full_node.full_node_store.get_filter_challenge(
+            sp.cc_vdf.challenge, uint8(4)
+        )
+        assert res["filter_challenge"] == expected_sp_filter
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
         selected_eos = blocks[-1].finished_sub_slots[0]
@@ -540,6 +545,11 @@ async def test_signage_points(
         assert "signage_point" not in res
         assert res["eos"] == selected_eos
         assert not res["reverted"]
+        assert res["signage_point_index"] == uint8(0)
+        expected_eos_filter = full_node_api_1.full_node.full_node_store.get_filter_challenge(
+            selected_eos.challenge_chain.get_hash(), uint8(0)
+        )
+        assert res["filter_challenge"] == expected_eos_filter
 
         # Do another one but without sending the slot
         await full_node_api_1.full_node.add_block(blocks[-1])
@@ -552,6 +562,7 @@ async def test_signage_points(
         assert "signage_point" not in res
         assert res["eos"] == selected_eos
         assert not res["reverted"]
+        assert res["signage_point_index"] == uint8(0)
 
         # Perform a reorg
         blocks = bt.get_consecutive_blocks(12, seed=b"1234")
@@ -570,6 +581,7 @@ async def test_signage_points(
         assert "signage_point" not in res
         assert res["eos"] == selected_eos
         assert res["reverted"]
+        assert res["signage_point_index"] == uint8(0)
 
 
 @pytest.mark.anyio

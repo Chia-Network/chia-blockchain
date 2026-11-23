@@ -20,7 +20,7 @@ from chia_rs import (
 )
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
@@ -307,10 +307,18 @@ class FullNodeRpcApi:
                     structured_message="Did not find eos in cache",
                 )
             eos, time_received = eos_tuple
+            # EOS partials are SP index 0; include V2 plot-filter inputs for pools
+            result: EndpointResult = {
+                "eos": eos,
+                "time_received": time_received,
+                "reverted": False,
+                "signage_point_index": uint8(0),
+                "filter_challenge": self.service.full_node_store.get_filter_challenge(challenge_hash, uint8(0)),
+            }
 
             # If it's still in the full node store, it's not reverted
             if self.service.full_node_store.get_sub_slot(eos.challenge_chain.get_hash()):
-                return {"eos": eos, "time_received": time_received, "reverted": False}
+                return result
 
             # Otherwise we can backtrack from peak to find it in the blockchain
             curr: BlockRecord | None = self.service.blockchain.get_peak()
@@ -323,15 +331,17 @@ class FullNodeRpcApi:
                     assert curr.finished_challenge_slot_hashes is not None
                     if curr.finished_challenge_slot_hashes[-1] == eos.challenge_chain.get_hash():
                         # Found this slot in the blockchain
-                        return {"eos": eos, "time_received": time_received, "reverted": False}
+                        return result
                     number_of_slots_searched += len(curr.finished_challenge_slot_hashes)
                 curr = self.service.blockchain.try_block_record(curr.prev_hash)
                 if curr is None:
                     # Got to the beginning of the blockchain without finding the slot
-                    return {"eos": eos, "time_received": time_received, "reverted": True}
+                    result["reverted"] = True
+                    return result
 
             # Backtracked through 10 slots but still did not find it
-            return {"eos": eos, "time_received": time_received, "reverted": True}
+            result["reverted"] = True
+            return result
 
         # Now we handle the case of getting a signage point
         sp_hash: bytes32 = bytes32.from_hexstr(request["sp_hash"])
@@ -348,9 +358,32 @@ class FullNodeRpcApi:
         assert sp.rc_vdf is not None, "Not an EOS, the signage point rewards chain VDF must not be None"
         assert sp.cc_vdf is not None, "Not an EOS, the signage point challenge chain VDF must not be None"
 
+        signage_point_index: uint8 | None = None
+        for _, sps, _ in self.service.full_node_store.finished_sub_slots:
+            for index, candidate in enumerate(sps):
+                if candidate is not None:
+                    assert candidate.cc_vdf is not None
+                    if candidate.cc_vdf.output.get_hash() == sp_hash:
+                        signage_point_index = uint8(index)
+                        break
+            if signage_point_index is not None:
+                break
+
+        result = {
+            "signage_point": sp,
+            "time_received": time_received,
+            "reverted": False,
+            "signage_point_index": signage_point_index,
+            "filter_challenge": (
+                None
+                if signage_point_index is None
+                else self.service.full_node_store.get_filter_challenge(sp.cc_vdf.challenge, signage_point_index)
+            ),
+        }
+
         # If it's still in the full node store, it's not reverted
         if self.service.full_node_store.get_signage_point(sp_hash):
-            return {"signage_point": sp, "time_received": time_received, "reverted": False}
+            return result
 
         # Otherwise we can backtrack from peak to find it in the blockchain
         rc_challenge: bytes32 = sp.rc_vdf.challenge
@@ -363,37 +396,32 @@ class FullNodeRpcApi:
             sp_total_iters = sp.cc_vdf.number_of_iterations + curr_b.ip_sub_slot_total_iters(self.service.constants)
             if curr_b.reward_infusion_new_challenge == rc_challenge:
                 if next_b is None:
-                    return {"signage_point": sp, "time_received": time_received, "reverted": False}
+                    return result
                 next_b_total_iters = next_b.ip_sub_slot_total_iters(self.service.constants) + next_b.ip_iters(
                     self.service.constants
                 )
 
-                return {
-                    "signage_point": sp,
-                    "time_received": time_received,
-                    "reverted": sp_total_iters > next_b_total_iters,
-                }
+                result["reverted"] = sp_total_iters > next_b_total_iters
+                return result
             if curr_b.finished_reward_slot_hashes is not None:
                 assert curr_b.finished_challenge_slot_hashes is not None
                 for eos_rc in curr_b.finished_challenge_slot_hashes:
                     if eos_rc == rc_challenge:
                         if next_b is None:
-                            return {"signage_point": sp, "time_received": time_received, "reverted": False}
+                            return result
                         next_b_total_iters = next_b.ip_sub_slot_total_iters(self.service.constants) + next_b.ip_iters(
                             self.service.constants
                         )
-                        return {
-                            "signage_point": sp,
-                            "time_received": time_received,
-                            "reverted": sp_total_iters > next_b_total_iters,
-                        }
+                        result["reverted"] = sp_total_iters > next_b_total_iters
+                        return result
             next_b = curr_b
             curr_b_optional = self.service.blockchain.try_block_record(curr_b.prev_hash)
             if curr_b_optional is None:
                 break
             curr_b = curr_b_optional
 
-        return {"signage_point": sp, "time_received": time_received, "reverted": True}
+        result["reverted"] = True
+        return result
 
     async def get_block(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
