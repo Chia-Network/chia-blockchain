@@ -361,5 +361,5 @@ class KeychainServer:
         return {
             "success": True,
             "pk": bytes(key_data.public_key).hex(),
-            "entropy": key_data.entropy.hex() if private else None,
+            "entropy": key_data.entropy.hex() if key_data.secrets is not None else None,
         }

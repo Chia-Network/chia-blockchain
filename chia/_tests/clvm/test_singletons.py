@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import replace
+from unittest import mock
 
 import pytest
 from chia_rs import CoinSpend, G1Element, G2Element
@@ -17,7 +18,7 @@ from chia.util.errors import Err
 from chia.wallet.conditions import Condition, CreateCoin
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.custody.custody_architecture import PuzzleWithRestrictions
-from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember
+from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember, SingletonMember
 from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, DelegatedPuzzleAndSolution, UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.singleton_drivers import (
     P2Singleton,
@@ -233,7 +234,11 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
         await push_bundle(sim, sim_client, [singleton_even_spend, await acs_fee_spend(sim_client)])
 
         # Now try a perfectly innocent spend
-        evil_singleton = replace(evil_singleton, inner_puzzle=ACSPuzzle())
+        evil_singleton = replace(
+            evil_singleton,
+            coin=Coin(evil_singleton.coin.parent_coin_info, evil_singleton.coin.puzzle_hash, uint64(2)),
+            inner_puzzle=ACSPuzzle(),
+        )
         evil_spend, _ = evil_singleton.action_spend(
             UnknownSolution(program=Program.to([[ConditionOpcode.CREATE_COIN, ACS_PH, 1]]))
         )
@@ -283,10 +288,14 @@ def test_singleton_driver_edge_cases() -> None:
     assert matched is not None
     assert matched.coin_amount == uint64(1)
 
-    with pytest.raises(ValueError, match="Coin amount cannot be even"):
+    # SingletonLaunchInfo rejects even amounts in __post_init__; force an even amount past that guard
+    # so Singleton.launch's defensive check is exercised.
+    even_launch_info = SingletonLaunchInfo(desired_inner_puzzle=ACS, key_value_hints={}, amount=uint64(1))
+    object.__setattr__(even_launch_info, "amount", uint64(2))
+    with pytest.raises(ValueError, match=re.escape("Coin amount cannot be even. Subtract one mojo.")):
         Singleton.launch(
             origin_coin=Coin(bytes32.zeros, bytes32.zeros, uint64(100)),
-            launch_info=SingletonLaunchInfo(desired_inner_puzzle=ACS, key_value_hints={}, amount=uint64(2)),
+            launch_info=even_launch_info,
         )
 
     singleton = Singleton(
@@ -306,21 +315,9 @@ def test_singleton_driver_edge_cases() -> None:
     p2 = P2SingletonPuzzle(singleton_id=bytes32.zeros)
     assert P2SingletonPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACS.program)) is None
 
-    from unittest import mock
-
-    from chia.wallet.puzzles.custody.member_puzzles import SingletonMember
-
     singleton_member = SingletonMember(singleton_id=bytes32.zeros)
     pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], member=singleton_member)
-    with (
-        mock.patch.object(PuzzleWithRestrictions, "match", return_value=pwr),
-        mock.patch.object(
-            PuzzleWithRestrictions,
-            "program",
-            new_callable=mock.PropertyMock,
-            return_value=UnknownPuzzle(known_program=singleton_member.program),
-        ),
-    ):
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=pwr):
         assert P2SingletonPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) == p2
 
     bls_pwr = PuzzleWithRestrictions(
@@ -328,13 +325,16 @@ def test_singleton_driver_edge_cases() -> None:
         restrictions=[],
         member=BLSWithTaprootMember(synthetic_key=G1Element()),
     )
-    with (
-        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
-        mock.patch.object(
-            PuzzleWithRestrictions,
-            "program",
-            new_callable=mock.PropertyMock,
-            return_value=UnknownPuzzle(known_program=BLSWithTaprootMember(synthetic_key=G1Element()).program),
-        ),
-    ):
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr):
+        assert P2SingletonPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+
+    # PuzzleWithRestrictions.match normally stores UnknownMember; cover the UnknownPuzzle member branch.
+    unknown_singleton_member_pwr = mock.Mock(spec=PuzzleWithRestrictions)
+    unknown_singleton_member_pwr.member = UnknownPuzzle(known_program=singleton_member.program)
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_singleton_member_pwr):
+        assert P2SingletonPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) == p2
+
+    unknown_non_singleton_pwr = mock.Mock(spec=PuzzleWithRestrictions)
+    unknown_non_singleton_pwr.member = UnknownPuzzle(known_program=ACS.program)
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_non_singleton_pwr):
         assert P2SingletonPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None

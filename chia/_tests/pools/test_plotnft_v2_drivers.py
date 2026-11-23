@@ -403,7 +403,7 @@ async def test_plotnft_pooling_claim(
         )
 
 
-def test_plotnft_errors() -> None:
+def test_plotnft_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(
         ValueError, match=re.escape("Cannot initialize a PlotNFTPuzzle with an empty pool config and exiting=True")
     ):
@@ -480,6 +480,32 @@ def test_plotnft_errors() -> None:
     with mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_member_pwr):
         assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
 
+    # When the member is an UnknownPuzzle (program reveal present), resolve BLS / MofN via .match()
+    unknown_bls_pwr = mock.Mock(spec=PuzzleWithRestrictions)
+    unknown_bls_pwr.member = UnknownPuzzle(known_program=bls_member.program)
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_bls_pwr):
+        matched_bls_from_unknown = PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1)))
+        assert matched_bls_from_unknown is not None
+        assert matched_bls_from_unknown.user_config.synthetic_pubkey == user_sk.get_g1()
+
+    unknown_unresolved_pwr = mock.Mock(spec=PuzzleWithRestrictions)
+    unknown_unresolved_pwr.member = UnknownPuzzle(known_program=Program.to(1))
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_unresolved_pwr):
+        assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_unresolved_pwr),
+        mock.patch.object(MofN, "match", return_value=mofn_one),
+    ):
+        assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_unresolved_pwr),
+        mock.patch.object(MofN, "match", return_value=mofn_two),
+    ):
+        with pytest.raises(NotImplementedError, match="Currently unimplemented"):
+            PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1)))
+
     pooling_plotnft = PlotNFT(
         coin=Coin(bytes32.zeros, pooling_inner.tree_hash, uint64(1)),
         lineage_proof=LineageProof(),
@@ -515,18 +541,21 @@ def test_plotnft_errors() -> None:
         )
 
     with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton launcher for next PlotNFT")):
-
-        class BadLauncherStruct(SingletonStruct):
-            singleton_puzzles = SingletonCorePuzzles(
-                singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
+        with monkeypatch.context() as m:
+            m.setattr(
+                SingletonStruct,
+                "singleton_puzzles",
+                SingletonCorePuzzles(
+                    singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
+                ),
             )
-
+            puzzle = Program.to(SingletonStruct.singleton_puzzles.singleton_mod).curry(
+                SingletonStruct(launcher_id=bytes32.zeros).to_program()
+            )
         PlotNFT.get_next_from_coin_spend(
             coin_spend=make_spend(
                 default_coin,
-                Program.to(PlotNFT.struct_driver.singleton_puzzles.singleton_mod).curry(
-                    BadLauncherStruct(launcher_id=bytes32.zeros).program
-                ),
+                puzzle,
                 NilSolution().program,
             ),
             genesis_challenge=bytes32.zeros,
@@ -534,7 +563,7 @@ def test_plotnft_errors() -> None:
 
     def wrap_inner_puz(inner_puz: Program) -> UnknownPuzzle:
         return UnknownPuzzle(
-            known_program=PlotNFT.struct_driver.singleton_puzzles.singleton_mod.curry(
+            known_program=SingletonStruct.singleton_puzzles.singleton_mod.curry(
                 SingletonStruct(launcher_id=bytes32.zeros).program, inner_puz
             )
         )
