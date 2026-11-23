@@ -32,7 +32,11 @@ from chia.full_node.hard_fork_utils import get_flags
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
+from chia.types.blockchain_format.proof_of_space import (
+    calculate_base_plot_filter_bits,
+    calculate_prefix_bits,
+    v1_cut_off_height,
+)
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
@@ -673,20 +677,37 @@ class FullNodeRpcApi:
                 structured_message="Older block not found",
             )
         delta_weight = newer_block.weight - older_block.weight
-
-        # TODO: todo_v2_plots Update this calculation to take v2 plots into
-        # account
         plot_filter_size = calculate_prefix_bits(self.service.constants, newer_block.height, PlotParam.make_v1(32))
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
         eligible_plots_filter_multiplier = 2**plot_filter_size
+        # the actual space factor is to convert the theoretical v1 plot size
+        # down to the actual size. for v2 plots _expected_plot_size() already
+        # returns the actual size
         network_space_bytes_estimate = (
             UI_ACTUAL_SPACE_CONSTANT_FACTOR
             * weight_div_iters
             * additional_difficulty_constant
             * eligible_plots_filter_multiplier
         )
+        constants = self.service.constants
+        prev_tx_height = newer_block.prev_transaction_block_height
+        if prev_tx_height > constants.HARD_FORK2_HEIGHT:
+            # Gradually change display units from v1-equivalent bytes to
+            # v2-equivalent bytes over the v1 phase-out period. The observed
+            # weight already accounts for v1's declining eligibility.
+            phase_out_duration = v1_cut_off_height(constants) - constants.HARD_FORK2_HEIGHT
+            # approximate the transition of v1 vs v2 plots by the phase-out
+            # schedule. To calculate the true ratio we would need to inspect the
+            # last 4000 blocks, which is too expensive. This is just an
+            # approximation for the user interface
+            phase_out_progress = min(1.0, (prev_tx_height - constants.HARD_FORK2_HEIGHT) / phase_out_duration)
+            v2_filter_bits = calculate_base_plot_filter_bits(prev_tx_height, constants)
+            v2_space = weight_div_iters * constants.DIFFICULTY_CONSTANT_FACTOR * (1 << v2_filter_bits)
+            network_space_bytes_estimate = (
+                1 - phase_out_progress
+            ) * network_space_bytes_estimate + phase_out_progress * v2_space
         return {"space": uint128(network_space_bytes_estimate)}
 
     async def get_constants(self, request: dict[str, Any]) -> EndpointResult:
