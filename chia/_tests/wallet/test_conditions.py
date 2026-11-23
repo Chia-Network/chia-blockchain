@@ -216,8 +216,7 @@ def test_parse_conditions_additional_conditions() -> None:
     class CustomCondition(Condition):
         value: uint64
 
-        def to_program(self) -> Program:
-            return Program.to([custom_opcode, self.value])
+        def to_program(self) -> Program: ...  # type: ignore[empty-body]
 
         @classmethod
         def from_program(cls, program: Program) -> CustomCondition:

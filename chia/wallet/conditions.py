@@ -1374,7 +1374,7 @@ def parse_conditions_non_consensus(
 ) -> list[Condition]:
     driver_dictionary: dict[bytes, type[Condition]] = (
         CONDITION_DRIVERS_W_ABSTRACTIONS if abstractions else CONDITION_DRIVERS
-    )
+    ).copy()
     if additional_conditions is not None:
         driver_dictionary.update(additional_conditions)
     final_condition_list: list[Condition] = []
