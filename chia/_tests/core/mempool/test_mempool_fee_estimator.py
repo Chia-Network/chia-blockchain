@@ -12,6 +12,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimation import MempoolItemInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
+from chia.full_node.fee_estimator_constants import STORED_FEE_RATE_SCALE
 from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
 from chia.util.inline_executor import InlineExecutor
@@ -107,3 +108,24 @@ async def test_fee_increase() -> None:
             assert short_estimate.mojos_per_clvm_cost == uint64(fee_tracker.buckets[3] / 1000)
             assert med_estimate.mojos_per_clvm_cost == uint64(fee_tracker.buckets[3] / 1000)
             assert long_estimate.mojos_per_clvm_cost == uint64(0)
+
+
+def test_add_tx_counts_item_in_its_fee_rate_bucket() -> None:
+    """
+    Covers the scenario of a new mempool item to make sure it counts in the fee
+    tracker as waiting once, in its proper fee rate bucket.
+    """
+    fee_tracker = FeeTracker(fee_store=FeeStore())
+    # The tracker hasn't seen any block yet, so items enter at block 0, and
+    # waiting ones are counted by the block they entered at.
+    entry_block = 0
+    mempool_item = MempoolItemInfo(cost=10_000_000, fee=50_000_000, height_added_to_mempool=uint32(entry_block))
+    fee_tracker.add_tx(item=mempool_item)
+    # Buckets are in mojos per `STORED_FEE_RATE_SCALE` cost. Each counts the fee
+    # rates above its edge, up to the next bucket's.
+    paid = mempool_item.fee_per_cost * STORED_FEE_RATE_SCALE
+    for fee_stat in (fee_tracker.short_horizon, fee_tracker.med_horizon, fee_tracker.long_horizon):
+        waiting = fee_stat.unconfirmed_txs[entry_block]
+        [counted_in] = [bucket for bucket, count in enumerate(waiting) if count > 0]
+        assert waiting[counted_in] == 1
+        assert fee_stat.buckets[counted_in] < paid <= fee_stat.buckets[counted_in + 1]

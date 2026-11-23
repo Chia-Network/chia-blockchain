@@ -160,11 +160,9 @@ class FeeStat:  # TxConfirmStats
             self.old_unconfirmed_txs[i] += self.unconfirmed_txs[block_height % len(self.unconfirmed_txs)][i]
             self.unconfirmed_txs[block_height % len(self.unconfirmed_txs)][i] = 0
 
-    def new_mempool_tx(self, block_height: uint32, fee_rate: float) -> int:
-        bucket_index: int = get_bucket_index(self.buckets, fee_rate)
+    def new_mempool_tx(self, block_height: uint32, bucket_index: int) -> None:
         block_index = block_height % len(self.unconfirmed_txs)
         self.unconfirmed_txs[block_index][bucket_index] += 1
-        return bucket_index
 
     def remove_tx(self, latest_seen_height: uint32, item: MempoolItemInfo, bucket_index: int) -> None:
         if item.height_added_to_mempool is None:
