@@ -574,6 +574,7 @@ async def test_signage_points(
         assert res["reverted"]
         assert res["signage_point"] == sp
         assert "eos" not in res
+        assert res["signage_point_index"] == uint8(4)
 
         # EOS is no longer in the blockchain
         res = await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())

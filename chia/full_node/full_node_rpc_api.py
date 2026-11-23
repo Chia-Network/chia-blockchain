@@ -298,26 +298,25 @@ class FullNodeRpcApi:
         if "sp_hash" not in request:
             challenge_hash: bytes32 = bytes32.from_hexstr(request["challenge_hash"])
             # This is the case of getting an end of slot
-            eos_tuple = self.service.full_node_store.recent_eos.get(challenge_hash)
-            if not eos_tuple:
+            recent_eos = self.service.full_node_store.recent_eos.get(challenge_hash)
+            if not recent_eos:
                 raise RpcError(
                     RpcErrorCodes.EOS_NOT_IN_CACHE,
                     f"Did not find eos {challenge_hash.hex()} in cache",
                     data={"challenge_hash": challenge_hash.hex()},
                     structured_message="Did not find eos in cache",
                 )
-            eos, time_received = eos_tuple
-            # EOS partials are SP index 0; include V2 plot-filter inputs for pools
+
             result: EndpointResult = {
-                "eos": eos,
-                "time_received": time_received,
+                "eos": recent_eos.eos,
+                "time_received": recent_eos.time_received,
                 "reverted": False,
                 "signage_point_index": uint8(0),
-                "filter_challenge": self.service.full_node_store.get_filter_challenge(challenge_hash, uint8(0)),
+                "filter_challenge": recent_eos.filter_challenge,
             }
 
             # If it's still in the full node store, it's not reverted
-            if self.service.full_node_store.get_sub_slot(eos.challenge_chain.get_hash()):
+            if self.service.full_node_store.get_sub_slot(recent_eos.eos.challenge_chain.get_hash()):
                 return result
 
             # Otherwise we can backtrack from peak to find it in the blockchain
@@ -329,7 +328,7 @@ class FullNodeRpcApi:
             while number_of_slots_searched < 10:
                 if curr.first_in_sub_slot:
                     assert curr.finished_challenge_slot_hashes is not None
-                    if curr.finished_challenge_slot_hashes[-1] == eos.challenge_chain.get_hash():
+                    if curr.finished_challenge_slot_hashes[-1] == recent_eos.eos.challenge_chain.get_hash():
                         # Found this slot in the blockchain
                         return result
                     number_of_slots_searched += len(curr.finished_challenge_slot_hashes)
@@ -345,8 +344,8 @@ class FullNodeRpcApi:
 
         # Now we handle the case of getting a signage point
         sp_hash: bytes32 = bytes32.from_hexstr(request["sp_hash"])
-        sp_tuple = self.service.full_node_store.recent_signage_points.get(sp_hash)
-        if sp_tuple is None:
+        recent_sp = self.service.full_node_store.recent_signage_points.get(sp_hash)
+        if recent_sp is None:
             raise RpcError(
                 RpcErrorCodes.SP_NOT_IN_CACHE,
                 f"Did not find sp {sp_hash.hex()} in cache",
@@ -354,31 +353,16 @@ class FullNodeRpcApi:
                 structured_message="Did not find sp in cache",
             )
 
-        sp, time_received = sp_tuple
+        sp = recent_sp.signage_point
         assert sp.rc_vdf is not None, "Not an EOS, the signage point rewards chain VDF must not be None"
         assert sp.cc_vdf is not None, "Not an EOS, the signage point challenge chain VDF must not be None"
 
-        signage_point_index: uint8 | None = None
-        for _, sps, _ in self.service.full_node_store.finished_sub_slots:
-            for index, candidate in enumerate(sps):
-                if candidate is not None:
-                    assert candidate.cc_vdf is not None
-                    if candidate.cc_vdf.output.get_hash() == sp_hash:
-                        signage_point_index = uint8(index)
-                        break
-            if signage_point_index is not None:
-                break
-
         result = {
             "signage_point": sp,
-            "time_received": time_received,
+            "time_received": recent_sp.time_received,
             "reverted": False,
-            "signage_point_index": signage_point_index,
-            "filter_challenge": (
-                None
-                if signage_point_index is None
-                else self.service.full_node_store.get_filter_challenge(sp.cc_vdf.challenge, signage_point_index)
-            ),
+            "signage_point_index": recent_sp.signage_point_index,
+            "filter_challenge": recent_sp.filter_challenge,
         }
 
         # If it's still in the full node store, it's not reverted

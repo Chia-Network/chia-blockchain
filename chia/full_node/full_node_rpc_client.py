@@ -262,23 +262,21 @@ class FullNodeRpcClient(RpcClient):
         elif sp_hash is not None:
             response = await self.fetch("get_recent_signage_point_or_eos", {"sp_hash": sp_hash.hex()})
             filter_challenge = response.get("filter_challenge")
-            sp_index = response.get("signage_point_index")
             return {
                 "signage_point": SignagePoint.from_json_dict(response["signage_point"]),
                 "time_received": response["time_received"],
                 "reverted": response["reverted"],
-                "signage_point_index": None if sp_index is None else uint8(sp_index),
+                "signage_point_index": uint8(response["signage_point_index"]),
                 "filter_challenge": None if filter_challenge is None else bytes32.from_hexstr(filter_challenge),
             }
         elif challenge_hash is not None:
             response = await self.fetch("get_recent_signage_point_or_eos", {"challenge_hash": challenge_hash.hex()})
             filter_challenge = response.get("filter_challenge")
-            sp_index = response.get("signage_point_index")
             return {
                 "eos": EndOfSubSlotBundle.from_json_dict(response["eos"]),
                 "time_received": response["time_received"],
                 "reverted": response["reverted"],
-                "signage_point_index": None if sp_index is None else uint8(sp_index),
+                "signage_point_index": uint8(response["signage_point_index"]),
                 "filter_challenge": None if filter_challenge is None else bytes32.from_hexstr(filter_challenge),
             }
         else:
