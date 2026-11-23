@@ -9,7 +9,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
-from chia.pools.plotnft_drivers import SingletonPuzzles, SingletonStruct
 from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -28,6 +27,7 @@ from chia.wallet.nft_wallet.nft_puzzle_utils import (
     UpdateMetadataCondition,
 )
 from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, ACSSolution, UnknownPuzzle, UnknownSolution
+from chia.wallet.puzzles.singleton_drivers import SingletonCorePuzzles, SingletonPuzzle, SingletonStruct
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 ACS = Program.to(1)
@@ -261,19 +261,16 @@ async def test_default_transfer_program(cost_logger: CostLogger, monkeypatch: py
         FAKE_CAT_MOD = Program.to([2, 11, 23])  # (a 11 23) or (mod (_ _ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
         FAKE_LAUNCHER_ID = bytes32.zeros
         FAKE_TAIL = bytes32([2] * 32)
-        # Match the pre-driver test shape: (FAKE_MOD_HASH, (launcher_id, launcher_id)).
         monkeypatch.setattr(
             SingletonStruct,
             "singleton_puzzles",
-            SingletonPuzzles(
+            SingletonCorePuzzles(
                 singleton_mod=FAKE_SINGLETON_MOD,
                 singleton_mod_hash_pre_computed=None,
+                hash_of_quoted_mod_hash_pre_computed=None,
             ),
         )
-        FAKE_SINGLETON = FAKE_SINGLETON_MOD.curry(
-            SingletonStruct(launcher_id=FAKE_LAUNCHER_ID).to_program(),
-            ACS,
-        )
+        FAKE_SINGLETON = SingletonPuzzle(launcher_id=bytes32.zeros, inner_puzzle=ACSPuzzle())
         FAKE_CAT = FAKE_CAT_MOD.curry(FAKE_CAT_MOD.get_tree_hash(), FAKE_TAIL, ACS)
 
         ROYALTY_ADDRESS = bytes32([1] * 32)
@@ -317,11 +314,11 @@ async def test_default_transfer_program(cost_logger: CostLogger, monkeypatch: py
         await sim.rewind(BLOCK_HEIGHT)
 
         # Now try an owner update plus royalties
-        await sim.farm_block(FAKE_SINGLETON.get_tree_hash())
+        await sim.farm_block(FAKE_SINGLETON.tree_hash)
         await sim.farm_block(FAKE_CAT.get_tree_hash())
         await sim.farm_block(ACS_PH)
         singleton_coin = (
-            await sim_client.get_coin_records_by_puzzle_hash(FAKE_SINGLETON.get_tree_hash(), include_spent_coins=False)
+            await sim_client.get_coin_records_by_puzzle_hash(FAKE_SINGLETON.tree_hash, include_spent_coins=False)
         )[0].coin
         cat_coin = (
             await sim_client.get_coin_records_by_puzzle_hash(FAKE_CAT.get_tree_hash(), include_spent_coins=False)
@@ -350,7 +347,7 @@ async def test_default_transfer_program(cost_logger: CostLogger, monkeypatch: py
 
         did_announcement_spend = make_spend(
             singleton_coin,
-            FAKE_SINGLETON,
+            FAKE_SINGLETON.program,
             Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=FAKE_LAUNCHER_ID)]).program]),
         )
 
