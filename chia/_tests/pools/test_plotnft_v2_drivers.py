@@ -480,6 +480,32 @@ def test_plotnft_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     with mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_member_pwr):
         assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
 
+    # When the member is an UnknownPuzzle (program reveal present), resolve BLS / MofN via .match()
+    unknown_bls_pwr = mock.Mock(spec=PuzzleWithRestrictions)
+    unknown_bls_pwr.member = UnknownPuzzle(known_program=bls_member.program)
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_bls_pwr):
+        matched_bls_from_unknown = PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1)))
+        assert matched_bls_from_unknown is not None
+        assert matched_bls_from_unknown.user_config.synthetic_pubkey == user_sk.get_g1()
+
+    unknown_unresolved_pwr = mock.Mock(spec=PuzzleWithRestrictions)
+    unknown_unresolved_pwr.member = UnknownPuzzle(known_program=Program.to(1))
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_unresolved_pwr):
+        assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_unresolved_pwr),
+        mock.patch.object(MofN, "match", return_value=mofn_one),
+    ):
+        assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_unresolved_pwr),
+        mock.patch.object(MofN, "match", return_value=mofn_two),
+    ):
+        with pytest.raises(NotImplementedError, match="Currently unimplemented"):
+            PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1)))
+
     pooling_plotnft = PlotNFT(
         coin=Coin(bytes32.zeros, pooling_inner.tree_hash, uint64(1)),
         lineage_proof=LineageProof(),
