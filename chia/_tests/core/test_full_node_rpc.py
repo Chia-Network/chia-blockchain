@@ -42,11 +42,13 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    ("height", "v2_fraction"),
+    ("prev_tx_height", "phase_out_progress"),
     [(99, 0), (100, 0), (101, 0.01), (125, 0.25), (150, 0.5), (175, 0.75), (199, 0.99), (200, 1), (201, 1)],
 )
 @pytest.mark.parametrize("v2_filter_reduction", [60, 1000])
-async def test_network_space_transition(height: int, v2_fraction: float, v2_filter_reduction: int) -> None:
+async def test_network_space_transition(
+    prev_tx_height: int, phase_out_progress: float, v2_filter_reduction: int
+) -> None:
     constants = DEFAULT_CONSTANTS.replace(
         HARD_FORK_HEIGHT=uint32(50),
         HARD_FORK2_HEIGHT=uint32(100),
@@ -55,7 +57,12 @@ async def test_network_space_transition(height: int, v2_fraction: float, v2_filt
         PLOT_FILTER_V2_RELATIVE_HEIGHT=[uint32(1000)] * 8 + [uint32(v2_filter_reduction)],
     )
     older = SimpleNamespace(height=uint32(1), weight=10, total_iters=1000)
-    newer = SimpleNamespace(height=uint32(height), weight=60, total_iters=3000)
+    newer = SimpleNamespace(
+        height=uint32(prev_tx_height + 1),
+        prev_transaction_block_height=uint32(prev_tx_height),
+        weight=60,
+        total_iters=3000,
+    )
     hashes = [bytes32([i] * 32) for i in (1, 2)]
     store = SimpleNamespace(
         get_block_record=AsyncMock(side_effect=[newer, older]),
@@ -69,8 +76,8 @@ async def test_network_space_transition(height: int, v2_fraction: float, v2_filt
     # V1 has a 256 filter throughout this range. V2 starts at 512 and
     # reduces to 256 at its independently configured relative height.
     v1_space = 0.78 * (50 / 2000) * constants.DIFFICULTY_CONSTANT_FACTOR * 256
-    v2_space = scale * (256 if height >= 100 + v2_filter_reduction else 512)
-    assert result["space"] == int((1 - v2_fraction) * v1_space + v2_fraction * v2_space)
+    v2_space = scale * (256 if prev_tx_height >= 100 + v2_filter_reduction else 512)
+    assert result["space"] == int((1 - phase_out_progress) * v1_space + phase_out_progress * v2_space)
     assert store.get_block_record.await_count == 2
     store.get_full_block_bytes.assert_not_awaited()
 
