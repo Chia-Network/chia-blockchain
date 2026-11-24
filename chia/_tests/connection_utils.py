@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Collection
 from pathlib import Path
 
 import aiohttp
@@ -46,12 +47,8 @@ async def add_dummy_connection(
     *,
     additional_capabilities: list[tuple[uint16, str]] | None = None,
     wait_for_peer_added: bool = True,
+    excluded_capabilities: Collection[Capability] = (),
 ) -> tuple[asyncio.Queue[Message], bytes32]:
-    if additional_capabilities is None:
-        additional_capabilities = [
-            (uint16(Capability.HARD_FORK_2.value), "1"),
-            (uint16(Capability.RATE_LIMITS_V3.value), "1"),
-        ]
     wsc, peer_id = await add_dummy_connection_wsc(
         server=server,
         self_hostname=self_hostname,
@@ -59,6 +56,7 @@ async def add_dummy_connection(
         type=type,
         additional_capabilities=additional_capabilities,
         wait_for_peer_added=wait_for_peer_added,
+        excluded_capabilities=excluded_capabilities,
     )
 
     return wsc.incoming_queue, peer_id
@@ -71,12 +69,20 @@ async def add_dummy_connection_wsc(
     type: NodeType = NodeType.FULL_NODE,
     additional_capabilities: list[tuple[uint16, str]] | None = None,
     wait_for_peer_added: bool = True,
+    *,
+    excluded_capabilities: Collection[Capability] = (),
 ) -> tuple[WSChiaConnection, bytes32]:
     if additional_capabilities is None:
         additional_capabilities = [
             (uint16(Capability.HARD_FORK_2.value), "1"),
             (uint16(Capability.RATE_LIMITS_V3.value), "1"),
         ]
+    excluded_ids = {uint16(capability.value) for capability in excluded_capabilities}
+    capabilities = [
+        capability
+        for capability in default_capabilities[type] + additional_capabilities
+        if capability[0] not in excluded_ids
+    ]
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
     try:
@@ -114,7 +120,7 @@ async def add_dummy_connection_wsc(
             peer_id,
             100,
             30,
-            local_capabilities_for_handshake=default_capabilities[type] + additional_capabilities,
+            local_capabilities_for_handshake=capabilities,
             stub_metadata_for_type=StubMetadataRegistry,
             session=session,
         )
