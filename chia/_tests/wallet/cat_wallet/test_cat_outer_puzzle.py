@@ -8,10 +8,17 @@ from clvm_tools.binutils import disassemble
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
-from chia.wallet.cat_wallet.cat_utils import CATPuzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CATCorePuzzles, CATPuzzle
 from chia.wallet.outer_puzzles import construct_puzzle, get_inner_puzzle, get_inner_solution, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
+
+
+def test_cat_core_puzzles_computed_hashes() -> None:
+    puzzles = CATCorePuzzles(cat_mod_hash_pre_computed=None, hash_of_quoted_mod_hash_pre_computed=None)
+    assert puzzles.cat_mod_hash == CAT_MOD.get_tree_hash()
+    assert puzzles.hash_of_quoted_mod_hash == calculate_hash_of_quoted_mod_hash(puzzles.cat_mod_hash)
 
 
 def test_cat_outer_puzzle() -> None:

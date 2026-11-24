@@ -803,6 +803,8 @@ class NFTWallet:
         unft = UncurriedNFT.uncurry(*nft_coin.full_puzzle.uncurry())
         assert unft is not None
         if unft.supports_did:
+            if new_owner not in {None, b""} and new_did_inner_hash is None:
+                raise ValueError("Must specify new_did_inner_hash when setting a new owner")
             if new_owner is None:
                 # If no new owner was specified and we're sending this to ourselves, let's not reset the DID
                 derivation_record: (

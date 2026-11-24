@@ -800,39 +800,35 @@ async def test_sync_none_wp_response_backward_comp(
 
 
 @pytest.mark.anyio
-# todo_v2_plots fix this test and remove limit_consensus_modes
-@pytest.mark.limit_consensus_modes(
-    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
-    reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
-)
 async def test_bad_peak_cache_invalidation(
     two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
     default_1000_blocks: list[FullBlock],
     blockchain_constants: ConsensusConstants,
     consensus_mode: ConsensusMode,
 ) -> None:
-    full_node_1, _full_node_2, _server_1, _server_2, bt = two_nodes
+    full_node_1, _full_node_2, _server_1, _server_2, _bt = two_nodes
 
     for block in default_1000_blocks[:-500]:
         await full_node_1.full_node.add_block(block)
 
     cache_size = full_node_1.full_node.config.get("bad_peak_cache_size")
     assert cache_size is not None
-    for x in range(cache_size + 10):
-        blocks = bt.get_consecutive_blocks(
-            num_blocks=1, block_list_input=default_1000_blocks[:-500], seed=x.to_bytes(2, "big")
+    # The cache only stores (header hash, height) pairs, so the bad peaks don't
+    # need to be real blocks. Farming each one on top of the existing chain is
+    # very slow, since BlockTools re-validates the whole chain every time.
+    for _ in range(cache_size + 10):
+        full_node_1.full_node.add_to_bad_peak_cache(
+            peak_header_hash=bytes32.random(), peak_height=default_1000_blocks[500].height
         )
-        block = blocks[-1]
-        full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
 
     assert len(full_node_1.full_node.bad_peak_cache) == cache_size
 
     for block in default_1000_blocks[500:]:
         await full_node_1.full_node.add_block(block)
 
-    blocks = bt.get_consecutive_blocks(num_blocks=1, block_list_input=default_1000_blocks[:-1])
-    block = blocks[-1]
-    full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
+    full_node_1.full_node.add_to_bad_peak_cache(
+        peak_header_hash=bytes32.random(), peak_height=default_1000_blocks[-1].height
+    )
     assert len(full_node_1.full_node.bad_peak_cache) == 1
 
 

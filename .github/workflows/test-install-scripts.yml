@@ -153,7 +153,11 @@ jobs:
   test_scripts_in_docker:
     name: Docker ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
-    container: ${{ matrix.distribution.url }}
+    container:
+      image: ${{ matrix.distribution.url }}
+      env:
+        # OCI images may omit PATH; retain system tools when GITHUB_PATH adds the virtualenv.
+        PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     strategy:
       fail-fast: false
       matrix:

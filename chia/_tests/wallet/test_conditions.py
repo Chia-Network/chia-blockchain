@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, final
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -12,6 +12,7 @@ from clvm.EvalError import EvalError
 from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.casts import int_from_bytes
+from chia.util.streamable import streamable
 from chia.wallet.conditions import (
     CONDITION_DRIVERS,
     CONDITION_DRIVERS_W_ABSTRACTIONS,
@@ -204,6 +205,33 @@ def test_unknown_condition() -> None:
         conditions_from_json_dicts([{"opcode": bytes(32)}])
     assert unknown_condition == UnknownCondition(Program.to(-10), [Program.to(HASH), Program.to(AMT)])
     assert unknown_condition == UnknownCondition.from_program(unknown_condition.to_program())
+
+
+def test_parse_conditions_additional_conditions() -> None:
+    custom_opcode = bytes([99])
+
+    @final
+    @streamable
+    @dataclass(frozen=True)
+    class CustomCondition(Condition):
+        value: uint64
+
+        def to_program(self) -> Program: ...  # type: ignore[empty-body]
+
+        @classmethod
+        def from_program(cls, program: Program) -> CustomCondition:
+            return cls(uint64(program.at("rf").as_int()))
+
+    assert custom_opcode not in CONDITION_DRIVERS
+    assert custom_opcode not in CONDITION_DRIVERS_W_ABSTRACTIONS
+    # Without the extra driver this opcode falls through to UnknownCondition
+    assert isinstance(parse_conditions_non_consensus([Program.to([custom_opcode, AMT])])[0], UnknownCondition)
+
+    custom = parse_conditions_non_consensus(
+        [Program.to([custom_opcode, AMT])],
+        additional_conditions={custom_opcode: CustomCondition},
+    )[0]
+    assert custom == CustomCondition(uint64(AMT))
 
 
 @pytest.mark.parametrize(
