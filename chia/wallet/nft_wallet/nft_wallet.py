@@ -434,7 +434,7 @@ class NFTWallet:
                 inner_puzzle=UnknownPuzzle(known_program=p2_inner_puzzle),
                 transfer_program=DefaultTransferProgram(
                     self_launcher_id=launcher_coin.name(),
-                    royalty_address=royalty_puzzle_hash,
+                    royalty_address=royalty_puzzle_hash if royalty_puzzle_hash is not None else target_puzzle_hash,
                     royalty_basis_points=percentage,
                 ),
             )

@@ -464,6 +464,89 @@ def test_transfer_program_condition() -> None:
     assert full.to_program() == Program.to([-10, owner, [[100, asset_a], [250, asset_b]], inner])
 
 
+def test_get_next_from_previous_preserves_wallet_mint_metadata_order() -> None:
+    """Wallet mint key order differs from NFTMetadata.program; next-state sync must not rebuild it."""
+    # Same shape as wallet_rpc_api.nft_mint_nft (mh/lh appended after sn/st).
+    mint_metadata = Program.to(
+        [
+            ("u", ["https://example.com/data"]),
+            ("h", bytes32([1] * 32)),
+            ("mu", ["https://example.com/meta"]),
+            ("lu", ["https://example.com/license"]),
+            ("sn", 1),
+            ("st", 1),
+            ("mh", bytes32([2] * 32)),
+            ("lh", bytes32([3] * 32)),
+        ]
+    )
+    assert NFTMetadata.from_program(mint_metadata).program.get_tree_hash() != mint_metadata.get_tree_hash()
+
+    launcher_id = bytes32([9] * 32)
+    nft_puzzle = SingletonPuzzle(
+        launcher_id=launcher_id,
+        inner_puzzle=MetadataLayer(
+            metadata=mint_metadata,
+            metadata_updater=DefaultMetadataUpdater(),
+            inner_puzzle=ACSPuzzle(),
+        ),
+    )
+    previous_coin = Coin(bytes32([8] * 32), nft_puzzle.tree_hash, uint64(1))
+    lineage = LineageProof(parent_name=bytes32([7] * 32), amount=uint64(1))
+
+    def next_from_conditions(conditions: list[Any]) -> NFT[UnknownPuzzle]:
+        solution = NFTSolution(
+            lineage_proof=lineage,
+            coin_amount=uint64(1),
+            inner_solution=MetadataLayerSolution(inner_solution=ACSSolution(conditions=conditions)),
+        )
+        return NFT.get_next_from_previous(
+            previous_coin=previous_coin,
+            previous_nft_puzzle=UnknownPuzzle(known_program=nft_puzzle.program),
+            previous_solution=UnknownSolution(program=solution.program),
+        )
+
+    next_inner = ACSPuzzle().tree_hash
+    unchanged = next_from_conditions([CreateCoin(puzzle_hash=next_inner, amount=uint64(1))])
+    assert unchanged.inner_puzzle.metadata == mint_metadata
+    assert (
+        unchanged.coin.puzzle_hash
+        == SingletonPuzzle(
+            launcher_id=launcher_id,
+            inner_puzzle=MetadataLayer(
+                metadata=mint_metadata,
+                metadata_updater=DefaultMetadataUpdater(),
+                inner_puzzle=UnknownPuzzle(known_tree_hash=next_inner),
+            ),
+        ).tree_hash
+    )
+
+    update = UpdateMetadataCondition(data_uri="https://example.com/new")
+    expected_metadata = (
+        run(
+            NFT_METADATA_UPDATER,
+            Program.to([mint_metadata, DefaultMetadataUpdater().tree_hash, update.to_program().at("rrf")]),
+        )
+        .first()
+        .first()
+    )
+    updated = next_from_conditions([CreateCoin(puzzle_hash=next_inner, amount=uint64(1)), update])
+    assert updated.inner_puzzle.metadata == expected_metadata
+    assert (
+        updated.coin.puzzle_hash
+        == SingletonPuzzle(
+            launcher_id=launcher_id,
+            inner_puzzle=MetadataLayer(
+                metadata=expected_metadata,
+                metadata_updater=DefaultMetadataUpdater(),
+                inner_puzzle=UnknownPuzzle(known_tree_hash=next_inner),
+            ),
+        ).tree_hash
+    )
+    assert expected_metadata.get_tree_hash() != (
+        NFTMetadata.from_program(mint_metadata).update_from_condition(condition=update).program.get_tree_hash()
+    )
+
+
 def test_nft_metadata_ownership_driver_edge_cases() -> None:
 
     # other_update path is covered by lifecycle tests; unreachable else needs bypass of __post_init__

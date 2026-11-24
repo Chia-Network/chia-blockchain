@@ -580,13 +580,27 @@ class NFT(
         tp_condition = (
             tpc[0] if (tpc := [c for c in conditions if isinstance(c, TransferProgramCondition)]) != [] else None
         )
-        previous_metadata = NFTMetadata.from_program(previous_nft.inner_puzzle.metadata)
+        # Preserve on-chain metadata bytes. Round-tripping through NFTMetadata.program
+        # reorders keys (wallet mint order differs), which changes the puzzle hash/coin id.
+        # The default updater is (mod (CURRENT_METADATA UPDATER_PH (key . new_url)) ...) and
+        # returns ((new_metadata new_updater_ph) conditions).
+        next_metadata = previous_nft.inner_puzzle.metadata
+        if update_metadata_condition is not None:
+            updater_result = run(
+                previous_nft.inner_puzzle.metadata_updater.program,
+                Program.to(
+                    [
+                        previous_nft.inner_puzzle.metadata,
+                        previous_nft.inner_puzzle.metadata_updater.tree_hash,
+                        update_metadata_condition.to_program().at("rrf"),
+                    ]
+                ),
+            )
+            next_metadata = updater_result.first().first()
         nft_puzzle = SingletonPuzzle(
             launcher_id=previous_nft.launcher_id,
             inner_puzzle=MetadataLayer(
-                metadata=previous_metadata.update_from_condition(condition=update_metadata_condition).program
-                if update_metadata_condition is not None
-                else previous_metadata.program,
+                metadata=next_metadata,
                 metadata_updater=DefaultMetadataUpdater(),
                 inner_puzzle=OwnershipLayer(
                     current_owner=(tp_condition.new_owner.launcher_id if tp_condition.new_owner is not None else None)
