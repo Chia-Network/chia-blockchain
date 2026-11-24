@@ -100,7 +100,7 @@ class NFTCoinInfo(Streamable):
     """The latest coin of the NFT"""
     coin: Coin
     """NFT lineage proof"""
-    lineage_proof: LineageProof | None
+    lineage_proof: LineageProof
     """NFT full puzzle"""
     full_puzzle: Program
     """NFT minting block height"""
