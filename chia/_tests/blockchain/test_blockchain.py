@@ -4165,11 +4165,28 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools, conse
                 all_coins.append(coin)
     spend_bundle_0 = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, all_coins.pop())
     blocks = bt.get_consecutive_blocks(
-        15,
+        5,
         block_list_input=blocks,
         farmer_reward_puzzle_hash=coinbase_puzzlehash,
         pool_reward_puzzle_hash=receiver_puzzlehash,
         transaction_data=spend_bundle_0,
+        guarantee_transaction_block=True,
+    )
+    # Delay the canonical branch after the fork point, so its equal-height peak
+    # loses on total iterations even when proof selection changes across plot modes.
+    blocks = bt.get_consecutive_blocks(
+        1,
+        block_list_input=blocks,
+        skip_slots=10,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        guarantee_transaction_block=True,
+    )
+    blocks = bt.get_consecutive_blocks(
+        9,
+        block_list_input=blocks,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
         guarantee_transaction_block=True,
     )
 
@@ -4218,14 +4235,10 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools, conse
             # same height as peak decide by iterations
             peak = b.get_peak()
             assert peak is not None
-            # same height as peak should be ADDED_AS_ORPHAN if block.total_iters >= peak.total_iters
-            if block.total_iters < peak.total_iters:
-                expected = AddBlockResult.NEW_PEAK
-            else:
-                expected = AddBlockResult.ADDED_AS_ORPHAN
-            # todo_v2_plots we are checking that are desierd case got executed, hard to create with the new pos2 plots
-            if consensus_mode < ConsensusMode.HARD_FORK_3_0:
-                assert expected == AddBlockResult.NEW_PEAK
+            assert block.height == peak.height
+            assert block.weight == peak.weight
+            assert block.total_iters < peak.total_iters
+            expected = AddBlockResult.NEW_PEAK
         else:
             expected = AddBlockResult.NEW_PEAK
         await _validate_and_add_block(b, block, expected_result=expected, fork_info=fork_info)

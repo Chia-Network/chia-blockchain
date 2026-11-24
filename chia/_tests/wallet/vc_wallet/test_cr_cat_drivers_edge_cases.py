@@ -13,17 +13,25 @@ from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, ACSSolution, UnknownPu
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.vc_wallet.cr_cat_drivers import (
     CRCAT,
+    CREDENTIAL_RESTRICTION,
+    CREDENTIAL_STRUCT,
     PENDING_VC_ANNOUNCEMENT,
     CRCATSpend,
     CredentialRestrictionLayer,
     CredentialRestrictionLayerSolution,
     PendingApprovalPuzzle,
     ProofsChecker,
+    construct_pending_approval_state,
 )
 
 
 def test_proofs_checker_and_pending_approval_match_failures() -> None:
     assert ProofsChecker.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
+    with pytest.raises(ValueError, match="Puzzle was not a proof checker"):
+        ProofsChecker.from_program(UnknownPuzzle(known_program=ACSPuzzle().program))
+
+    proofs_checker = ProofsChecker(flags=["flag"])
+    assert ProofsChecker.from_program(UnknownPuzzle(known_program=proofs_checker.program)) == proofs_checker
 
     assert PendingApprovalPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
 
@@ -61,17 +69,44 @@ def test_proofs_checker_and_pending_approval_match_failures() -> None:
         )
     )
     assert matched == PendingApprovalPuzzle(target_puzzle_hash=bytes32.zeros, amount=uint64(1))
+    assert (
+        construct_pending_approval_state(bytes32.zeros, uint64(1))
+        == PendingApprovalPuzzle(target_puzzle_hash=bytes32.zeros, amount=uint64(1)).program
+    )
 
 
 def test_credential_restriction_match_failures() -> None:
     assert CredentialRestrictionLayerSolution.match(UnknownSolution(program=Program.to([1, 2, 3]))) is None
 
     # Valid CR layer shape but unknown proofs checker
-    from chia.wallet.vc_wallet.cr_cat_drivers import CREDENTIAL_RESTRICTION, CREDENTIAL_STRUCT
-
     first_curry = CREDENTIAL_RESTRICTION.curry(CREDENTIAL_STRUCT, [bytes32.zeros], Program.to("bad checker"))
     bad_cr = first_curry.curry(first_curry.get_tree_hash(), ACSPuzzle().program)
     assert CredentialRestrictionLayer.match(unknown_puzzle=UnknownPuzzle(known_program=bad_cr)) is None
+
+
+def test_get_next_from_coin_spend_unknown_proofs_checker() -> None:
+    coin = Coin(bytes32.zeros, bytes32.zeros, uint64(1))
+    bad_checker = Program.to("bad checker")
+
+    # Non-CR CAT parent: remark condition carries an unknown proofs checker
+    cat_only = CATPuzzle(tail_hash=bytes32.zeros, inner_puzzle=ACSPuzzle())
+    remark_conditions = Program.to([[1, bytes32.zeros, [bytes32.zeros], bad_checker]])
+    with pytest.raises(ValueError, match="Unknown proofs checker in next CRCAT"):
+        CRCAT.get_next_from_coin_spend(
+            make_spend(coin, cat_only.program, Program.to([[]])),
+            conditions=remark_conditions,
+        )
+
+    # CR-CAT parent: puzzle reveal contains an unknown proofs checker
+    first_curry = CREDENTIAL_RESTRICTION.curry(CREDENTIAL_STRUCT, [bytes32.zeros], bad_checker)
+    bad_cr = first_curry.curry(first_curry.get_tree_hash(), ACSPuzzle().program)
+    cr_cat = CATPuzzle(tail_hash=bytes32.zeros, inner_puzzle=UnknownPuzzle(known_program=bad_cr))
+    cr_layer_solution = Program.to([0, 0, 0, 0, 0, 0, []])
+    with pytest.raises(ValueError, match="Unknown proofs checker in next CRCAT"):
+        CRCAT.get_next_from_coin_spend(
+            make_spend(coin, cr_cat.program, Program.to([cr_layer_solution])),
+            conditions=Program.to([]),
+        )
 
 
 def test_crcat_is_cr_cat_and_spend_errors() -> None:
@@ -114,6 +149,7 @@ async def test_crcat_wallet_unknown_proofs_checker() -> None:
 
     from chia.wallet.outer_puzzles import AssetType
     from chia.wallet.puzzle_drivers import PuzzleInfo
+    from chia.wallet.trade_manager import TradeManager
     from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 
     puzzle_info = PuzzleInfo(
@@ -129,3 +165,11 @@ async def test_crcat_wallet_unknown_proofs_checker() -> None:
     )
     with pytest.raises(ValueError, match="Unknown proofs checker found in CR-CAT puzzle driver"):
         await CRCATWallet.create_from_puzzle_info(MagicMock(), MagicMock(), puzzle_info)
+
+    trade_manager = TradeManager()
+    with pytest.raises(ValueError, match="Unknown proofs checker for CRCAT"):
+        await trade_manager.check_for_requested_payment_modifications(
+            {},
+            {bytes32.zeros: puzzle_info},
+            taking=False,
+        )

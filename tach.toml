@@ -1,4 +1,5 @@
 interfaces = []
+exact = true
 exclude = ["**/*__pycache__", "**/*egg-info", "**/docs", "**/tests", "**/venv"]
 source_roots = ["."]
 
@@ -176,10 +177,6 @@ depends_on = [
 ]
 
 [[modules]]
-path = "chia.legacy"
-depends_on = ["chia.util"]
-
-[[modules]]
 path = "chia.rpc"
 # this module should probably be disbanded and contents moved to the modules
 # for their respective services
@@ -300,7 +297,6 @@ path = "chia.solver"
 depends_on = [
     "chia.service",
     "chia.protocols",
-    "chia.types",
     "chia.util",
     { path = "chia.apis", deprecated = false },
     { path = "chia.consensus", deprecated = false },

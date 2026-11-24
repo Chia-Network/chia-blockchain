@@ -13,13 +13,14 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.cat_wallet.cat_utils import CATPuzzle
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 
 
 @dataclass
@@ -68,8 +69,7 @@ def run_generator(
     ]
     cat_list: list[CAT] = []
     for spend in spends:
-        _, puzzle, _, solution = spend.as_iter()
-        matched_cat = CATPuzzle.match_uncurried(uncurry_puzzle(puzzle))
+        matched_cat = CATPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=spend.puzzle_reveal))
 
         if matched_cat is None:
             continue
@@ -77,7 +77,9 @@ def run_generator(
         asset_id = matched_cat.tail_hash
         memo = ""
 
-        _, puzzle_result = puzzle.run_with_cost(max_cost, solution, flags)
+        _, puzzle_result = Program.from_serialized(spend.puzzle_reveal).run_with_cost(
+            max_cost, Program.from_serialized(spend.solution), flags
+        )
 
         conds: dict[ConditionOpcode, list[ConditionWithArgs]] = {}
 
