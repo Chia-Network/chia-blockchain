@@ -578,18 +578,18 @@ class CRCATWallet(CATWallet):
 
         if vc is None:  # pragma: no cover
             raise RuntimeError("Spending no cat coins is not an appropriate use of _generate_unsigned_spendbundle")
-        if vc.proof_hash is None:
+        if vc.inner_puzzle.proof_hash is None:
             raise RuntimeError("CR-CATs found an appropriate VC but that VC contains no proofs")  # pragma: no cover
 
         proof_of_inclusions: Program = await vc_wallet.proof_of_inclusions_for_root_and_keys(
-            vc.proof_hash, self.info.proofs_checker.flags
+            vc.inner_puzzle.proof_hash, self.info.proofs_checker.flags
         )
 
         expected_announcements, coin_spends, _ = CRCAT.spend_many(
             inner_spends,
             proof_of_inclusions,
             NilSolution(),  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
-            vc.proof_provider,
+            vc.inner_puzzle.proof_provider,
             vc.launcher_id,
             vc.wrap_inner_with_backdoor().get_tree_hash() if add_authorizations_to_cr_cats else None,
         )
@@ -727,10 +727,10 @@ class CRCATWallet(CATWallet):
         vc = await vc_wallet.get_vc_with_provider_in_and_proofs(
             self.info.authorized_providers, self.info.proofs_checker.flags
         )
-        if vc.proof_hash is None:
+        if vc.inner_puzzle.proof_hash is None:
             raise RuntimeError(f"VC {vc.launcher_id} has no proofs to authorize transaction")  # pragma: no cover
         proof_of_inclusions: Program = await vc_wallet.proof_of_inclusions_for_root_and_keys(
-            vc.proof_hash, self.info.proofs_checker.flags
+            vc.inner_puzzle.proof_hash, self.info.proofs_checker.flags
         )
 
         # Generate the bundle nonce
@@ -763,7 +763,7 @@ class CRCATWallet(CATWallet):
             ],
             proof_of_inclusions,
             NilSolution(),  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
-            vc.proof_provider,
+            vc.inner_puzzle.proof_provider,
             vc.launcher_id,
             vc.wrap_inner_with_backdoor().get_tree_hash(),
         )

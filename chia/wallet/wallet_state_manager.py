@@ -1009,10 +1009,10 @@ class WalletStateManager:
             )
 
         # Check if the coin is a VC
-        is_vc, _err_msg = VerifiedCredential.is_vc(uncurried)
+        is_vc = VerifiedCredential.is_vc(unknown_puzzle=uncurried)
         if is_vc:
-            vc: VerifiedCredential = VerifiedCredential.get_next_from_coin_spend(coin_spend)
-            return await VCWallet.identify(self, vc), vc
+            vc = VerifiedCredential.get_next_from_coin_spend(coin_spend)
+            return await VCWallet.identify(self, vc), vc  # type: ignore[return-value]
 
         # Check if the coin is a PlotNFT
         if uncurried.mod == SingletonStruct.singleton_puzzles.singleton_mod:
