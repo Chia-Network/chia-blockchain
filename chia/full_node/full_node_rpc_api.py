@@ -388,8 +388,7 @@ class FullNodeRpcApi:
                 result["reverted"] = sp_total_iters > next_b_total_iters
                 return result
             if curr_b.finished_reward_slot_hashes is not None:
-                assert curr_b.finished_challenge_slot_hashes is not None
-                for eos_rc in curr_b.finished_challenge_slot_hashes:
+                for eos_rc in curr_b.finished_reward_slot_hashes:
                     if eos_rc == rc_challenge:
                         if next_b is None:
                             return result

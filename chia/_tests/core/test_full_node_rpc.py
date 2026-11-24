@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import time
+
 import pytest
-from chia_rs import AugSchemeMPL, BlockRecord, FullBlock, UnfinishedBlock
+from chia_rs import AugSchemeMPL, BlockRecord, FullBlock, UnfinishedBlock, VDFInfo
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -18,6 +20,7 @@ from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_store import FullNodeStore, RecentEos, RecentSignagePoint
 from chia.protocols import full_node_protocol
 from chia.protocols.outbound_message import NodeType
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
@@ -583,6 +586,177 @@ async def test_signage_points(
         assert res["eos"] == selected_eos
         assert res["reverted"]
         assert res["signage_point_index"] == uint8(0)
+
+
+def _seed_recent_sp(store: FullNodeStore, sp: SignagePoint, index: uint8) -> bytes32:
+    assert sp.cc_vdf is not None
+    sp_hash = sp.cc_vdf.output.get_hash()
+    store.recent_signage_points.put(
+        sp_hash,
+        RecentSignagePoint(sp, time.time(), index, None),
+    )
+    return sp_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[
+        ConsensusMode.PLAIN,
+        ConsensusMode.HARD_FORK_2_0,
+        ConsensusMode.SOFT_FORK_2_7,
+        ConsensusMode.HARD_FORK_3_0,
+    ],
+)
+async def test_get_recent_signage_point_or_eos_backtrack(
+    two_nodes_sim_and_wallets_services: SimulatorsAndWalletsServices,
+) -> None:
+    """Cover get_recent_signage_point_or_eos paths that walk the chain after the
+    active slot cache no longer holds the SP/EOS (trimmed by new_peak).
+    """
+    nodes, _, bt = two_nodes_sim_and_wallets_services
+    full_node_service_1, _full_node_service_2 = nodes
+    full_node_api_1 = full_node_service_1._api
+    store = full_node_api_1.full_node.full_node_store
+    blockchain = full_node_api_1.full_node.blockchain
+
+    config = bt.config
+    self_hostname = config["self_hostname"]
+    assert full_node_service_1.rpc_server is not None
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service_1.rpc_server.listen_port,
+        full_node_service_1.root_path,
+        full_node_service_1.config,
+    ) as client:
+        blocks = bt.get_consecutive_blocks(3)
+        for block in blocks:
+            await full_node_api_1.full_node.add_block(block)
+
+        # --- EOS found via blockchain walk (not in active finished_sub_slots) ---
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+        selected_eos = blocks[-1].finished_sub_slots[0]
+        await full_node_api_1.full_node.add_block(blocks[-1])
+        eos_hash = selected_eos.challenge_chain.get_hash()
+        store.recent_eos.put(eos_hash, RecentEos(selected_eos, time.time(), None))
+        store.initialize_genesis_sub_slot()
+        assert store.get_sub_slot(eos_hash) is None
+
+        res = await client.get_recent_signage_point_or_eos(None, eos_hash)
+        assert res is not None
+        assert res["eos"] == selected_eos
+        assert not res["reverted"]
+        assert res["signage_point_index"] == uint8(0)
+
+        # --- SP at peak: reward_infusion match with next_b is None ---
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+        await full_node_api_1.full_node.add_block(blocks[-1])
+        peak = blockchain.get_peak()
+        assert peak is not None
+        sp = get_signage_point(
+            bt.constants,
+            blockchain,
+            peak,
+            peak.ip_sub_slot_total_iters(bt.constants),
+            uint8(4),
+            [],
+            peak.sub_slot_iters,
+        )
+        assert sp.cc_vdf is not None
+        assert sp.rc_vdf is not None
+        # Force rc challenge to the peak infusion so the walk matches with next_b is None
+        if sp.rc_vdf.challenge != peak.reward_infusion_new_challenge:
+            sp = SignagePoint(
+                sp.cc_vdf,
+                sp.cc_proof,
+                VDFInfo(
+                    peak.reward_infusion_new_challenge,
+                    sp.rc_vdf.number_of_iterations,
+                    sp.rc_vdf.output,
+                ),
+                sp.rc_proof,
+            )
+        assert sp.rc_vdf is not None
+        sp_hash = _seed_recent_sp(store, sp, uint8(4))
+        store.initialize_genesis_sub_slot()
+        assert store.get_signage_point(sp_hash) is None
+
+        res = await client.get_recent_signage_point_or_eos(sp_hash, None)
+        assert res is not None
+        assert res["signage_point"] == sp
+        assert not res["reverted"]
+        assert res["signage_point_index"] == uint8(4)
+
+        # --- SP with next_b set: later peak, still finds infusion challenge ---
+        blocks = bt.get_consecutive_blocks(2, block_list_input=blocks)
+        for block in blocks[-2:]:
+            await full_node_api_1.full_node.add_block(block)
+        _seed_recent_sp(store, sp, uint8(4))
+        store.initialize_genesis_sub_slot()
+
+        res = await client.get_recent_signage_point_or_eos(sp_hash, None)
+        assert res is not None
+        assert res["signage_point"] == sp
+        assert res["signage_point_index"] == uint8(4)
+        assert isinstance(res["reverted"], bool)
+
+        # --- EOS not found within 10 slots (cache entry older than search window) ---
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=12)
+        await full_node_api_1.full_node.add_block(blocks[-1])
+        store.recent_eos.put(eos_hash, RecentEos(selected_eos, time.time(), None))
+        store.initialize_genesis_sub_slot()
+        res = await client.get_recent_signage_point_or_eos(None, eos_hash)
+        assert res is not None
+        assert res["eos"] == selected_eos
+        assert res["reverted"]
+
+        # --- SP via finished_reward_slot_hashes (rc challenge = finished reward EOS) ---
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=2)
+        slot_block = blocks[-1]
+        assert len(slot_block.finished_sub_slots) >= 1
+        await full_node_api_1.full_node.add_block(slot_block)
+        peak = blockchain.get_peak()
+        assert peak is not None
+        assert peak.finished_reward_slot_hashes is not None
+        # Build an SP whose rc challenge is a finished reward-slot hash (not an infusion)
+        eos_rc = peak.finished_reward_slot_hashes[-1]
+        sp_from_eos = get_signage_point(
+            bt.constants,
+            blockchain,
+            peak,
+            peak.ip_sub_slot_total_iters(bt.constants),
+            uint8(2),
+            list(slot_block.finished_sub_slots),
+            peak.sub_slot_iters,
+        )
+        assert sp_from_eos.cc_vdf is not None
+        assert sp_from_eos.rc_vdf is not None
+        # If get_signage_point still keyed off infusion, force the rc challenge for coverage
+        if sp_from_eos.rc_vdf.challenge != eos_rc:
+            forced_rc = VDFInfo(eos_rc, sp_from_eos.rc_vdf.number_of_iterations, sp_from_eos.rc_vdf.output)
+            sp_from_eos = SignagePoint(sp_from_eos.cc_vdf, sp_from_eos.cc_proof, forced_rc, sp_from_eos.rc_proof)
+        assert sp_from_eos.rc_vdf is not None
+        assert sp_from_eos.rc_vdf.challenge == eos_rc
+        assert sp_from_eos.rc_vdf.challenge != peak.reward_infusion_new_challenge
+
+        sp2_hash = _seed_recent_sp(store, sp_from_eos, uint8(2))
+        store.initialize_genesis_sub_slot()
+        res = await client.get_recent_signage_point_or_eos(sp2_hash, None)
+        assert res is not None
+        assert res["signage_point"] == sp_from_eos
+        assert not res["reverted"]
+        assert res["signage_point_index"] == uint8(2)
+
+        # Same SP after a later peak: next_b is set on the finished_reward match
+        blocks = bt.get_consecutive_blocks(2, block_list_input=blocks)
+        for block in blocks[-2:]:
+            await full_node_api_1.full_node.add_block(block)
+        _seed_recent_sp(store, sp_from_eos, uint8(2))
+        store.initialize_genesis_sub_slot()
+        res = await client.get_recent_signage_point_or_eos(sp2_hash, None)
+        assert res is not None
+        assert res["signage_point"] == sp_from_eos
+        assert isinstance(res["reverted"], bool)
+        assert res["signage_point_index"] == uint8(2)
 
 
 @pytest.mark.anyio
