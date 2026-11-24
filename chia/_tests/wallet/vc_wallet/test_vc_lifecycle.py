@@ -1002,7 +1002,7 @@ def test_magic_tp_condition() -> None:
     )
     parsed_with_tp = MagicTPCondition.from_program(with_tp.to_program())
     assert parsed_with_tp.tp_solution is not None
-    assert parsed_with_tp.tp_solution == tp_solution.program
+    assert parsed_with_tp.tp_solution == UnknownSolution(program=tp_solution.program)
 
     revoke = MagicTPCondition(
         eml_lineage_proof=steady_lineage,
