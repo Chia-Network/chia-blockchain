@@ -427,15 +427,22 @@ class HarvesterAPI:
         v2_awaitables = []
         passed = 0
         total = 0
+        total_v1_plots = 0
+        total_v2_plots = 0
         with self.harvester.plot_manager:
             self.harvester.log.debug("new_signage_point_harvester lock acquired")
             for try_plot_filename, try_plot_info in self.harvester.plot_manager.plots.items():
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
                 total += 1
+                is_v2 = try_plot_info.prover.get_version() == PlotVersion.V2
+                if is_v2:
+                    total_v2_plots += 1
+                else:
+                    total_v1_plots += 1
                 if not self._plot_passes_filter(try_plot_info, new_challenge):
                     continue
-                if try_plot_info.prover.get_version() == PlotVersion.V2:
+                if is_v2:
                     # before hard fork activation, we can't farm v2 plots
                     constants = self.harvester.constants
                     if new_challenge.last_tx_height < constants.HARD_FORK2_HEIGHT:
@@ -496,10 +503,10 @@ class HarvesterAPI:
         await peer.send_message(pass_msg)
 
         self.harvester.log.info(
-            f"challenge_hash: {new_challenge.challenge_hash.hex()[:10]} ..."
-            f"{len(awaitables) + len(v2_awaitables)} plots were eligible for farming challenge"
-            f"Found {total_proofs_found} V1 proofs and {total_v2_partial_proofs_found} V2 qualities."
-            f" Time: {time_taken:.5f} s. Total {self.harvester.plot_manager.plot_count()} plots"
+            f"{len(awaitables) + len(v2_awaitables)} plots were eligible for farming"
+            f" challenge_hash: {new_challenge.challenge_hash.hex()[:10]}..."
+            f" Found {total_proofs_found} V1 proofs and {total_v2_partial_proofs_found} V2 qualities."
+            f" Time: {time_taken:.5f} s. Total {total_v1_plots} V1 and {total_v2_plots} V2 plots"
         )
         self.harvester.state_changed(
             "farming_info",
