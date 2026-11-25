@@ -140,7 +140,7 @@ class FeeStat:  # TxConfirmStats
         fee_rate = item.fee_per_cost * STORED_FEE_RATE_SCALE
         bucket_index = get_bucket_index(self.buckets, fee_rate)
 
-        for i in range(periods_to_confirm, len(self.confirmed_average)):
+        for i in range(periods_to_confirm, len(self.confirmed_average) + 1):
             self.confirmed_average[i - 1][bucket_index] += 1
 
         self.tx_ct_avg[bucket_index] += 1

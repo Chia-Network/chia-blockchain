@@ -185,3 +185,25 @@ def test_median_of_single_bucket_range() -> None:
     next_block_fee_rate = horizon_fee_rate(fee_tracker=fee_tracker, fee_stat=fee_tracker.short_horizon, target_blocks=1)
     # Up to the fraction of a mojo the fee was cut down by
     assert next_block_fee_rate == pytest.approx(low_rate)
+
+
+def test_confirmation_counts_in_every_period() -> None:
+    """
+    Covers the scenario where transactions get into the next block to make sure
+    each horizon counts them as confirmed within its longest target too so that
+    target gets a proper estimate.
+    """
+    fee_tracker = FeeTracker(fee_store=FeeStore())
+    # Enough of them for even the long horizon to have an answer
+    transactions = 20
+    cost = 10_000_000
+    fee_rate = 42
+    items = [
+        MempoolItemInfo(cost=cost, fee=cost * fee_rate, height_added_to_mempool=uint32(0)) for _ in range(transactions)
+    ]
+    fee_tracker.process_block(block_height=uint32(1), items=items)
+    for fee_stat in (fee_tracker.short_horizon, fee_tracker.med_horizon, fee_tracker.long_horizon):
+        longest_target_fee_rate = horizon_fee_rate(
+            fee_tracker=fee_tracker, fee_stat=fee_stat, target_blocks=fee_stat.max_confirms
+        )
+        assert longest_target_fee_rate == pytest.approx(fee_rate)
