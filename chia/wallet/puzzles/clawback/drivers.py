@@ -139,6 +139,7 @@ def match_clawback_puzzle(
     unknown_puzzle: UnknownPuzzle,
     inner_puzzle: Program | SerializedProgram,
     inner_solution: Program | SerializedProgram,
+    child_puzzle_hash: bytes32,
 ) -> ClawbackMetadata | None:
     # Check if the inner puzzle is a P2 puzzle
     if MOD != unknown_puzzle.mod:
@@ -182,6 +183,9 @@ def match_clawback_puzzle(
             f"Clawback metadata {metadata} doesn't match inner puzzle {inner_puzzle.get_tree_hash().hex()}"
         )  # pragma: no cover
         return None  # pragma: no cover
+    if puzzle.get_tree_hash() != child_puzzle_hash:
+        # The metadata describes a different output of the same spend
+        return None
     return metadata
 
 
