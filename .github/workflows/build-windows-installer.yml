@@ -23,8 +23,20 @@ on:
   release:
     types: [published]
   pull_request:
-    paths-ignore:
-      - "**.md"
+    paths:
+      - "**"
+      - "!**/*.md"
+      - "!.cursor/**"
+      - "!ruff.toml"
+      - "!mypy.ini.template"
+      - "!mypy-exclusions.txt"
+      - "!mypy-strict-bytes-exclusions.txt"
+      - "!.pre-commit-config.yaml"
+      - "!tach.toml"
+      - "!.github/actionlint.yaml"
+      - "!.github/workflows/**"
+      - ".github/workflows/build-windows-installer.yml"
+      - ".github/workflows/reflow-*.yml"
     branches:
       - "**"
 
