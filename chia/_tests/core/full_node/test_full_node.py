@@ -4952,24 +4952,18 @@ async def test_hard_fork_version_enforcement(
     self_hostname: str,
     consensus_mode: ConsensusMode,
     has_hard_fork2_capability: bool,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
     Covers the case where peers connecting to a full node after the hard fork
     without advertising the HARD_FORK_2 capability get disconnected.
     """
     _, server, _ = one_node_one_block
-    hard_fork2_capability = (uint16(Capability.HARD_FORK_2.value), "1")
-    if not has_hard_fork2_capability:
-        # The default capabilities advertise HARD_FORK_2 so we take it out to
-        # make the dummy peer look like an older version without it.
-        older_peer_capabilities = [
-            capability for capability in default_capabilities[NodeType.FULL_NODE] if capability != hard_fork2_capability
-        ]
-        monkeypatch.setitem(default_capabilities, NodeType.FULL_NODE, older_peer_capabilities)
-    additional_capabilities = [hard_fork2_capability] if has_hard_fork2_capability else []
     wsc, peer_id = await add_dummy_connection_wsc(
-        server, self_hostname, 42, additional_capabilities=additional_capabilities, wait_for_peer_added=False
+        server,
+        self_hostname,
+        42,
+        excluded_capabilities=[] if has_hard_fork2_capability else [Capability.HARD_FORK_2],
+        wait_for_peer_added=False,
     )
     staying_connected = consensus_mode < ConsensusMode.HARD_FORK_3_0 or has_hard_fork2_capability
     if staying_connected:
