@@ -585,21 +585,38 @@ class FullNodeSimulator(FullNodeAPI):
         Arguments:
             records: The transaction records to wait for.
         """
-        with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            ids_to_check: set[bytes32] = set(record_ids)
+        ids_to_check: set[bytes32] = set(record_ids)
+        try:
+            with anyio.fail_after(delay=adjusted_timeout(timeout)):
+                for backoff in backoff_times():
+                    found = set()
+                    for txid in ids_to_check:
+                        tx = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(txid)
+                        if tx is not None and (tx.is_in_mempool() or tx.spend_bundle is None):
+                            found.add(txid)
+                    ids_to_check = ids_to_check.difference(found)
 
-            for backoff in backoff_times():
-                found = set()
-                for txid in ids_to_check:
-                    tx = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(txid)
-                    if tx is not None and (tx.is_in_mempool() or tx.spend_bundle is None):
-                        found.add(txid)
-                ids_to_check = ids_to_check.difference(found)
+                    if len(ids_to_check) == 0:
+                        return
 
-                if len(ids_to_check) == 0:
-                    return
-
-                await asyncio.sleep(backoff)
+                    await asyncio.sleep(backoff)
+        except TimeoutError as exc:
+            details: list[str] = []
+            for txid in sorted(ids_to_check, key=lambda item: item.hex()):
+                tx = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(txid)
+                if tx is None:
+                    details.append(f"{txid.hex()}: record missing")
+                    continue
+                bundle_name = None if tx.spend_bundle is None else tx.spend_bundle.name().hex()
+                bundle_in_mempool = (
+                    tx.spend_bundle is not None
+                    and self.full_node.mempool_manager.get_spendbundle(tx.spend_bundle.name()) is not None
+                )
+                details.append(
+                    f"{txid.hex()}: sent={tx.sent} sent_to={list(tx.sent_to)} "
+                    f"bundle={bundle_name} bundle_in_mempool={bundle_in_mempool}"
+                )
+            raise TimeoutError("Transactions were not marked in the mempool: " + "; ".join(details)) from exc
 
     async def process_transaction_records(
         self,

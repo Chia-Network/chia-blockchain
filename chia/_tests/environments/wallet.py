@@ -401,8 +401,10 @@ class WalletTestFramework:
                                 self.full_node, _exclude_from_mempool_check=invalid_transactions
                             )
                         )
-                    except TimeoutError:  # pragma: no cover
-                        raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
+                    except TimeoutError as e:  # pragma: no cover
+                        raise TimeoutError(
+                            f"All TXs for env-{i} were not found in mempool or marked as in mempool: {e}"
+                        ) from e
                 for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
                     try:
                         async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
@@ -431,8 +433,10 @@ class WalletTestFramework:
                             self.full_node,
                             _exclude_from_mempool_check=invalid_transactions + [tx.name for tx in local_pending_txs],
                         )
-                    except TimeoutError:  # pragma: no cover
-                        raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
+                    except TimeoutError as e:  # pragma: no cover
+                        raise TimeoutError(
+                            f"All TXs for env-{i} were not found in mempool or marked as in mempool: {e}"
+                        ) from e
                 for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
                     try:
                         async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
