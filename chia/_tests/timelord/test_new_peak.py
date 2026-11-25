@@ -6,7 +6,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64, uint128
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.blockchain import Blockchain
@@ -26,6 +25,35 @@ def last_unfinished(tl: TimelordAPI, *, overflow: bool) -> timelord_protocol.New
         return tl.timelord.overflow_blocks[-1]
     else:
         return tl.timelord.unfinished_blocks[-1]
+
+
+def orphaned_unfinished_candidates(
+    bt: BlockTools, blocks: list[FullBlock], max_trimmed_blocks: int = 20
+) -> tuple[list[FullBlock], FullBlock, FullBlock]:
+    """
+    Find a tip in blocks with two candidate next blocks whose signage points are in the tip's sub-slot.
+    block_1 is not an overflow block, and block_2 has more total iterations than block_1.
+    The timelord can only infuse block_1 if its signage point is in the tip's sub-slot. After block_2
+    becomes the peak, the full node can only finish block_1 if it still has that sub-slot.
+    Where the proofs land depends on the test chain, so the tip is not always the last block.
+    """
+    for trimmed in range(max_trimmed_blocks + 1):
+        chain = blocks[: len(blocks) - trimmed]
+        block_1 = bt.get_consecutive_blocks(1, chain, skip_overflow=True)[-1]
+        block_2 = bt.get_consecutive_blocks(1, chain, min_signage_point=block_1.reward_chain_block.signage_point_index)[
+            -1
+        ]
+        # an overflow block has the sub-slot that it is infused in as its last finished sub-slot
+        block_2_overflow = is_overflow_block(bt.constants, block_2.reward_chain_block.signage_point_index)
+        if (
+            len(block_1.finished_sub_slots) == 0
+            and len(block_2.finished_sub_slots) == int(block_2_overflow)
+            and block_2.total_iters > block_1.total_iters
+        ):
+            return chain, block_1, block_2
+    pytest.fail(  # pragma: no cover
+        f"no tip in the last {max_trimmed_blocks + 1} blocks has two candidate blocks in its sub-slot"
+    )
 
 
 @pytest.mark.parametrize(
@@ -181,20 +209,6 @@ class TestNewPeak:
             )
 
     @pytest.mark.anyio
-    # todo_v2_plots fix this test and remove limit_consensus_modes
-    # With ConsensusMode.HARD_FORK_3_0 this fails because the test constructs
-    # an UnfinishedBlock from a finished block. That flow should only handle
-    # truly unfinished blocks; HF3.0 rejects this synthetic unfinished block
-    # with INVALID_CC_CHALLENGE. Fix the test to use a real unfinished block
-    # (or make_unfinished_block with correct finished_sub_slots).
-    @pytest.mark.limit_consensus_modes(
-        allowed=[
-            ConsensusMode.PLAIN,
-            ConsensusMode.HARD_FORK_2_0,
-            ConsensusMode.SOFT_FORK_2_7,
-        ],
-        reason="test builds a synthetic unfinished block for HF3.0",
-    )
     async def test_timelord_new_peak_unfinished_orphaned(
         self,
         one_node: tuple[list[FullNodeService], list[FullNodeSimulator], BlockTools],
@@ -203,15 +217,17 @@ class TestNewPeak:
     ) -> None:
         [full_node_service], _, bt = one_node
         full_node = full_node_service._node
+        # make two new blocks on tip, block_2 has higher total iterations
+        chain, block_1, block_2 = orphaned_unfinished_candidates(bt, default_1000_blocks)
         async with create_blockchain(bt.constants, 2) as (b1, _):
             async with create_blockchain(bt.constants, 2) as (b2, _):
                 timelord_api, _ = timelord
-                for block in default_1000_blocks:
+                for block in chain:
                     await _validate_and_add_block(b1, block)
                     await _validate_and_add_block(b2, block)
                     await full_node.add_block(block)
 
-                peak = timelord_peak_from_block(b1, default_1000_blocks[-1])
+                peak = timelord_peak_from_block(b1, chain[-1])
                 assert peak is not None
                 assert timelord_api.timelord.new_peak is None
                 await timelord_api.new_peak_timelord(peak)
@@ -223,16 +239,10 @@ class TestNewPeak:
                     == peak.reward_chain_block.get_hash()
                 )
 
-                # make two new blocks on tip, block_2 has higher total iterations
-                block_1 = bt.get_consecutive_blocks(1, default_1000_blocks, skip_overflow=True)[-1]
-                block_2 = bt.get_consecutive_blocks(
-                    1, default_1000_blocks, min_signage_point=block_1.reward_chain_block.signage_point_index
-                )[-1]
-
                 # make sure block_2 has higher iterations then block_1
                 assert block_2.total_iters > block_1.total_iters
                 # make sure block_1 and block_2 have higher iterations then peak
-                assert block_1.total_iters > default_1000_blocks[-1].total_iters
+                assert block_1.total_iters > chain[-1].total_iters
 
                 await _validate_and_add_block(b1, block_1)
                 await _validate_and_add_block(b2, block_2)
@@ -241,7 +251,7 @@ class TestNewPeak:
 
                 timelord_unf_block = timelord_protocol.NewUnfinishedBlockTimelord(
                     block_1.reward_chain_block.get_unfinished(),
-                    uint64(block_record_1.weight - default_1000_blocks[-1].weight),
+                    uint64(block_record_1.weight - chain[-1].weight),
                     block_record_1.sub_slot_iters,
                     block_1.foliage,
                     next_sub_epoch_summary(bt.constants, b1, block_record_1.required_iters, block_1, True),
@@ -378,15 +388,6 @@ class TestNewPeak:
                 )
 
     @pytest.mark.anyio
-    # todo_v2_plots remove limit_consensus_modes when this test uses a real unfinished block for HF3.0.
-    @pytest.mark.limit_consensus_modes(
-        allowed=[
-            ConsensusMode.PLAIN,
-            ConsensusMode.HARD_FORK_2_0,
-            ConsensusMode.SOFT_FORK_2_7,
-        ],
-        reason="test builds a synthetic unfinished block for HF3.0",
-    )
     async def test_timelord_new_peak_stale_overflow_does_not_block_peak(
         self, bt: BlockTools, timelord: tuple[TimelordAPI, ChiaServer], default_1000_blocks: list[FullBlock]
     ) -> None:
