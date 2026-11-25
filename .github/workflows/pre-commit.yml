@@ -71,10 +71,9 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: "3.11"
+          # 3.12 only. mypy on 3.11, 3.13, and 3.14 stays in upload-pypi-source.yml.
+          # CHIA_MANAGE_MYPY_CHECK_EXCLUSIONS staleness check now runs on 3.12 only.
           - major_dot_minor: "3.12"
-          - major_dot_minor: "3.13"
-          - major_dot_minor: "3.14"
         exclude:
           - os:
               matrix: windows
