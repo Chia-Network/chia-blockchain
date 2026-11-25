@@ -17,6 +17,8 @@ class ExplorerStoreProtocol(Protocol):
     lineage, and hints. Consensus does not use these.
     """
 
+    async def get_coin_record(self, coin_name: bytes32) -> CoinRecord | None: ...
+
     async def get_coin_records_by_puzzle_hash(
         self,
         include_spent_coins: bool,

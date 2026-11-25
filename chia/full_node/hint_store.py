@@ -137,6 +137,9 @@ class HintStore:
         [count] = row
         return int(count)
 
+    async def get_coin_record(self, coin_name: bytes32) -> CoinRecord | None:
+        return await self.coin_store.get_coin_record(coin_name)
+
     async def get_coin_records_by_puzzle_hash(
         self,
         include_spent_coins: bool,

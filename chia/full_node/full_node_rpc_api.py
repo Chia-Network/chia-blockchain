@@ -773,7 +773,7 @@ class FullNodeRpcApi:
             raise RpcError.simple(RpcErrorCodes.NAME_NOT_IN_REQUEST, "Name not in request")
         name = bytes32.from_hexstr(request["name"])
 
-        coin_record: CoinRecord | None = await self.service.coin_store.get_coin_record(name)
+        coin_record: CoinRecord | None = await self.service.hint_store.get_coin_record(name)
         if coin_record is None:
             raise RpcError(
                 RpcErrorCodes.COIN_RECORD_NOT_FOUND,
@@ -890,7 +890,7 @@ class FullNodeRpcApi:
     async def get_puzzle_and_solution(self, request: dict[str, Any]) -> EndpointResult:
         coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])
         height = request["height"]
-        coin_record = await self.service.coin_store.get_coin_record(coin_name)
+        coin_record = await self.service.hint_store.get_coin_record(coin_name)
         if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:
             raise RpcError(
                 RpcErrorCodes.INVALID_HEIGHT_FOR_COIN,

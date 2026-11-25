@@ -1677,7 +1677,7 @@ class FullNodeAPI:
     ) -> Message | None:
         coin_name = request.coin_name
         height = request.height
-        coin_record = await self.full_node.coin_store.get_coin_record(coin_name)
+        coin_record = await self.full_node.hint_store.get_coin_record(coin_name)
         reject = wallet_protocol.RejectPuzzleSolution(coin_name, height)
         reject_msg = make_msg(ProtocolMessageTypes.reject_puzzle_solution, reject)
         if coin_record is None or coin_record.spent_block_index != height:
