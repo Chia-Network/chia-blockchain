@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from sys import maxsize
+
 from chia_rs import (
     INTERNED_SPEND_LIST,
+    SERDE_2026_MAGIC_PREFIX,
     ConsensusConstants,
     FullBlock,
     UnfinishedBlock,
@@ -65,9 +68,31 @@ def validate_tx_generator(
     return None
 
 
-def compute_generator_root(generator: bytes, flags: int) -> bytes32:
+def max_canonical_blob_size(max_cost: int, cost_per_byte: int) -> int:
+    """Return the level-0 serialized size bound for the given cost budget."""
+    # Keep this in sync with chia-consensus/src/serde_2026.rs until generator
+    # root validation moves to Rust.
+    usize_max = 2 * maxsize + 1
+    if cost_per_byte == 0:
+        return usize_max
+
+    prefix_length = len(SERDE_2026_MAGIC_PREFIX)
+    vbytes = max_cost // cost_per_byte
+    if vbytes <= (1 << 20) + 1:
+        return vbytes * 4 // 3 + 9 + prefix_length
+
+    # A width of w bytes holds 7*w - 1 magnitude bits.
+    width = (vbytes.bit_length() + 7) // 7
+    if width > 8:
+        return usize_max
+    return min(vbytes * width + 3 * width + prefix_length, usize_max)
+
+
+def compute_generator_root(generator: bytes, flags: int, constants: ConsensusConstants) -> bytes32:
     """Commit to the interned tree after activation, or serialized bytes before it."""
     if flags & INTERNED_SPEND_LIST:
+        if len(generator) > max_canonical_blob_size(constants.MAX_BLOCK_COST_CLVM, constants.COST_PER_BYTE):
+            raise ValueError("generator is larger than max_canonical_blob_size")
         return tree_hash_2026(generator)
     return std_hash(generator)
 
@@ -77,7 +102,7 @@ def validate_generator_root(
 ) -> bool:
     try:
         flags = get_flags_for_height_and_constants(pre_sp_tx_height, constants)
-        return compute_generator_root(generator, flags) == root
+        return compute_generator_root(generator, flags, constants) == root
     except ValueError:
         # Malformed interned trees cannot match a generator commitment.
         return False
