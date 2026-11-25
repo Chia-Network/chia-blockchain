@@ -232,6 +232,13 @@ class WalletRpcClient(RpcClient):
         extra_conditions: tuple[Condition, ...] = ...,
         timelock_info: ConditionValidTimes = ...,
     ) -> wallet_request_types.CreateOfferForIDsResponse: ...
+    async def create_spendbundle_for_ids(
+        self,
+        request: wallet_request_types.CreateOfferForIDs,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = ...,
+        timelock_info: ConditionValidTimes = ...,
+    ) -> wallet_request_types.CreateOfferForIDsResponse: ...
     async def get_offer_summary(
         self,
         request: wallet_request_types.GetOfferSummary,
