@@ -1529,6 +1529,7 @@ class SendNotificationResponse(TransactionEndpointResponse):
 class PushTransactions(TransactionEndpointRequest):
     transactions: list[TransactionRecord]
     push: bool | None = True
+    sign_fee_only: bool = False
 
     # We allow for flexibility in transaction parsing here so we need to override
     @classmethod
