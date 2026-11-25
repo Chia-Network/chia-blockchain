@@ -207,6 +207,12 @@ WALLET_RPC_ENDPOINT_METADATA: list[WalletRpcMetadata] = [
         tx_endpoint=True,
     ),
     WalletRpcMetadata(
+        endpoint_name="create_fee_transaction",
+        request_type=wallet_request_types.CreateFeeTransaction,
+        response_type=wallet_request_types.CreateFeeTransactionResponse,
+        tx_endpoint=True,
+    ),
+    WalletRpcMetadata(
         endpoint_name="delete_unconfirmed_transactions",
         request_type=wallet_request_types.DeleteUnconfirmedTransactions,
         response_type=wallet_request_types.Empty,
