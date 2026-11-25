@@ -251,9 +251,9 @@ class WalletTransactionStore:
         for row in rows:
             record = (await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0])]))[0]
             if include_accepted_txs:
-                # Reset the "sent" state for peers that have replied about this transaction. Retain errors.
-                record = dataclasses.replace(record, sent=uint32(1), sent_to=filter_ok_mempool_status(record.sent_to))
-                await self.add_transaction_record(record)
+                # Caller decides which peers to retry. Do not rewrite sent or
+                # sent_to here: writing a filtered copy used to clear mempool
+                # acks and stamp sent=1 onto records that were never sent.
                 self.tx_submitted[record.name] = current_time, 1
                 records.append(record)
             elif record.name in self.tx_submitted:
