@@ -259,10 +259,6 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
         )
     elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
         ret = ret.replace(
-            # TODO: todo_v2_plots we may want to tweak these test cases to
-            # activate the hard fork at some height > 0 (e.g. 5)
-            # and have a shorter phase-out period (e.g. 2 bits). We would have
-            # to regenerate the test chains and tweak some tests for this
             HARD_FORK2_HEIGHT=uint32(0),
             # we don't have very much v2 space. We need a lower difficulty
             # level to start with
