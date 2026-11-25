@@ -20,7 +20,7 @@ from chia_rs import (
 )
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
@@ -32,7 +32,11 @@ from chia.full_node.hard_fork_utils import get_flags
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
+from chia.types.blockchain_format.proof_of_space import (
+    calculate_base_plot_filter_bits,
+    calculate_prefix_bits,
+    v1_cut_off_height,
+)
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
@@ -298,19 +302,26 @@ class FullNodeRpcApi:
         if "sp_hash" not in request:
             challenge_hash: bytes32 = bytes32.from_hexstr(request["challenge_hash"])
             # This is the case of getting an end of slot
-            eos_tuple = self.service.full_node_store.recent_eos.get(challenge_hash)
-            if not eos_tuple:
+            recent_eos = self.service.full_node_store.recent_eos.get(challenge_hash)
+            if not recent_eos:
                 raise RpcError(
                     RpcErrorCodes.EOS_NOT_IN_CACHE,
                     f"Did not find eos {challenge_hash.hex()} in cache",
                     data={"challenge_hash": challenge_hash.hex()},
                     structured_message="Did not find eos in cache",
                 )
-            eos, time_received = eos_tuple
+
+            result: EndpointResult = {
+                "eos": recent_eos.eos,
+                "time_received": recent_eos.time_received,
+                "reverted": False,
+                "signage_point_index": uint8(0),
+                "filter_challenge": recent_eos.filter_challenge,
+            }
 
             # If it's still in the full node store, it's not reverted
-            if self.service.full_node_store.get_sub_slot(eos.challenge_chain.get_hash()):
-                return {"eos": eos, "time_received": time_received, "reverted": False}
+            if self.service.full_node_store.get_sub_slot(recent_eos.eos.challenge_chain.get_hash()):
+                return result
 
             # Otherwise we can backtrack from peak to find it in the blockchain
             curr: BlockRecord | None = self.service.blockchain.get_peak()
@@ -321,22 +332,24 @@ class FullNodeRpcApi:
             while number_of_slots_searched < 10:
                 if curr.first_in_sub_slot:
                     assert curr.finished_challenge_slot_hashes is not None
-                    if curr.finished_challenge_slot_hashes[-1] == eos.challenge_chain.get_hash():
+                    if curr.finished_challenge_slot_hashes[-1] == recent_eos.eos.challenge_chain.get_hash():
                         # Found this slot in the blockchain
-                        return {"eos": eos, "time_received": time_received, "reverted": False}
+                        return result
                     number_of_slots_searched += len(curr.finished_challenge_slot_hashes)
                 curr = self.service.blockchain.try_block_record(curr.prev_hash)
                 if curr is None:
                     # Got to the beginning of the blockchain without finding the slot
-                    return {"eos": eos, "time_received": time_received, "reverted": True}
+                    result["reverted"] = True
+                    return result
 
             # Backtracked through 10 slots but still did not find it
-            return {"eos": eos, "time_received": time_received, "reverted": True}
+            result["reverted"] = True
+            return result
 
         # Now we handle the case of getting a signage point
         sp_hash: bytes32 = bytes32.from_hexstr(request["sp_hash"])
-        sp_tuple = self.service.full_node_store.recent_signage_points.get(sp_hash)
-        if sp_tuple is None:
+        recent_sp = self.service.full_node_store.recent_signage_points.get(sp_hash)
+        if recent_sp is None:
             raise RpcError(
                 RpcErrorCodes.SP_NOT_IN_CACHE,
                 f"Did not find sp {sp_hash.hex()} in cache",
@@ -344,13 +357,21 @@ class FullNodeRpcApi:
                 structured_message="Did not find sp in cache",
             )
 
-        sp, time_received = sp_tuple
+        sp = recent_sp.signage_point
         assert sp.rc_vdf is not None, "Not an EOS, the signage point rewards chain VDF must not be None"
         assert sp.cc_vdf is not None, "Not an EOS, the signage point challenge chain VDF must not be None"
 
+        result = {
+            "signage_point": sp,
+            "time_received": recent_sp.time_received,
+            "reverted": False,
+            "signage_point_index": recent_sp.signage_point_index,
+            "filter_challenge": recent_sp.filter_challenge,
+        }
+
         # If it's still in the full node store, it's not reverted
         if self.service.full_node_store.get_signage_point(sp_hash):
-            return {"signage_point": sp, "time_received": time_received, "reverted": False}
+            return result
 
         # Otherwise we can backtrack from peak to find it in the blockchain
         rc_challenge: bytes32 = sp.rc_vdf.challenge
@@ -363,37 +384,31 @@ class FullNodeRpcApi:
             sp_total_iters = sp.cc_vdf.number_of_iterations + curr_b.ip_sub_slot_total_iters(self.service.constants)
             if curr_b.reward_infusion_new_challenge == rc_challenge:
                 if next_b is None:
-                    return {"signage_point": sp, "time_received": time_received, "reverted": False}
+                    return result
                 next_b_total_iters = next_b.ip_sub_slot_total_iters(self.service.constants) + next_b.ip_iters(
                     self.service.constants
                 )
 
-                return {
-                    "signage_point": sp,
-                    "time_received": time_received,
-                    "reverted": sp_total_iters > next_b_total_iters,
-                }
+                result["reverted"] = sp_total_iters > next_b_total_iters
+                return result
             if curr_b.finished_reward_slot_hashes is not None:
-                assert curr_b.finished_challenge_slot_hashes is not None
-                for eos_rc in curr_b.finished_challenge_slot_hashes:
+                for eos_rc in curr_b.finished_reward_slot_hashes:
                     if eos_rc == rc_challenge:
                         if next_b is None:
-                            return {"signage_point": sp, "time_received": time_received, "reverted": False}
+                            return result
                         next_b_total_iters = next_b.ip_sub_slot_total_iters(self.service.constants) + next_b.ip_iters(
                             self.service.constants
                         )
-                        return {
-                            "signage_point": sp,
-                            "time_received": time_received,
-                            "reverted": sp_total_iters > next_b_total_iters,
-                        }
+                        result["reverted"] = sp_total_iters > next_b_total_iters
+                        return result
             next_b = curr_b
             curr_b_optional = self.service.blockchain.try_block_record(curr_b.prev_hash)
             if curr_b_optional is None:
                 break
             curr_b = curr_b_optional
 
-        return {"signage_point": sp, "time_received": time_received, "reverted": True}
+        result["reverted"] = True
+        return result
 
     async def get_block(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
@@ -673,20 +688,37 @@ class FullNodeRpcApi:
                 structured_message="Older block not found",
             )
         delta_weight = newer_block.weight - older_block.weight
-
-        # TODO: todo_v2_plots Update this calculation to take v2 plots into
-        # account
         plot_filter_size = calculate_prefix_bits(self.service.constants, newer_block.height, PlotParam.make_v1(32))
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
         eligible_plots_filter_multiplier = 2**plot_filter_size
+        # the actual space factor is to convert the theoretical v1 plot size
+        # down to the actual size. for v2 plots _expected_plot_size() already
+        # returns the actual size
         network_space_bytes_estimate = (
             UI_ACTUAL_SPACE_CONSTANT_FACTOR
             * weight_div_iters
             * additional_difficulty_constant
             * eligible_plots_filter_multiplier
         )
+        constants = self.service.constants
+        prev_tx_height = newer_block.prev_transaction_block_height
+        if prev_tx_height > constants.HARD_FORK2_HEIGHT:
+            # Gradually change display units from v1-equivalent bytes to
+            # v2-equivalent bytes over the v1 phase-out period. The observed
+            # weight already accounts for v1's declining eligibility.
+            phase_out_duration = v1_cut_off_height(constants) - constants.HARD_FORK2_HEIGHT
+            # approximate the transition of v1 vs v2 plots by the phase-out
+            # schedule. To calculate the true ratio we would need to inspect the
+            # last 4000 blocks, which is too expensive. This is just an
+            # approximation for the user interface
+            phase_out_progress = min(1.0, (prev_tx_height - constants.HARD_FORK2_HEIGHT) / phase_out_duration)
+            v2_filter_bits = calculate_base_plot_filter_bits(prev_tx_height, constants)
+            v2_space = weight_div_iters * constants.DIFFICULTY_CONSTANT_FACTOR * (1 << v2_filter_bits)
+            network_space_bytes_estimate = (
+                1 - phase_out_progress
+            ) * network_space_bytes_estimate + phase_out_progress * v2_space
         return {"space": uint128(network_space_bytes_estimate)}
 
     async def get_constants(self, request: dict[str, Any]) -> EndpointResult:

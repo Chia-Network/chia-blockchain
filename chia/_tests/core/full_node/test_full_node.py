@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import copy
 import dataclasses
 import logging
 import os
@@ -4779,6 +4780,30 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.parametrize(
+    "configured, expected",
+    [
+        (None, 4),
+        (0, 0),
+        (1, 1),
+    ],
+)
+async def test_minimum_block_fee_per_cost_config(
+    bt: BlockTools, tmp_path: Path, configured: int | None, expected: int
+) -> None:
+    config = copy.deepcopy(bt.config["full_node"])
+    config["database_path"] = str(tmp_path / "blockchain.sqlite")
+    del config["minimum_block_fee_per_cost"]
+    if configured is not None:
+        config["minimum_block_fee_per_cost"] = configured
+
+    full_node = await FullNode.create(config, root_path=bt.root_path, consensus_constants=bt.constants)
+    async with full_node.manage():
+        assert full_node.mempool_manager.minimum_block_fee_per_cost == expected
+
+
+@pytest.mark.anyio
 async def test_send_transaction_peer_tx_queue_full(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
 ) -> None:
@@ -4927,13 +4952,22 @@ async def test_hard_fork_version_enforcement(
     self_hostname: str,
     consensus_mode: ConsensusMode,
     has_hard_fork2_capability: bool,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
     Covers the case where peers connecting to a full node after the hard fork
     without advertising the HARD_FORK_2 capability get disconnected.
     """
     _, server, _ = one_node_one_block
-    additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")] if has_hard_fork2_capability else []
+    hard_fork2_capability = (uint16(Capability.HARD_FORK_2.value), "1")
+    if not has_hard_fork2_capability:
+        # The default capabilities advertise HARD_FORK_2 so we take it out to
+        # make the dummy peer look like an older version without it.
+        older_peer_capabilities = [
+            capability for capability in default_capabilities[NodeType.FULL_NODE] if capability != hard_fork2_capability
+        ]
+        monkeypatch.setitem(default_capabilities, NodeType.FULL_NODE, older_peer_capabilities)
+    additional_capabilities = [hard_fork2_capability] if has_hard_fork2_capability else []
     wsc, peer_id = await add_dummy_connection_wsc(
         server, self_hostname, 42, additional_capabilities=additional_capabilities, wait_for_peer_added=False
     )

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import random
-import time
 from collections.abc import AsyncIterator
 
 import pytest
@@ -1645,7 +1644,7 @@ class TestGetFilterChallenge:
 
         for sub_slot, _, _ in store.finished_sub_slots:
             if sub_slot is not None:
-                store.recent_eos.put(sub_slot.challenge_chain.get_hash(), (sub_slot, time.time()))
+                store._cache_recent_eos(sub_slot)
 
         store.finished_sub_slots = store.finished_sub_slots[-1:]
 
