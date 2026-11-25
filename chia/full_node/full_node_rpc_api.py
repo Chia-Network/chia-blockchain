@@ -443,7 +443,7 @@ class FullNodeRpcApi:
         block_range = []
         for a in range(start, end):
             block_range.append(uint32(a))
-        blocks: list[FullBlock] = await self.service.block_store.get_full_blocks_at(block_range)
+        blocks: list[FullBlock] = await self.service.block_archive.get_full_blocks_at(block_range)
         json_blocks = []
         for block in blocks:
             hh: bytes32 = block.header_hash
@@ -460,8 +460,8 @@ class FullNodeRpcApi:
         compact_blocks = 0
         uncompact_blocks = 0
         with log_exceptions(self.service.log, consume=True):
-            compact_blocks = await self.service.block_store.count_compactified_blocks()
-            uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
+            compact_blocks = await self.service.block_archive.count_compactified_blocks()
+            uncompact_blocks = await self.service.block_archive.count_uncompactified_blocks()
 
         hint_count = 0
         if self.service.hint_store is not None:

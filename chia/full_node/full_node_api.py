@@ -523,7 +523,7 @@ class FullNodeAPI:
                 if header_hash_i is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     return make_msg(ProtocolMessageTypes.reject_blocks, reject)
-                block_bytes: bytes | None = await self.full_node.block_store.get_full_block_bytes(header_hash_i)
+                block_bytes: bytes | None = await self.full_node.block_archive.get_full_block_bytes(header_hash_i)
                 if block_bytes is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
@@ -1729,7 +1729,7 @@ class FullNodeAPI:
         if request.end_height < request.start_height or request.end_height - request.start_height > 128:
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
         try:
-            blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
+            blocks_bytes = await self.full_node.block_archive.get_block_bytes_in_range(
                 request.start_height, request.end_height
             )
         except ValueError:

@@ -830,7 +830,7 @@ async def test_rate_limits_v3_e2e(
     assert sender_rl_window.receive_window == 0
     assert receiver_rl_window.receive_window == 0
     # Issue a request to verify the windows state after its completion
-    test_block = (await full_node_api.full_node.block_store.get_full_blocks_at([uint32(0)]))[0]
+    test_block = (await full_node_api.full_node.block_archive.get_full_blocks_at([uint32(0)]))[0]
     result = await sender_connection.call_api(FullNodeAPI.request_blocks, RequestBlocks(uint32(0), uint32(0), False))
     assert isinstance(result, RespondBlocks)
     assert result.start_height == uint32(0)
