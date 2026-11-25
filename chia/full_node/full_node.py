@@ -52,6 +52,7 @@ from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.generator_validation import validate_generator_root
 from chia.consensus.get_block_challenge import (
+    post_hard_fork2,
     post_hard_fork2_block_record,
     pre_sp_tx_block_height,
     unfinished_block_sub_slots,
@@ -69,7 +70,12 @@ from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResul
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
-from chia.full_node.mempool_manager import DEFAULT_MAX_SPENDS_PER_ITEM, LogMempoolMode, MempoolManager
+from chia.full_node.mempool_manager import (
+    DEFAULT_MAX_SPENDS_PER_ITEM,
+    DEFAULT_MINIMUM_BLOCK_FEE_PER_COST,
+    LogMempoolMode,
+    MempoolManager,
+)
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
@@ -259,8 +265,6 @@ class FullNode:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncGenerator[None, None]:
-        self.log.info(f"HARD_FORK2_HEIGHT: {self.constants.HARD_FORK2_HEIGHT}")
-        self.log.info(f"PLOT_FILTER_V2_RELATIVE_HEIGHT: {self.constants.PLOT_FILTER_V2_RELATIVE_HEIGHT}")
         self._timelord_lock = asyncio.Lock()
         self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 
@@ -360,6 +364,9 @@ class FullNode:
                 max_spends_per_item=self.config.get("max_spends_per_item", DEFAULT_MAX_SPENDS_PER_ITEM),
                 log_mempool=self._log_mempool_mode(),
                 root_path=self.root_path,
+                minimum_block_fee_per_cost=uint64(
+                    self.config.get("minimum_block_fee_per_cost", DEFAULT_MINIMUM_BLOCK_FEE_PER_COST)
+                ),
             ) as self._mempool_manager:
                 # Transactions go into this queue from the server, and get sent to respond_transaction
                 self._transaction_queue = TransactionQueue(
@@ -1727,19 +1734,15 @@ class FullNode:
         # callers keep fork_info across batches but release the chain lock
         # between them, so a reorg may have replaced the fork point. fail
         # rather than roll back to a stale fork height
-        if fork_info.fork_height >= 0:
-            if len(fork_info.block_hashes) == 0:
-                fork_hash = fork_info.peak_hash
-            else:
-                first_fork_block = await self.blockchain.get_block_record_from_db(fork_info.block_hashes[0])
-                assert first_fork_block is not None
-                fork_hash = first_fork_block.prev_hash
-            if self.blockchain.height_to_hash(uint32(fork_info.fork_height)) != fork_hash:
-                self.log.warning(
-                    f"fork point {fork_hash.hex()} at height {fork_info.fork_height} is no longer canonical, "
-                    f"failing batch from {peer_info}"
-                )
-                return False, None
+        if (
+            fork_info.fork_height >= 0
+            and self.blockchain.height_to_hash(uint32(fork_info.fork_height)) != fork_info.fork_hash
+        ):
+            self.log.warning(
+                f"fork point {fork_info.fork_hash.hex()} at height {fork_info.fork_height} is no longer canonical, "
+                f"failing batch from {peer_info}"
+            )
+            return False, None
 
         pre_validate_start = time.monotonic()
         blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)
@@ -2668,13 +2671,6 @@ class FullNode:
             self.blockchain,
         )
         finished_sub_slots = unfinished_block_sub_slots(self.constants, self.blockchain, block, sub_slot_iters)
-        prev_tx_height = pre_sp_tx_block_height(
-            self.constants,
-            self.blockchain,
-            prev_b_hash=block.prev_header_hash,
-            sp_index=block.reward_chain_block.signage_point_index,
-            finished_sub_slots=finished_sub_slots,
-        )
 
         # Count the blocks in sub slot, and check if it's a new epoch
         if finished_sub_slots > 0:
@@ -2724,6 +2720,13 @@ class FullNode:
             height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
             # Match finished-block prevalidation: CLVM flags are gated on the
             # latest tx block infused before this block's signage point.
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=self.constants,
+                blocks=self.blockchain,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=block.reward_chain_block.signage_point_index,
+                finished_sub_slots=finished_sub_slots,
+            )
             flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
 
             # on mainnet we won't receive unfinished blocks for heights
@@ -2779,7 +2782,13 @@ class FullNode:
         else:
             height = uint32(self.blockchain.block_record(block.prev_header_hash).height + 1)
 
-        post_hard_fork = prev_tx_height >= self.constants.HARD_FORK2_HEIGHT
+        post_hard_fork = post_hard_fork2(
+            self.constants,
+            self.blockchain,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            finished_sub_slots=finished_sub_slots,
+        )
         ses: SubEpochSummary | None = next_sub_epoch_summary(
             self.constants,
             self.blockchain,

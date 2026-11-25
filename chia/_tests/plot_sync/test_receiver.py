@@ -34,7 +34,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncDone,
     PlotSyncIdentifier,
     PlotSyncPathList,
-    PlotSyncPlotList,
+    PlotSyncPlotList2,
     PlotSyncResponse,
     PlotSyncStart,
     RequestPlots,
@@ -151,10 +151,12 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
     assert receiver.total_plot_size() == 100 * expected_file_count
     expected_effective_plot_size: float = 0
     for plot in synced_plots:
-        plot_size = UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot.param(), DEFAULT_CONSTANTS)
+        plot_size = float(_expected_plot_size(plot.param(), DEFAULT_CONSTANTS))
         if isinstance(plot, Plot2) and plot.is_v2():
             assert plot.group_size is not None
             plot_size *= plot.group_size
+        else:
+            plot_size *= UI_ACTUAL_SPACE_CONSTANT_FACTOR
         expected_effective_plot_size += plot_size
     assert receiver.total_effective_plot_size() == int(expected_effective_plot_size)
     if version == "0.0.39":
@@ -202,10 +204,10 @@ def assert_error_response(plot_sync: Receiver, error_code: ErrorCodes) -> None:
     assert response.error.code == error_code.value
 
 
-def pre_function_validate(receiver: Receiver, data: list[Plot] | list[str], expected_state: State) -> None:
+def pre_function_validate(receiver: Receiver, data: list[Plot2] | list[str], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
-            assert type(plot_info) is Plot
+            assert type(plot_info) is Plot2
             assert plot_info.filename not in receiver.plots()
     elif expected_state == State.removed:
         for path in data:
@@ -221,10 +223,10 @@ def pre_function_validate(receiver: Receiver, data: list[Plot] | list[str], expe
             assert path not in receiver.duplicates()
 
 
-def post_function_validate(receiver: Receiver, data: list[Plot] | list[str], expected_state: State) -> None:
+def post_function_validate(receiver: Receiver, data: list[Plot2] | list[str], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
-            assert type(plot_info) is Plot
+            assert type(plot_info) is Plot2
             assert plot_info.filename in receiver._current_sync.delta.valid.additions
     elif expected_state == State.removed:
         for path in data:
@@ -245,7 +247,7 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
     assert receiver.current_sync().state == sync_step.state
     last_sync_time_before = receiver._last_sync.time_done
     # For the list types invoke the trigger function in batches
-    if sync_step.payload_type in {PlotSyncPlotList, PlotSyncPathList}:
+    if sync_step.payload_type in {PlotSyncPlotList2, PlotSyncPathList}:
         step_data, _ = sync_step.args
         assert len(step_data) == 10
         # Invoke batches of: 1, 2, 3, 4 items and validate the data against plot store before and after
@@ -281,27 +283,32 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
     # Create example plot data
     path_list = [str(x) for x in range(40)]
     plot_info_list = [
-        Plot(
+        Plot2(
             filename=str(x),
-            size=uint8(0),
-            plot_id=bytes32.random(seeded_random),
+            size=uint8(32) if int(x) % 2 == 0 else None,
+            plot_id=bytes32.random(seeded_random) if int(x) % 2 == 0 else None,
             pool_contract_puzzle_hash=None,
             pool_public_key=None,
             plot_public_key=G1Element(),
             file_size=uint64(random.randint(0, 100)),
             time_modified=uint64(0),
-            compression_level=uint8(0),
+            compression_level=uint8(0) if int(x) % 2 == 0 else None,
+            group_plot_id=bytes32.random(seeded_random) if int(x) % 2 else None,
+            strength=uint8(3) if int(x) % 2 else None,
+            meta_group=uint8(0) if int(x) % 2 else None,
+            group_size=uint16(8) if int(x) % 2 else None,
         )
         for x in path_list
     ]
 
     # Manually add the plots we want to remove in tests
-    receiver._plots = {plot_info.filename: plot_info.to_plot2() for plot_info in plot_info_list[0:10]}
+    receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
     receiver._total_plot_size = sum(plot.file_size for plot in receiver.plots().values())
-    # TODO: todo_v2_plots support v2 plots
     receiver._total_effective_plot_size = int(
         sum(
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.param(), DEFAULT_CONSTANTS))
+            (1 if plot.is_v2() else UI_ACTUAL_SPACE_CONSTANT_FACTOR)
+            * int(_expected_plot_size(plot.param(), DEFAULT_CONSTANTS))
+            * plot.plot_count()
             for plot in receiver.plots().values()
         )
     )
@@ -315,7 +322,7 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
             uint32(len(plot_info_list)),
             uint8(HarvestingMode.CPU),
         ),
-        SyncStepData(State.loaded, receiver.process_loaded, PlotSyncPlotList, plot_info_list[10:20], True),
+        SyncStepData(State.loaded, receiver.process_loaded2, PlotSyncPlotList2, plot_info_list[10:20], True),
         SyncStepData(State.removed, receiver.process_removed, PlotSyncPathList, path_list[0:10], True),
         SyncStepData(State.invalid, receiver.process_invalid, PlotSyncPathList, path_list[20:30], True),
         SyncStepData(State.keys_missing, receiver.process_keys_missing, PlotSyncPathList, path_list[30:40], True),
@@ -384,10 +391,8 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     assert get_list_or_len(plot_sync_dict_1["duplicates"], not counts_only) == 0
     assert plot_sync_dict_1["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
     assert plot_sync_dict_1["total_effective_plot_size"] == int(
-        sum(
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.param(), DEFAULT_CONSTANTS))
-            for plot in receiver.plots().values()
-        )
+        5 * UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(PlotParam.make_v1(32), DEFAULT_CONSTANTS)
+        + 5 * 8 * _expected_plot_size(PlotParam.make_v2(0, 0, 3), DEFAULT_CONSTANTS)
     )
     assert plot_sync_dict_1["syncing"] is None
     assert plot_sync_dict_1["last_sync_time"] is None
@@ -425,7 +430,7 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
         assert sync_data == expected_sync_data
 
     plot_sync_dict_3 = receiver.to_dict(counts_only)
-    loaded_plots = [plot.to_plot2() for plot in sync_steps[State.loaded].args[0]]
+    loaded_plots = sync_steps[State.loaded].args[0]
     assert get_list_or_len(loaded_plots, counts_only) == plot_sync_dict_3["plots"]
     assert (
         get_list_or_len(sync_steps[State.invalid].args[0], counts_only) == plot_sync_dict_3["failed_to_open_filenames"]
@@ -435,10 +440,8 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
 
     assert plot_sync_dict_3["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
     assert plot_sync_dict_3["total_effective_plot_size"] == int(
-        sum(
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.param(), DEFAULT_CONSTANTS))
-            for plot in receiver.plots().values()
-        )
+        5 * UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(PlotParam.make_v1(32), DEFAULT_CONSTANTS)
+        + 5 * 8 * _expected_plot_size(PlotParam.make_v2(0, 0, 3), DEFAULT_CONSTANTS)
     )
     assert plot_sync_dict_3["last_sync_time"] > 0
     assert plot_sync_dict_3["syncing"] is None

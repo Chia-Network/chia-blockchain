@@ -360,11 +360,11 @@ class Receiver:
 
         def effective_plot_size(plot: Plot2) -> float:
             plot_param = plot.param()
-            size = UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot_param, self._constants)
+            size = _expected_plot_size(plot_param, self._constants)
             if plot.is_v2():
                 assert plot.group_size is not None
-                size *= plot.group_size
-            return size
+                return size * plot.group_size
+            return UI_ACTUAL_SPACE_CONSTANT_FACTOR * size
 
         self._total_effective_plot_size = int(sum(effective_plot_size(plot) for plot in self._plots.values()))
         # Save current sync as last sync and create a new current sync

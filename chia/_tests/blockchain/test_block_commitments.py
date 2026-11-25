@@ -822,38 +822,14 @@ class TestSyncWithCommitments:
         """
         As in test_canonical_block_between_backtrack_blocks, but the chain
         committed between two fork blocks is a reorg that replaces the
-        backtrack's fork point. The retained ForkInfo no longer shares its
-        prefix with the canonical MMR, so adding the next fork block raises
-        the canonical MMR view mismatch AssertionError, whether it commits to
-        the correct root or to a root mixing the new canonical prefix with
-        the fork's leaves, and nothing is stored.
+        backtrack's fork point, so the next fork block is refused and nothing
+        is stored.
         """
         bt = hf2_bt
         canonical = bt.get_consecutive_blocks(30)
         fork_point = 26
         fork = bt.get_consecutive_blocks(8, block_list_input=canonical[: fork_point + 1], seed=b"backtrack-probe")
         replacement = bt.get_consecutive_blocks(8, block_list_input=canonical[:25], seed=b"replaced-fork-point")
-        child = fork[30]
-        _, _, block_records = load_block_list(fork, bt.constants)
-        sp_total_iters = block_records[child.header_hash].sp_total_iters(bt.constants)
-        cutoff = block_records[child.prev_header_hash]
-        while cutoff.total_iters >= sp_total_iters:
-            cutoff = block_records[cutoff.prev_hash]
-        # the leaves a stale ForkInfo would combine: the replacement chain up
-        # to the fork point, then the fork
-        mixed = [*replacement[: fork_point + 1], *fork[fork_point + 1 :]]
-        aggregate_from = bt.constants.HARD_FORK2_HEIGHT
-        oracle = MerkleMountainRange()
-        for block in mixed[aggregate_from : cutoff.height + 1]:
-            assert not block_has_transactions_generator(block)
-            oracle.append(compute_mmr_leaf(block.header_hash, EMPTY_MERKLE_SET_ROOT))
-        mixed_root = oracle.compute_root()
-        assert mixed_root is not None and mixed_root != child.reward_chain_block.header_mmr_root
-        reward_chain_block = child.reward_chain_block.replace(header_mmr_root=mixed_root)
-        mixed_child = child.replace(
-            reward_chain_block=reward_chain_block,
-            foliage=child.foliage.replace(reward_block_hash=reward_chain_block.get_hash()),
-        )
 
         async with setup_two_nodes(bt.constants, db_version, self_hostname) as (full_node_1, _, _, _, _):
             node = full_node_1.full_node
@@ -870,10 +846,10 @@ class TestSyncWithCommitments:
             assert peak is not None and peak.header_hash == replacement[-1].header_hash
             assert node.blockchain.height_to_hash(uint32(fork_point)) != canonical[fork_point].header_hash
 
-            for block in (mixed_child, child):
-                with pytest.raises(AssertionError, match="canonical MMR view mismatch"):
-                    await node.add_block(block, None, fork_info=fork_info)
-                assert await node.blockchain.get_block_record_from_db(block.header_hash) is None
+            child = fork[30]
+            with pytest.raises(AssertionError, match="is no longer canonical"):
+                await node.add_block(child, None, fork_info=fork_info)
+            assert await node.blockchain.get_block_record_from_db(child.header_hash) is None
 
 
 HF2_CONSTANTS = test_constants.replace(

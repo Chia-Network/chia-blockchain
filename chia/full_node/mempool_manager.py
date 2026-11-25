@@ -51,6 +51,12 @@ log = logging.getLogger(__name__)
 # this amount. 0.00001 XCH
 MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
 DEFAULT_MAX_SPENDS_PER_ITEM = 1000
+# The minimum block fee used when the full_node config doesn't specify one, in
+# mojos per CLVM cost.
+DEFAULT_MINIMUM_BLOCK_FEE_PER_COST = uint64(4)
+# The minimum block fee policy expires at this timestamp (2027-11-03 00:00:00
+# UTC). Once the peak has reached it, the configured minimum is ignored.
+MINIMUM_BLOCK_FEE_EXPIRATION = uint64(1_825_200_000)
 
 
 @dataclass
@@ -334,6 +340,7 @@ class MempoolManager:
     max_block_clvm_cost: uint64
     max_tx_clvm_cost: uint64
     max_spends_per_item: int
+    minimum_block_fee_per_cost: uint64
     validation_timeout: float
     log_mempool: LogMempoolMode
     root_path: Path | None
@@ -350,6 +357,7 @@ class MempoolManager:
         max_spends_per_item: int = DEFAULT_MAX_SPENDS_PER_ITEM,
         log_mempool: LogMempoolMode = "false",
         root_path: Path | None = None,
+        minimum_block_fee_per_cost: uint64,
     ):
         self.constants: ConsensusConstants = consensus_constants
         self.log_mempool = log_mempool
@@ -370,6 +378,7 @@ class MempoolManager:
         # transactions. This prevents spam. This is equivalent to 0.055 XCH per block, or about 0.00005 XCH for two
         # spends.
         self.nonzero_fee_minimum_fpc = 5
+        self.minimum_block_fee_per_cost = minimum_block_fee_per_cost
 
         # We need to deduct the block overhead, which consists of the wrapping
         # quote opcode's bytes cost as well as its execution cost.
@@ -413,6 +422,7 @@ class MempoolManager:
         max_spends_per_item: int = DEFAULT_MAX_SPENDS_PER_ITEM,
         log_mempool: LogMempoolMode = "false",
         root_path: Path | None = None,
+        minimum_block_fee_per_cost: uint64,
     ) -> AsyncGenerator[Self, None]:
         self = cls(
             get_coin_records,
@@ -421,6 +431,7 @@ class MempoolManager:
             pool,
             max_tx_clvm_cost=max_tx_clvm_cost,
             max_spends_per_item=max_spends_per_item,
+            minimum_block_fee_per_cost=minimum_block_fee_per_cost,
             validation_timeout=validation_timeout,
             log_mempool=log_mempool,
             root_path=root_path,
@@ -444,6 +455,17 @@ class MempoolManager:
     ) -> None:
         self.shut_down()
 
+    def effective_minimum_fee_per_cost(self) -> uint64:
+        """
+        Returns the minimum fee, in mojos per CLVM cost, for selecting
+        transactions into a block on top of the current peak
+        """
+        assert self.peak is not None
+        assert self.peak.timestamp is not None
+        if self.peak.timestamp >= MINIMUM_BLOCK_FEE_EXPIRATION:
+            return uint64(0)
+        return self.minimum_block_fee_per_cost
+
     # TODO: remove this, use create_generator() instead
     def create_bundle_from_mempool(self, last_tb_header_hash: bytes32) -> tuple[SpendBundle, list[Coin]] | None:
         """
@@ -452,7 +474,11 @@ class MempoolManager:
         """
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
-        return self.mempool.create_bundle_from_mempool_items(self.constants, self.peak.height)
+        return self.mempool.create_bundle_from_mempool_items(
+            self.constants,
+            self.peak.height,
+            minimum_fee_per_cost=self.effective_minimum_fee_per_cost(),
+        )
 
     def create_block_generator(self, last_tb_header_hash: bytes32, timeout: float) -> NewBlockGenerator | None:
         """
@@ -460,7 +486,12 @@ class MempoolManager:
         """
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
-        return self.mempool.create_block_generator(self.constants, self.peak.height, timeout)
+        return self.mempool.create_block_generator(
+            self.constants,
+            self.peak.height,
+            timeout,
+            minimum_fee_per_cost=self.effective_minimum_fee_per_cost(),
+        )
 
     def create_block_generator2(self, last_tb_header_hash: bytes32, timeout: float) -> NewBlockGenerator | None:
         """
@@ -468,7 +499,12 @@ class MempoolManager:
         """
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
-        return self.mempool.create_block_generator2(self.constants, self.peak.height, timeout)
+        return self.mempool.create_block_generator2(
+            self.constants,
+            self.peak.height,
+            timeout,
+            minimum_fee_per_cost=self.effective_minimum_fee_per_cost(),
+        )
 
     def get_filter(self) -> bytes:
         all_transactions: set[bytes32] = set()
@@ -1172,10 +1208,6 @@ def optional_min(a: T | None, b: T | None) -> T | None:
     return min((v for v in [a, b] if v is not None), default=None)
 
 
-def optional_max(a: T | None, b: T | None) -> T | None:
-    return max((v for v in [a, b] if v is not None), default=None)
-
-
 def can_replace(conflicting_items: list[MempoolItem], new_item: MempoolItem) -> bool:
     """
     This function implements the mempool replacement rules. Given a Mempool item
@@ -1186,9 +1218,6 @@ def can_replace(conflicting_items: list[MempoolItem], new_item: MempoolItem) -> 
 
     conflicting_fees = 0
     conflicting_cost = 0
-    assert_height: uint32 | None = None
-    assert_before_height: uint32 | None = None
-    assert_before_seconds: uint64 | None = None
     # we don't allow replacing mempool items with new ones that remove
     # eligibility for dedup and fast-forward. Doing so could be abused by
     # denying such spends from operating as intended
@@ -1214,9 +1243,30 @@ def can_replace(conflicting_items: list[MempoolItem], new_item: MempoolItem) -> 
             if bcs.eligible_for_dedup:
                 existing_dedup_spends.add(bytes32(coin_id))
 
-        assert_height = optional_max(assert_height, item.assert_height)
-        assert_before_height = optional_min(assert_before_height, item.assert_before_height)
-        assert_before_seconds = optional_min(assert_before_seconds, item.assert_before_seconds)
+        # Preserve the effective height/time locks of conflicting items
+        if new_item.assert_height != item.assert_height:
+            log.debug(
+                "Rejecting conflicting tx due to changing ASSERT_HEIGHT constraints %s -> %s",
+                item.assert_height,
+                new_item.assert_height,
+            )
+            return False
+
+        if new_item.assert_before_height != item.assert_before_height:
+            log.debug(
+                "Rejecting conflicting tx due to changing ASSERT_BEFORE_HEIGHT constraints %s -> %s",
+                item.assert_before_height,
+                new_item.assert_before_height,
+            )
+            return False
+
+        if new_item.assert_before_seconds != item.assert_before_seconds:
+            log.debug(
+                "Rejecting conflicting tx due to changing ASSERT_BEFORE_SECONDS constraints %s -> %s",
+                item.assert_before_seconds,
+                new_item.assert_before_seconds,
+            )
+            return False
 
     # New item must have higher fee per cost
     conflicting_fees_per_cost = conflicting_fees / conflicting_cost
@@ -1231,31 +1281,6 @@ def can_replace(conflicting_items: list[MempoolItem], new_item: MempoolItem) -> 
     fee_increase = new_item.fee - conflicting_fees
     if fee_increase < MEMPOOL_MIN_FEE_INCREASE:
         log.debug(f"Rejecting conflicting tx due to low fee increase ({fee_increase})")
-        return False
-
-    # New item may not have a different effective height/time lock (time-lock rule)
-    if new_item.assert_height != assert_height:
-        log.debug(
-            "Rejecting conflicting tx due to changing ASSERT_HEIGHT constraints %s -> %s",
-            assert_height,
-            new_item.assert_height,
-        )
-        return False
-
-    if new_item.assert_before_height != assert_before_height:
-        log.debug(
-            "Rejecting conflicting tx due to changing ASSERT_BEFORE_HEIGHT constraints %s -> %s",
-            assert_before_height,
-            new_item.assert_before_height,
-        )
-        return False
-
-    if new_item.assert_before_seconds != assert_before_seconds:
-        log.debug(
-            "Rejecting conflicting tx due to changing ASSERT_BEFORE_SECONDS constraints %s -> %s",
-            assert_before_seconds,
-            new_item.assert_before_seconds,
-        )
         return False
 
     if len(existing_ff_spends) > 0 or len(existing_dedup_spends) > 0:

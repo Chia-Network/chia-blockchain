@@ -5,6 +5,7 @@ import dataclasses
 import enum
 import logging
 import time
+from typing import NamedTuple
 
 from chia_rs import BlockRecord, ConsensusConstants, EndOfSubSlotBundle, FullBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
@@ -48,6 +49,31 @@ class SignagePointAddResult(enum.Enum):
     ADDED = "added"
     NOT_ADDED = "not_added"
     INVALID_VDF = "invalid_vdf"
+
+
+class RecentSignagePoint(NamedTuple):
+    """Pooling cache entry for get_recent_signage_point_or_eos.
+
+    ``signage_point_index`` and ``filter_challenge`` are stored at insert time so
+    pools can still read them after the SP's slot has left ``finished_sub_slots``.
+    """
+
+    signage_point: SignagePoint
+    time_received: float
+    signage_point_index: uint8
+    filter_challenge: bytes32 | None
+
+
+class RecentEos(NamedTuple):
+    """Pooling cache entry for get_recent_signage_point_or_eos (end of sub-slot).
+
+    EOS partials use signage_point_index 0; ``filter_challenge`` is cached for that
+    window at insert time.
+    """
+
+    eos: EndOfSubSlotBundle
+    time_received: float
+    filter_challenge: bytes32 | None
 
 
 @streamable
@@ -162,8 +188,8 @@ class FullNodeStore:
     future_ip_cache: LRUKeyedListCache[bytes32, timelord_protocol.NewInfusionPointVDF]
 
     # These recent caches are for pooling support
-    recent_signage_points: LRUCache[bytes32, tuple[SignagePoint, float]]
-    recent_eos: LRUCache[bytes32, tuple[EndOfSubSlotBundle, float]]
+    recent_signage_points: LRUCache[bytes32, RecentSignagePoint]
+    recent_eos: LRUCache[bytes32, RecentEos]
 
     pending_tx_request: dict[bytes32, bytes32]  # tx_id: peer_id
     # Map of transaction ID to the map of peer ID to its hostname, fee and cost
@@ -687,9 +713,7 @@ class FullNodeStore:
                 return None
 
         self.finished_sub_slots.append((eos, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
-
-        new_cc_hash = eos.challenge_chain.get_hash()
-        self.recent_eos.put(new_cc_hash, (eos, time.time()))
+        self._cache_recent_eos(eos)
 
         new_ips: list[timelord_protocol.NewInfusionPointVDF] = []
         for ip in self.future_ip_cache.get(eos.reward_chain.get_hash(), []):
@@ -835,10 +859,29 @@ class FullNodeStore:
                         return SignagePointAddResult.INVALID_VDF
 
                 sp_arr[index] = signage_point
-                self.recent_signage_points.put(signage_point.cc_vdf.output.get_hash(), (signage_point, time.time()))
+                self._cache_recent_signage_point(signage_point, index, ss_challenge_hash)
                 return SignagePointAddResult.ADDED
         self.add_to_future_sp(signage_point, index)
         return SignagePointAddResult.NOT_ADDED
+
+    def _cache_recent_signage_point(self, signage_point: SignagePoint, index: uint8, challenge: bytes32) -> None:
+        assert signage_point.cc_vdf is not None
+        self.recent_signage_points.put(
+            signage_point.cc_vdf.output.get_hash(),
+            RecentSignagePoint(
+                signage_point,
+                time.time(),
+                index,
+                self.get_filter_challenge(challenge, index),
+            ),
+        )
+
+    def _cache_recent_eos(self, eos: EndOfSubSlotBundle) -> None:
+        cc_hash = eos.challenge_chain.get_hash()
+        self.recent_eos.put(
+            cc_hash,
+            RecentEos(eos, time.time(), self.get_filter_challenge(cc_hash, uint8(0))),
+        )
 
     def get_signage_point(self, cc_signage_point: bytes32) -> SignagePoint | None:
         assert len(self.finished_sub_slots) >= 1
@@ -876,7 +919,7 @@ class FullNodeStore:
             if recent_eos is None:
                 return None
 
-            return recent_eos[0]
+            return recent_eos.eos
 
         window_start = (index // self.constants.FILTER_WINDOW_SIZE) * self.constants.FILTER_WINDOW_SIZE
 
@@ -1083,7 +1126,7 @@ class FullNodeStore:
 
         for eos_op, _, _ in self.finished_sub_slots:
             if eos_op is not None:
-                self.recent_eos.put(eos_op.challenge_chain.get_hash(), (eos_op, time.time()))
+                self._cache_recent_eos(eos_op)
 
         # Only forward the last 4 SPs that we have cached, as others will be too old
         return FullNodeStorePeakResult(new_eos, sorted(new_sps)[-4:], new_ips)
