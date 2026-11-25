@@ -81,6 +81,10 @@ class BlockStore:
             # peak. The "key" field is there to make update statements simple
             await conn.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
 
+            # height -> header_hash for the main chain, dual-written alongside
+            # in_main_chain. Nothing reads this yet.
+            await conn.execute("CREATE TABLE IF NOT EXISTS chain_index(height bigint PRIMARY KEY, header_hash blob)")
+
             # If any of these indices are altered, they should also be altered
             # in the chia/cmds/db_upgrade.py file
             log.info("DB: Creating index height")
@@ -110,6 +114,7 @@ class BlockStore:
     async def rollback(self, height: int) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("UPDATE full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,))
+            await conn.execute("DELETE FROM chain_index WHERE height>?", (height,))
 
     async def set_in_chain(self, header_hashes: list[tuple[bytes32]]) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -118,6 +123,13 @@ class BlockStore:
             ) as cursor:
                 if cursor.rowcount != len(header_hashes):
                     raise RuntimeError(f"The blockchain database is corrupt. All of {header_hashes} should exist")
+            # same transaction, same rows: chain_index mirrors in_main_chain.
+            # height comes from full_blocks, already written by add_full_block.
+            await conn.executemany(
+                "INSERT OR REPLACE INTO chain_index(height, header_hash) "
+                "SELECT height, header_hash FROM full_blocks WHERE header_hash=?",
+                header_hashes,
+            )
 
     async def replace_proof(self, header_hash: bytes32, block: FullBlock) -> None:
         assert header_hash == block.header_hash
