@@ -51,7 +51,9 @@ def orphaned_unfinished_candidates(
             and block_2.total_iters > block_1.total_iters
         ):
             return chain, block_1, block_2
-    pytest.fail(f"no tip in the last {max_trimmed_blocks + 1} blocks has two candidate blocks in its sub-slot")
+    pytest.fail(  # pragma: no cover
+        f"no tip in the last {max_trimmed_blocks + 1} blocks has two candidate blocks in its sub-slot"
+    )
 
 
 @pytest.mark.parametrize(
