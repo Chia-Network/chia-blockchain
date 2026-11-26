@@ -61,6 +61,7 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
+from chia.full_node.block_archive_protocol import BlockArchiveProtocol
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
@@ -491,6 +492,10 @@ class FullNode:
     def block_store(self) -> BlockStore:
         assert self._block_store is not None
         return self._block_store
+
+    @property
+    def block_archive(self) -> BlockArchiveProtocol:
+        return self.block_store
 
     @property
     def timelord_lock(self) -> asyncio.Lock:
@@ -3435,7 +3440,7 @@ class FullNode:
         - Checks if the provided vdf_info is correct, assuming it refers to the start of sub-slot.
         - Checks if the existing proof was non-compact. Ignore this proof if we already have a compact proof.
         """
-        is_fully_compactified = await self.block_store.is_fully_compactified(header_hash)
+        is_fully_compactified = await self.block_archive.is_fully_compactified(header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             self.log.info(f"Already compactified block: {header_hash}. Ignoring.")
             return False
@@ -3503,7 +3508,7 @@ class FullNode:
         if new_block is None:
             return False
         try:
-            await self.block_store.replace_proof(header_hash, new_block)
+            await self.block_archive.replace_proof(header_hash, new_block)
             return True
         except BaseException as e:
             self.log.error(
@@ -3541,7 +3546,7 @@ class FullNode:
         if peak is None or peak.height - request.height < 5:
             self.log.info(f"Ignoring new_compact_vdf, height {request.height} too recent.")
             return None
-        is_fully_compactified = await self.block_store.is_fully_compactified(request.header_hash)
+        is_fully_compactified = await self.block_archive.is_fully_compactified(request.header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             return None
         header_block = await self.blockchain.get_header_block_by_height(
@@ -3678,7 +3683,7 @@ class FullNode:
                 connected_timelords = self.server.get_connections(NodeType.TIMELORD)
 
                 total_target_uncompact_proofs = target_uncompact_proofs * max(1, len(connected_timelords))
-                heights = await self.block_store.get_random_not_compactified(total_target_uncompact_proofs)
+                heights = await self.block_archive.get_random_not_compactified(total_target_uncompact_proofs)
                 self.log.info("Heights found for bluebox to compact: [%s]", ", ".join(map(str, heights)))
 
                 for h in heights:
