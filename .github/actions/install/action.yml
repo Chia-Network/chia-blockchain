@@ -2,6 +2,7 @@ name: "Install chia-blockchain"
 
 description: "Run the platform appropriate installer script."
 
+###Inputs
 inputs:
   python-version:
     description: "Value to be set for INSTALL_PYTHON_VERSION."
@@ -36,6 +37,7 @@ inputs:
     required: false
     default: ""
 
+###Runs
 runs:
   using: "composite"
   steps:
