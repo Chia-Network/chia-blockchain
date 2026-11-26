@@ -49,7 +49,7 @@ async def run_new_block_benchmark(version: int) -> None:
 
     async with setup_db("coin-store-benchmark.db", version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        hint_store = await HintStore.create(db_wrapper)
 
         all_unspent: list[bytes32] = []
         all_coins: list[bytes32] = []

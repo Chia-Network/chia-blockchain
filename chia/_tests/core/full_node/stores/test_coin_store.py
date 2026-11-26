@@ -380,7 +380,7 @@ async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -
             guarantee_transaction_block=True,
         )
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        hint_store = await HintStore.create(db_wrapper)
         store = await BlockStore.create(db_wrapper)
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
         b: Blockchain = await Blockchain.create(coin_store, store, height_map, bt.constants, InlineExecutor())
@@ -423,7 +423,7 @@ async def test_get_coin_states(db_version: int) -> None:
             for i in range(1, 301)
         ]
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        hint_store = await HintStore.create(db_wrapper)
         await add_coin_records_to_db(coin_store, crs)
 
         assert len(await hint_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(0))) == 300
@@ -550,7 +550,7 @@ async def test_coin_state_batches(
     async with DBConnection(db_version) as db_wrapper:
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        hint_store = await HintStore.create(db_wrapper)
 
         await add_coin_records_to_db(coin_store, random_coin_records.items)
         await hint_store.add_hints(random_coin_records.hints)
@@ -579,7 +579,7 @@ async def test_coin_state_batches(
         while len(remaining_phs) > 0:
             while height is not None:
                 (coin_states, height) = await hint_store.batch_coin_states_by_puzzle_hashes(
-                    remaining_phs[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE],
+                    remaining_phs[: HintStore.MAX_PUZZLE_HASH_BATCH_SIZE],
                     min_height=height,
                     include_spent=include_spent,
                     include_unspent=include_unspent,
@@ -596,7 +596,7 @@ async def test_coin_state_batches(
                 all_coin_states += coin_states
 
                 if height is None:
-                    remaining_phs = remaining_phs[CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE :]
+                    remaining_phs = remaining_phs[HintStore.MAX_PUZZLE_HASH_BATCH_SIZE :]
 
                     if len(remaining_phs) > 0:
                         height = uint32(0)
@@ -644,7 +644,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
 
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        hint_store = await HintStore.create(db_wrapper)
 
         await add_coin_records_to_db(coin_store, coin_records)
 
@@ -685,8 +685,8 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
 async def test_batch_no_puzzle_hashes(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         # Initialize coin and hint stores.
-        coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        await CoinStore.create(db_wrapper)
+        hint_store = await HintStore.create(db_wrapper)
 
         coin_states, height = await hint_store.batch_coin_states_by_puzzle_hashes([])
         assert coin_states == []
@@ -698,7 +698,7 @@ async def test_duplicate_by_hint(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        hint_store = await HintStore.create(db_wrapper)
 
         cr = CoinRecord(
             Coin(std_hash(b"Parent Coin Id"), std_hash(b"Puzzle Hash"), uint64(100)),
@@ -860,8 +860,8 @@ async def test_get_unspent_lineage_info_for_puzzle_hash(case: UnspentLineageInfo
 
     async with DBConnection(2) as db_wrapper:
         # Prepare the coin store with the test case's data
-        coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        await CoinStore.create(db_wrapper)
+        hint_store = await HintStore.create(db_wrapper)
         async with db_wrapper.writer() as writer:
             for item in make_test_data(case.items):
                 await writer.execute(
@@ -914,7 +914,7 @@ async def test_get_coin_records_by_parent_ids_max_items() -> None:
     parent_id = parent_coin.name()
     async with DBConnection(2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        hint_store = await HintStore.create(db_wrapper)
         parent_coin_record = CoinRecord(
             coin=parent_coin,
             confirmed_block_index=uint32(0),
@@ -951,7 +951,7 @@ async def test_get_coin_records_by_parent_ids_max_items_across_batches(
     with_coin_parent_index: bool, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Force multiple batches so we verify the global limit is enforced across batches.
-    monkeypatch.setattr("chia.full_node.coin_store.SQLITE_MAX_VARIABLE_NUMBER", 5)
+    monkeypatch.setattr("chia.full_node.hint_store.SQLITE_MAX_VARIABLE_NUMBER", 5)
     parent_coins = [Coin(bytes32.random(), bytes32.random(), uint64(1000)) for _ in range(8)]
     parent_ids = [coin.name() for coin in parent_coins]
     async with DBConnection(2) as db_wrapper:
@@ -980,8 +980,7 @@ async def test_get_coin_records_by_parent_ids_max_items_across_batches(
         if with_coin_parent_index:
             async with db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute("CREATE INDEX coin_parent_index ON coin_record(coin_parent)")
-            coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        hint_store = await HintStore.create(db_wrapper)
         results = await hint_store.get_coin_records_by_parent_ids(True, parent_ids, max_items=7)
         assert len(results) == 7
 
@@ -992,7 +991,7 @@ async def test_get_coin_records_by_parent_ids_respects_spent_filter_under_limit(
     parent_id = parent_coin.name()
     async with DBConnection(2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        hint_store = await HintStore.create(db_wrapper)
         parent_record = CoinRecord(
             coin=parent_coin,
             confirmed_block_index=uint32(0),
@@ -1181,8 +1180,7 @@ async def test_get_coin_records_by_parent_ids(with_coin_parent_index: bool) -> N
             async with db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute("CREATE INDEX coin_parent_index ON coin_record(coin_parent)")
             # Reopen to trigger index detection
-            coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(coin_store)
+        hint_store = await HintStore.create(db_wrapper)
         records = await hint_store.get_coin_records_by_parent_ids(
             include_spent_coins=True,
             parent_ids=[parent_coin_id, reward_coin.parent_coin_info],
