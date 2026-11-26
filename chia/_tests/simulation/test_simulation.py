@@ -476,7 +476,7 @@ class TestSimulation:
             else:
                 raise Exception("unexpected parametrization")
             for coin in coins:
-                coin_record = await full_node_api.full_node.coin_store.get_coin_record(coin.name())
+                coin_record = await full_node_api.full_node.hint_store.get_coin_record(coin.name())
                 assert coin_record is not None
 
     @pytest.mark.anyio

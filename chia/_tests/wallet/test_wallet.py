@@ -1900,13 +1900,13 @@ class TestWalletSimulator:
         assert wallet_coin_record_rem is not None
         assert wallet_coin_record_rem.spent
 
-        coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(removed.name())
+        coin_record_full_node = await full_node_api.full_node.hint_store.get_coin_record(removed.name())
         assert coin_record_full_node is not None
         assert coin_record_full_node.spent
-        add_1_coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(added.name())
+        add_1_coin_record_full_node = await full_node_api.full_node.hint_store.get_coin_record(added.name())
         assert add_1_coin_record_full_node is not None
         assert add_1_coin_record_full_node.confirmed_block_index > 0
-        add_2_coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(added_1.name())
+        add_2_coin_record_full_node = await full_node_api.full_node.hint_store.get_coin_record(added_1.name())
         assert add_2_coin_record_full_node is not None
         assert add_2_coin_record_full_node.confirmed_block_index > 0
 

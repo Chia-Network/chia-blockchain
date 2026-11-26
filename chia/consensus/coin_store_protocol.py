@@ -52,6 +52,10 @@ class CoinStoreProtocol(Protocol):
     wallet protocol, not consensus, so they are not part of this protocol.
     """
 
+    async def is_empty(self) -> bool:
+        """Check for coin records during node startup."""
+        ...
+
     def snapshot(self) -> AbstractAsyncContextManager[CoinStoreSnapshot]:
         """
         Acquire a consistent read view of the current state. Reads made

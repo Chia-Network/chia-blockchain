@@ -93,7 +93,7 @@ class TestBlockchainTransactions:
         # Two coins are added, main spend and change
         assert len(added_coins) == 2
         for coin in added_coins:
-            unspent = await full_node_1.coin_store.get_coin_record(coin.name())
+            unspent = await full_node_1.hint_store.get_coin_record(coin.name())
             assert unspent is not None
             assert not unspent.spent
             assert not unspent.coinbase

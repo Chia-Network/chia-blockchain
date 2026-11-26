@@ -656,7 +656,7 @@ class FullNodeSimulator(FullNodeAPI):
 
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             coin_set = set(coins)
-            coin_store = self.full_node.coin_store
+            hint_store = self.full_node.hint_store
 
             while True:
                 await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
@@ -664,7 +664,7 @@ class FullNodeSimulator(FullNodeAPI):
                 found: set[Coin] = set()
                 for coin in coin_set:
                     # TODO: is this the proper check?
-                    if await coin_store.get_coin_record(coin.name()) is not None:
+                    if await hint_store.get_coin_record(coin.name()) is not None:
                         found.add(coin)
 
                 coin_set = coin_set.difference(found)
